@@ -6,7 +6,8 @@ const MOCA_MANIFEST: BatteryManifest = {
   version: '1.0',
   steps: [
     { id: 'orientation', type: 'orientation', titleKey: 'orientation.title' },
-    { id: 'memory', type: 'moca-memory', titleKey: 'memory.title' },
+    { id: 'trails', type: 'moca-visuospatial', titleKey: 'visuospatial.trails' },
+    { id: 'clock', type: 'moca-clock', titleKey: 'visuospatial.clock' },
   ],
 };
 

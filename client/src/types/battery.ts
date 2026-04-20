@@ -1,4 +1,4 @@
-export type TestType = 'orientation' | 'moca-visuospatial' | 'moca-naming' | 'moca-memory';
+export type TestType = 'orientation' | 'moca-visuospatial' | 'moca-clock' | 'moca-naming' | 'moca-memory';
 
 export interface TestStep {
   id: string;
