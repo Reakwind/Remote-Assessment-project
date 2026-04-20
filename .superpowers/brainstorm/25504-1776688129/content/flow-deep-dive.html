@@ -1,0 +1,50 @@
+<h2>Deep Dive: Managing the Assessment Flow</h2>
+<p class="subtitle">Comparing approaches for flexibility, reliability, and ease of change.</p>
+
+<div class="options">
+  <div class="option" data-choice="hardcoded">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Hard-Coded Flow (The "Fixed Script")</h3>
+      <p><strong>Analogy:</strong> A printed book. To change the order of chapters, you have to reprint the whole book.</p>
+      <div class="pros-cons">
+        <div class="pros"><ul><li>Fastest to build initially</li><li>Zero hidden complexity</li></ul></div>
+        <div class="cons"><ul><li>Hard to reorder tests</li><li>Adding a test requires changing core code</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="config" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Config-Driven (The "Playlist")</h3>
+      <p><strong>Analogy:</strong> A Spotify playlist. You can drag and drop songs (tests) without changing how the music player works.</p>
+      <div class="pros-cons">
+        <div class="pros"><ul><li><strong>Easy to Change:</strong> Swap tests by editing one list.</li><li><strong>Resilient:</strong> Easy to save "Current Track" if the user's internet drops.</li></ul></div>
+        <div class="cons"><ul><li>Requires building a "Player" engine first.</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="statemachine">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>State Machine (The "Air Traffic Control")</h3>
+      <p><strong>Analogy:</strong> A complex flowchart. If X happens, go to Y; if user is tired, skip to Z.</p>
+      <div class="pros-cons">
+        <div class="pros"><ul><li>Handles complex logic perfectly</li><li>Mathematically impossible to get in a "broken state"</li></ul></div>
+        <div class="cons"><ul><li>Highest learning curve</li><li>Overkill for simple sequential batteries</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>My Recommendation: Option B (Config-Driven)</h3>
+  <p>For your "Developer-Led" requirement, <strong>Option B</strong> is the "Sweet Spot".</p>
+  <ol>
+    <li><strong>Maintenance:</strong> When you want to add a new "Memory Test", you just add it to the library and update the <code>battery.json</code> file. You don't touch the navigation code.</li>
+    <li><strong>Remote Reliability:</strong> Since the flow is just a list of steps, it's very easy to save the patient's progress to Supabase after every step. If their browser crashes, they come back and the "Player" just looks at the list and resumes at step #3.</li>
+    <li><strong>Flexibility:</strong> It allows you to have different batteries (e.g., "Short Version" vs "Full Version") just by using different JSON files.</li>
+  </ol>
+</div>

@@ -1,0 +1,33 @@
+<h2>Developer-Led Modular Architecture</h2>
+<p class="subtitle">Focusing on code modularity for easy test swapping and expansion.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Core Engine Concept</div>
+  <div class="mockup-body">
+    <div style="display: flex; gap: 20px; align-items: stretch;">
+      <div class="placeholder" style="flex: 1; text-align: center;">
+        <div class="label">Battery Engine</div>
+        <p>Handles Flow, Scoring, & UI</p>
+      </div>
+      <div style="display: flex; flex-direction: column; justify-content: center;">&larr; JSON Config &rarr;</div>
+      <div style="flex: 1; border: 1px dashed var(--border); padding: 10px;">
+        <div class="label">Test Registry</div>
+        <ul style="font-size: 0.9rem;">
+          <li>✅ Memory Test</li>
+          <li>✅ Attention Test</li>
+          <li>✅ Executive Function</li>
+          <li>➕ Add New Test...</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Why Approach C?</h3>
+  <ul>
+    <li><strong>Maintainability:</strong> Decouples the UI from specific test logic.</li>
+    <li><strong>Scalability:</strong> New tests follow a standard "Interface" or "Contract".</li>
+    <li><strong>Robustness:</strong> Changes to one test won't break the entire battery.</li>
+  </ul>
+</div>

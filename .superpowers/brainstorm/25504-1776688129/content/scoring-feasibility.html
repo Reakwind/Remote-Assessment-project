@@ -1,0 +1,42 @@
+<h2>Automated Scoring: Feasibility & Approaches</h2>
+<p class="subtitle">Can a computer grade a patient's drawing?</p>
+
+<div class="options">
+  <div class="option" data-choice="heuristics">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Mathematical Tracking (No AI)</h3>
+      <p>We place invisible "hitboxes" over the Trail Making numbers/letters. If the line connects 1 &rarr; א &rarr; 2, it scores automatically.</p>
+      <div class="pros-cons">
+        <div class="pros"><ul><li>100% Free</li><li>Perfect for Trail Making</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="ai">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>AI Computer Vision</h3>
+      <p>Sends the image to an AI (like GPT-4V) to grade the Clock Drawing based on MoCA rules.</p>
+      <div class="pros-cons">
+        <div class="cons"><ul><li>API Costs ($)</li><li>Privacy Hurdles</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>The Hybrid Approach (Recommended)</h3>
+      <p>Automate the <strong>Trail Making</strong> (math), but save the <strong>Clock</strong> for <strong>Manual Clinician Review</strong>.</p>
+      <div class="pros-cons">
+        <div class="pros"><ul><li>Zero Cost</li><li>Highest Clinical Validity</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>My Take on AI Feasibility</h3>
+  <p>Yes, AI scoring is very feasible today, but for a <strong>clinical MVP</strong>, I recommend starting with the <strong>Hybrid Approach</strong>. It ensures you don't have to deal with API costs or major privacy legalities on Day 1, while keeping the clinician as the ultimate authority on subjective drawings.</p>
+</div>

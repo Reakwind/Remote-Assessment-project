@@ -1,0 +1,46 @@
+<h2>The Battery Engine: How Tests Run</h2>
+<p class="subtitle">A standardized way to build, run, and score clinical assessments.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Test Lifecycle</div>
+  <div class="mockup-body">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+      <div class="placeholder" style="flex: 1; font-size: 0.8rem; padding: 10px;">
+        <div class="label">1. Instructions</div>
+        <p>Clear, large text & Audio</p>
+      </div>
+      <div style="font-weight: bold;">&rarr;</div>
+      <div class="placeholder" style="flex: 1; font-size: 0.8rem; padding: 10px; border-color: var(--primary);">
+        <div class="label">2. Task</div>
+        <p>Interactive Interaction</p>
+      </div>
+      <div style="font-weight: bold;">&rarr;</div>
+      <div class="placeholder" style="flex: 1; font-size: 0.8rem; padding: 10px;">
+        <div class="label">3. Data</div>
+        <p>Score + Metrics saved</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>The "Test Contract"</h3>
+  <p>To keep things flexible, every test we build will follow the same rules (a "Contract"):</p>
+  <ul>
+    <li><strong>Input:</strong> What specific instructions or parameters does this test need? (e.g. "Show 5 items for 10 seconds")</li>
+    <li><strong>Internal State:</strong> The test handles its own timer and user clicks.</li>
+    <li><strong>Output:</strong> When finished, it must return a standardized packet:
+      <code style="display: block; background: #eee; padding: 10px; margin-top: 5px; font-size: 0.8rem;">
+        { testId: "memory-1", score: 85, timeTaken: 45, rawData: [...] }
+      </code>
+    </li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>Accessibility Safety Net</h3>
+  <ul>
+    <li><strong>Audio Fallback:</strong> The engine will have a built-in "Read Aloud" feature for instructions.</li>
+    <li><strong>No-Trap Navigation:</strong> Navigation buttons (Next/Back) are managed by the Engine, not the individual tests, so the user can never get "stuck" inside a broken test.</li>
+  </ul>
+</div>

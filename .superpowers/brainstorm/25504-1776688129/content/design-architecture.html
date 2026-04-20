@@ -1,0 +1,37 @@
+<h2>System Architecture Design</h2>
+<p class="subtitle">A robust, scalable, and cost-effective foundation for remote assessment.</p>
+
+<div class="mockup">
+  <div class="mockup-header">High-Level Data Flow</div>
+  <div class="mockup-body">
+    <div style="display: flex; justify-content: space-around; align-items: center; text-align: center;">
+      <div style="border: 2px solid var(--border); padding: 15px; border-radius: 8px; width: 30%;">
+        <strong>Web Frontend</strong><br>
+        <small>React + TypeScript</small>
+      </div>
+      <div style="font-size: 2rem;">&rlarr;</div>
+      <div style="border: 2px solid var(--border); padding: 15px; border-radius: 8px; width: 30%; background: #f0fdf4;">
+        <strong>Supabase</strong><br>
+        <small>Auth & Database</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>1. Core Components</h3>
+  <ul>
+    <li><strong>The Patient App:</strong> A single-page application (SPA) focused on speed and reliability on older devices.</li>
+    <li><strong>The Battery Engine:</strong> The "Brain" that loads the JSON playlist, tracks progress, and manages test transitions.</li>
+    <li><strong>The Secure Vault (Supabase):</strong> Stores anonymized patient results, clinician accounts, and assessment configurations.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>2. Why this works for you?</h3>
+  <ul>
+    <li><strong>Security:</strong> All sensitive data is encrypted by Supabase. We will use "Row Level Security" to ensure only authorized clinicians see their patients' data.</li>
+    <li><strong>Cost:</strong> This architecture fits entirely within Supabase's free tier for early stages.</li>
+    <li><strong>Modularity:</strong> The Frontend is decoupled from the specific tests, allowing you to add new ones in the future without touching the database or the core engine.</li>
+  </ul>
+</div>

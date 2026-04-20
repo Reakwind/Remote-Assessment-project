@@ -1,0 +1,39 @@
+<h2>Design Direction: Minimalist & Accessible (Option A)</h2>
+<p class="subtitle">Prioritizing clarity and accessibility for the 60+ population.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Patient View: Question Screen</div>
+    <div class="mockup-body" style="background: white; color: black; padding: 40px; text-align: center;">
+      <h2 style="font-size: 2.5rem; margin-bottom: 30px;">Do you remember seeing this shape?</h2>
+      <div style="width: 150px; height: 150px; background: #333; margin: 0 auto 40px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <button class="mock-button" style="padding: 25px; font-size: 1.5rem; background: #000; color: #fff; border: 4px solid #000;">YES</button>
+        <button class="mock-button" style="padding: 25px; font-size: 1.5rem; background: #fff; color: #000; border: 4px solid #000;">NO</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mockup">
+    <div class="mockup-header">Developer Modularity</div>
+    <div class="mockup-body">
+      <div class="label">Component Hierarchy</div>
+      <ul style="font-size: 0.9rem;">
+        <li><code>&lt;AssessmentLayout /&gt;</code> (The Shell)</li>
+        <li>&nbsp;&nbsp;↳ <code>&lt;VisualWrapper /&gt;</code> (Theme/Accessibility)</li>
+        <li>&nbsp;&nbsp;&nbsp;&nbsp;↳ <code>&lt;ActiveTest /&gt;</code> (Logic Only)</li>
+        <li>&nbsp;&nbsp;&nbsp;&nbsp;↳ <code>&lt;AvatarLayer /&gt;</code> (Future: Hidden)</li>
+      </ul>
+      <p style="font-size: 0.8rem; color: #666;">Theme can be swapped via CSS variables or a React Context provider.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Strategy for Flexibility</h3>
+  <ul>
+    <li><strong>CSS Variables:</strong> Control font size and contrast centrally.</li>
+    <li><strong>Layout Slots:</strong> Reservation of "slots" in the UI where an avatar or audio control component can be injected later without refactoring the test logic.</li>
+    <li><strong>Standardized IO:</strong> Every test reports a simple JSON result, keeping the "Game Logic" independent of the "Display Layer".</li>
+  </ul>
+</div>

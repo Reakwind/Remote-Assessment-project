@@ -1,25 +1,26 @@
-# Project Context: Remote Neuropsychological Assessment
+# Project Context: Remote Neuropsychological Assessment (Hebrew MoCA)
 
 ## 1. Vision & Purpose
 A remote, web-based platform for cognitive assessment of the 60+ population in Israel.
 - **Initial Goal:** Complete digital implementation of the Hebrew MoCA (Montreal Cognitive Assessment).
-- **Flexibility:** Modular code allows swapping tests and evolving the battery (Developer-led).
-- **Accessibility:** Minimalist, high-contrast, large-typography Hebrew interface (RTL).
+- **Flexibility:** Modular "Battery Engine" (JSON-driven) allows swapping tests (Developer-led).
+- **Accessibility:** Minimalist, high-contrast Hebrew interface (RTL) with computer orientation for older users.
 
 ## 2. Technical Stack
-- **Frontend:** React, TypeScript, Vanilla CSS (RTL support).
+- **Frontend:** React, TypeScript, Vanilla CSS (RTL).
 - **Drawing:** HTML5 Canvas for Trail Making (1-א-2-ב...) and Clock Drawing.
-- **Backend:** Supabase (Auth, PostgreSQL) for cost-effective, secure health data storage.
-- **Norms:** Israeli validation (Lifshitz et al., 2012) and scoring algorithms.
+- **Backend:** Supabase (Auth, PostgreSQL) - targeting AWS/Google Israel Region for compliance.
+- **Norms:** Israeli validation (Lifshitz et al., 2012) using a decoupled JSON-based Scoring Engine.
 
 ## 3. Core Requirements
-- **Fallback:** Allow photo uploads for pen-and-paper drawings if digital canvas is unsuitable.
-- **Security:** HIPAA-aligned principles (encryption at rest/transit, RLS for clinician access).
-- **Reliability:** Per-step auto-save to prevent data loss for older users.
+- **Scoring:** Hybrid approach. Automated math/trails, manual clinician review for subjective drawings (Clock/Cube).
+- **Fallback:** Manual link sharing (Clinician copies/sends via WhatsApp/Email).
+- **Reliability:** Per-section auto-save and patient retries for timed tasks on connection loss.
+- **Privacy:** Pseudonymization (Case IDs in database, names only on clinician end).
 
 ## 4. MVP Roadmap
-1. **Engine Setup:** JSON-driven test runner.
-2. **Drawing Module:** Canvas for Trail Making and Clock.
-3. **Stimuli Module:** Hebrew word lists, animal images, and attention tasks.
-4. **Scoring Logic:** Automated point calculation based on Israeli norms.
-5. **Backend Integration:** Supabase persistence and clinician dashboard.
+1. **Engine Setup:** JSON-driven test runner with RTL Layout.
+2. **Orientation Module:** Familiarize older adults with the digital interface.
+3. **MoCA Implementation:** Drawing Canvas (Trails/Clock) + Stimuli (Hebrew lists/images).
+4. **Scoring Engine:** Logic for Israeli norms and education adjustments.
+5. **Clinician Dashboard:** Patient management, link generation, and manual scoring review.

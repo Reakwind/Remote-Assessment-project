@@ -1,0 +1,45 @@
+<h2>Cost-Effective Secure Backend (Option A)</h2>
+<p class="subtitle">Focusing on high security with minimal (or zero) initial operational costs.</p>
+
+<div class="cards">
+  <div class="card" data-choice="supabase" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>Supabase (PostgreSQL)</h3>
+      <p><strong>Cost: Free Tier</strong> ($0/mo for small-scale assessment needs).</p>
+      <ul>
+        <li>Built-in Auth & Data Encryption.</li>
+        <li>Real-time database (great for live monitoring).</li>
+        <li>Fastest time-to-production.</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="card" data-choice="firebase" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>Firebase (NoSQL)</h3>
+      <p><strong>Cost: Spark Plan</strong> ($0/mo with generous limits).</p>
+      <ul>
+        <li>Very mature ecosystem.</li>
+        <li>Excellent hosting and auth integration.</li>
+        <li>Document-based (flexible for changing test data).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" data-choice="pocketbase" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>Self-Hosted PocketBase</h3>
+      <p><strong>Cost: VPS (~$5/mo)</strong>.</p>
+      <ul>
+        <li>Single executable (simple to deploy).</li>
+        <li>Full control over data location (GDPR/HIPAA compliance).</li>
+        <li>No "vendor lock-in" limits.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Recommendation: Supabase</h3>
+  <p>For a neuropsychology project, Supabase offers the best balance of <strong>PostgreSQL reliability</strong> (better for structured medical data) and a <strong>comprehensive free tier</strong> that handles Auth and Security out of the box.</p>
+</div>
