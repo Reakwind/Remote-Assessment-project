@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BatteryManifest, AssessmentState } from '../types/battery';
+import type { BatteryManifest, AssessmentState } from '../types/battery';
 
 export function useBatteryEngine(manifest: BatteryManifest) {
   const [state, setState] = useState<AssessmentState>({
