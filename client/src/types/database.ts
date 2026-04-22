@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export type SessionStatus = 'pending' | 'in_progress' | 'completed' | 'awaiting_review';
 
 export interface Session {

@@ -31,7 +31,7 @@ export function useSession(tokenOverride?: string): SessionState {
     const token = tokenOverride || new URLSearchParams(window.location.search).get('t');
 
     if (!token) {
-      setState({ status: 'invalid', sessionId: null, linkToken: null, scoringContext: null });
+      setTimeout(() => setState({ status: 'invalid', sessionId: null, linkToken: null, scoringContext: null }), 0);
       return;
     }
 
@@ -46,7 +46,7 @@ export function useSession(tokenOverride?: string): SessionState {
           return;
         }
         if (!res.ok) {
-          setState({ status: 'invalid', sessionId: null, linkToken: null, scoringContext: null });
+          setTimeout(() => setState({ status: 'invalid', sessionId: null, linkToken: null, scoringContext: null }), 0);
           return;
         }
 
@@ -67,7 +67,7 @@ export function useSession(tokenOverride?: string): SessionState {
       .catch(() => {
         setState({ status: 'error', sessionId: null, linkToken: null, scoringContext: null });
       });
-  }, []);
+  }, [tokenOverride]);
 
   return state;
 }
