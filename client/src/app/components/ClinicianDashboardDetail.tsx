@@ -18,6 +18,20 @@ const SUMMARY = [
 
 export function ClinicianDashboardDetail() {
   const { patientId } = useParams();
+
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!patientId) return;
+    supabase.from('session_events')
+      .select('*')
+      .eq('session_id', patientId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setAuditLogs(data);
+      });
+  }, [patientId]);
+
   const { state } = useAssessmentStore();
   const [activeTab, setActiveTab] = useState<'clock' | 'cube' | 'trail' | 'memory' | 'digitSpan' | 'serial7' | 'language' | 'abstraction' | 'delayedRecall' | 'orientation'>('clock');
   const [rubrics, setRubrics] = useState({
