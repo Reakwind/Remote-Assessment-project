@@ -40,6 +40,18 @@ Deno.serve(async (req) => {
 
   if (dbError) return new Response('Database error', { status: 500, headers: corsHeaders });
 
+  const escapeCsvField = (field: any) => {
+    if (field === null || field === undefined) return '';
+    let str = String(field);
+    if (/^[=+\-@]/.test(str)) {
+      str = "'" + str;
+    }
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      str = '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  };
+
   const header = ['Case ID', 'Age Band', 'Date', 'Total Score', 'Percentile', 'Needs Review'].join(',');
   const rows = (sessions || []).map(s => {
     const report = Array.isArray(s.scoring_reports) ? s.scoring_reports[0] : s.scoring_reports;
@@ -50,7 +62,7 @@ Deno.serve(async (req) => {
       report?.total_score ?? 'N/A',
       report?.percentile ?? 'N/A',
       report?.needs_review ? 'Yes' : 'No'
-    ].join(',');
+    ].map(escapeCsvField).join(',');
   });
 
   const csv = [header, ...rows].join('\n');
