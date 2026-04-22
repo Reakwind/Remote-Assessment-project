@@ -51,6 +51,7 @@ Deno.serve(async (req) => {
       case_id: caseId,
       clinician_id: user.id,
       age_band: ageBand,
+        education_years: educationYears,
       status: 'pending'
     })
     .select('id, link_token')

@@ -101,15 +101,14 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
           fetch(edgeFn('save-drawing'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: prev.id, taskId: taskType, imageBase64 }),
+            body: JSON.stringify({ sessionId: prev.id, linkToken: prev.linkToken, taskId: taskType, imageBase64 }),
           })
             .then(res => res.ok ? res.json() : Promise.reject())
             .then(({ url }) => {
               fetch(edgeFn('submit-task'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  sessionId: prev.id, 
+                body: JSON.stringify({ sessionId: prev.id, linkToken: prev.linkToken, 
                   taskType, 
                   rawData: { ...data, drawingUrl: url } 
                 }),
@@ -121,8 +120,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
           fetch(edgeFn('submit-task'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              sessionId: prev.id, 
+            body: JSON.stringify({ sessionId: prev.id, linkToken: prev.linkToken, 
               taskType, 
               rawData: data 
             }),
@@ -152,8 +150,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
         fetch(edgeFn('complete-session'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            sessionId: prev.id,
+          body: JSON.stringify({ sessionId: prev.id, linkToken: prev.linkToken,
             // Drawing URLs and other data would be passed here in a production app
             // For MVP we just signal completion
             scoringReport: { totalRaw: 0, totalAdjusted: 0, totalProvisional: true, pendingReviewCount: 1, domains: {} },

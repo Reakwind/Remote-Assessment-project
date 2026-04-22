@@ -15,14 +15,28 @@ Deno.serve(async (req) => {
     return json({ error: 'Method not allowed' }, 405);
   }
 
-  let body: { sessionId: string; taskId: string; strokesData?: any[]; imageBase64?: string };
+  let body: { sessionId: string; linkToken: string; taskId: string; strokesData?: any[]; imageBase64?: string };
   try {
     body = await req.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { sessionId, taskId, strokesData, imageBase64 } = body;
+  const { sessionId, linkToken, taskId, strokesData, imageBase64 } = body;
+
+  
+  if (!linkToken) return json({ error: 'Unauthorized: missing token' }, 401);
+
+  // Validate session auth
+  const { data: session, error: sessionError } = await supabase
+    .from('sessions')
+    .select('id, status, link_token')
+    .eq('id', sessionId)
+    .single();
+
+  if (sessionError || !session) return json({ error: 'Session not found' }, 404);
+  if (session.link_token !== linkToken) return json({ error: 'Unauthorized: invalid token' }, 401);
+
   
   if (!sessionId || !taskId) {
     return json({ error: 'Missing required fields: sessionId, taskId' }, 400);

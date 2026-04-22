@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     return json({ error: 'Method not allowed' }, 405);
   }
 
-  let body: { sessionId: string; taskType: string; rawData: unknown };
+  let body: { sessionId: string; linkToken: string; taskType: string; rawData: unknown };
   try {
     body = await req.json();
   } catch {
@@ -32,15 +32,18 @@ Deno.serve(async (req) => {
   );
 
   // Validate session is in_progress
+  const { linkToken } = body;
+  if (!linkToken) return json({ error: 'Unauthorized: missing token' }, 401);
+
+  // Validate session auth
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .select('id, status')
+    .select('id, status, link_token')
     .eq('id', sessionId)
     .single();
 
-  if (sessionError || !session) {
-    return json({ error: 'Session not found' }, 404);
-  }
+  if (sessionError || !session) return json({ error: 'Session not found' }, 404);
+  if (session.link_token !== linkToken) return json({ error: 'Unauthorized: invalid token' }, 401);
 
   if (session.status !== 'in_progress') {
     // If it's pending, mark it as in_progress
