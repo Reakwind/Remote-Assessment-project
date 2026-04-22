@@ -42,7 +42,7 @@ export function useSession(tokenOverride?: string): SessionState {
     })
       .then(async (res) => {
         if (res.status === 410) {
-          setState({ status: 'already_used', sessionId: null, linkToken: null, scoringContext: null });
+          setState({ status: 'already_used', sessionId: null, linkToken: null, scoringContext: null }));
           return;
         }
         if (!res.ok) {
@@ -65,7 +65,7 @@ export function useSession(tokenOverride?: string): SessionState {
         });
       })
       .catch(() => {
-        setState({ status: 'error', sessionId: null, linkToken: null, scoringContext: null });
+        setState({ status: 'error', sessionId: null, linkToken: null, scoringContext: null }));
       });
   }, [tokenOverride]);
 
