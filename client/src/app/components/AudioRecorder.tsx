@@ -39,7 +39,7 @@ export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: A
         URL.revokeObjectURL(audioUrl);
       }
     };
-  }, [audioId, audioUrl]);
+  }, [audioId]);
   
   // Audio playback event listeners
   useEffect(() => {
