@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ChevronRight, FileDown, Download, CheckSquare, Mic } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { clsx } from "clsx";

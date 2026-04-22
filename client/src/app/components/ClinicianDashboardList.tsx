@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import { Search, ChevronLeft, Plus } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";

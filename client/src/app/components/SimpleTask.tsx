@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ListenButton } from "./ListenButton";
 import { AudioRecorder } from "./AudioRecorder";
 import { useAssessmentStore } from "../store/AssessmentContext";

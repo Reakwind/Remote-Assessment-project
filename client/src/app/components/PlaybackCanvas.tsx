@@ -102,7 +102,7 @@ export function PlaybackCanvas({ strokes, width = 600, height = 400, backgroundI
       canvas.height = height * dpr;
     }
     drawStrokes(progress * totalDuration);
-  }, [progress, totalDuration, validStrokes, width, height]);
+  }, [progress, totalDuration, validStrokes, width, height, drawStrokes]);
 
   // Handle animation frame
   useEffect(() => {

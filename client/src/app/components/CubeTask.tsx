@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { ListenButton } from "./ListenButton";
 import { BaseCanvas } from "./BaseCanvas";
@@ -7,7 +8,7 @@ export function CubeTask() {
   const { state, updateTaskData } = useAssessmentStore();
   
   const savedData = state.tasks.cube || { strokes: [] };
-  const [_, setHasDrawn] = useState(savedData.strokes.length > 0);
+  const [, setHasDrawn] = useState(savedData.strokes.length > 0);
 
   const handleDrawChange = (strokes: any[]) => {
     setHasDrawn(strokes.length > 0);
