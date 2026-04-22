@@ -3,6 +3,7 @@ import { Search, ChevronLeft, Plus } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useMemo, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 // Generate fake patients to demonstrate virtualization
 const FIRST_NAMES = ["ישראל", "דוד", "שרה", "רחל", "משה", "רבקה", "יוסף", "חיים", "מרים", "לאה"];
@@ -36,6 +37,33 @@ export function ClinicianDashboardList() {
     );
   }, [allPatients, search]);
 
+  
+  const handleCsvExport = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { alert("Not logged in"); return; }
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-csv`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      });
+      
+      if (!res.ok) throw new Error("Export failed");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `moca_export.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to export CSV");
+    }
+  };
+
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtualizer({
@@ -55,6 +83,11 @@ export function ClinicianDashboardList() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+
+          <button onClick={handleCsvExport} className="flex items-center gap-2 bg-white text-black border border-gray-200 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors shadow-sm text-lg">
+            <span>ייצוא CSV</span>
+          </button>
+
           <div className="relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input 
