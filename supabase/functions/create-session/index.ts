@@ -7,6 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+function generateAccessCode(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(6)), (byte) => (byte % 10).toString()).join('');
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -26,6 +30,7 @@ Deno.serve(async (req) => {
   if (!caseId || !ageBand || !patientPhone) {
     return json({ error: 'Missing required fields' }, 400);
   }
+  const accessCode = generateAccessCode();
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -54,9 +59,11 @@ Deno.serve(async (req) => {
       age_band: ageBand,
       status: 'pending',
       education_years: educationYears ?? null,
-      patient_phone: patientPhone
+      patient_phone: patientPhone,
+      access_code: accessCode,
+      assessment_type: 'moca',
     })
-    .select('id, link_token')
+    .select('id, link_token, access_code')
     .single();
 
   if (error || !session) {
@@ -68,7 +75,7 @@ Deno.serve(async (req) => {
   const baseUrl = Deno.env.get('PUBLIC_URL') || 'https://app.remotecheck.com';
 
   const sessionUrl = `${baseUrl}/#/session/${session.link_token}`;
-  const smsMessage = `Remote Check: כדי להתחיל את המבדק, פתחו את הקישור ${sessionUrl}`;
+  const smsMessage = `Remote Check: כדי להתחיל את המבדק, פתחו את הקישור ${sessionUrl}. קוד חד-פעמי: ${session.access_code ?? accessCode}`;
   const smsResult = await sendSms({ to: patientPhone, message: smsMessage });
 
   const { error: smsLogError } = await supabase
@@ -87,6 +94,7 @@ Deno.serve(async (req) => {
     sessionId: session.id,
     linkToken: session.link_token,
     sessionUrl,
+    accessCode: session.access_code ?? accessCode,
     smsSent: smsResult.ok,
     smsError: smsResult.error ?? null,
   });

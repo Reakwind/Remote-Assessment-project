@@ -1,21 +1,18 @@
 import { useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { Loader2, AlertTriangle, ArrowRight } from "lucide-react";
-import { useAssessmentStore } from "../store/AssessmentContext";
 import { useSession } from "../../hooks/useSession";
 
 export function SessionValidation() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { startNewAssessment } = useAssessmentStore();
   const session = useSession(token);
 
   useEffect(() => {
-    if (session.status === 'ready' && session.sessionId && session.linkToken && session.scoringContext) {
-      startNewAssessment(session.sessionId, session.linkToken, session.scoringContext);
-      navigate("/patient/welcome");
+    if (session.status === 'ready' && session.requiresAccessCode) {
+      navigate(`/session/${token}/code`);
     }
-  }, [session.status, session.sessionId, session.linkToken, session.scoringContext, navigate, startNewAssessment]);
+  }, [session.status, session.requiresAccessCode, navigate, token]);
 
   const getErrorMessage = () => {
     if (session.status === 'already_used') return "הקישור כבר שומש. אנא פנה למטפל לקישור חדש.";
