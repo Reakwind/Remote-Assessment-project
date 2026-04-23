@@ -20,6 +20,7 @@ CREATE TABLE sessions (
   case_id VARCHAR(50) NOT NULL,
   link_token UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
   used BOOLEAN DEFAULT FALSE,
+  education_years INT DEFAULT 12,
   clinician_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   started_at TIMESTAMPTZ,

@@ -1,6 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
   if (req.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405);
   }
@@ -23,7 +32,7 @@ Deno.serve(async (req) => {
   // Look up session by token
   const { data: session, error } = await supabase
     .from('sessions')
-    .select('id, status, used, age_band, created_at')
+    .select('id, status, used, age_band, education_years, created_at')
     .eq('link_token', token)
     .single();
 
@@ -44,7 +53,7 @@ Deno.serve(async (req) => {
   if (session.status === 'pending') {
     const { error: updateError } = await supabase
       .from('sessions')
-      .update({ started_at: new Date().toISOString(), status: 'in_progress' })
+      .update({ started_at: new Date().toISOString(), status: 'in_progress', used: true })
       .eq('id', session.id);
 
     if (updateError) {
@@ -55,6 +64,7 @@ Deno.serve(async (req) => {
   return json({
     sessionId:      session.id,
     ageBand:        session.age_band,
+    educationYears: session.education_years,
     sessionDate:    new Date().toISOString(),
   });
 });
@@ -62,6 +72,6 @@ Deno.serve(async (req) => {
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }

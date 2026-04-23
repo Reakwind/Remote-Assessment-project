@@ -3,33 +3,46 @@ import { Play, Pause, AlertTriangle } from "lucide-react";
 import { AudioStore } from "../store/audioStore";
 
 export function PlaybackAudio({ audioId }: { audioId: string | null }) {
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<{ id: string; message: string } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [localAudio, setLocalAudio] = useState<{ id: string; url: string } | null>(null);
+  const audioUrl = audioId?.startsWith("http")
+    ? audioId
+    : localAudio?.id === audioId
+      ? localAudio.url
+      : null;
+  const error = errorState?.id === audioId ? errorState.message : null;
 
   useEffect(() => {
-    if (!audioId) return;
-
+    let isActive = true;
     let url: string | null = null;
+    if (!audioId) {
+      return;
+    }
 
-    AudioStore.getAudio(audioId)
-      .then(blob => {
-        if (blob) {
-          url = URL.createObjectURL(blob);
-          setAudioUrl(url);
-        } else {
-          setError("לא נמצאה הקלטה עבור משימה זו.");
-        }
-      })
-      .catch(err => {
-        console.error("Failed to load audio:", err);
-        setError("אירעה שגיאה בטעינת ההקלטה.");
-      });
+    if (!audioId.startsWith("http")) {
+      AudioStore.getAudio(audioId)
+        .then((blob) => {
+          if (!isActive) return;
+          if (blob) {
+            url = URL.createObjectURL(blob);
+            setLocalAudio({ id: audioId, url });
+          } else {
+            setErrorState({ id: audioId, message: "לא נמצאה הקלטה עבור משימה זו." });
+          }
+        })
+        .catch((err) => {
+          if (!isActive) return;
+          console.error("Failed to load audio:", err);
+          setErrorState({ id: audioId, message: "אירעה שגיאה בטעינת ההקלטה." });
+        });
+    }
 
     return () => {
+      isActive = false;
       if (url) {
         URL.revokeObjectURL(url);
       }

@@ -56,7 +56,7 @@
   ],
   "drawingTasks": ["moca-visuospatial", "moca-cube", "moca-clock"],
   "noScoreTasks": ["moca-memory-learning"],
-  "targetWords": ["פנס", "חסידה", "ורד", "ירח", "אמת"],
+  "targetWords": ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"],
   "correctAnimalNames": ["אריה", "קרנף", "גמל"],
   "fluencyThreshold": 11,
   "educationCorrectionThreshold": 12

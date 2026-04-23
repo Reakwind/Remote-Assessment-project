@@ -17,7 +17,7 @@ const FULL_RESULTS: Record<string, unknown> = {
   'moca-serial-7s': [{ isCorrect: true }, { isCorrect: true }, { isCorrect: true }, { isCorrect: true }, { isCorrect: true }],
   'moca-language': { rep1: true, rep2: true, fluencyCount: 12 },
   'moca-abstraction': { pair1: true, pair2: true },
-  'moca-delayed-recall': { recalled: ['פנס', 'חסידה', 'ורד', 'ירח', 'אמת'] },
+  'moca-delayed-recall': { recalled: ['פנים', 'קטיפה', 'כנסייה', 'חרצית', 'אדום'] },
   'moca-naming': ['אריה', 'קרנף', 'גמל'],
   'moca-cube': null,
   'moca-clock': null,

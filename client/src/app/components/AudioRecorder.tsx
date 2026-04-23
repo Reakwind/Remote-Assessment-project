@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Mic, Square, Play, Pause, RotateCcw, AlertTriangle } from "lucide-react";
 import { clsx } from "clsx";
 import { AudioStore } from "../store/audioStore";
+import { useAssessmentStore } from "../store/AssessmentContext";
+import { edgeFn } from "../../lib/supabase";
 
 interface AudioRecorderProps {
   taskId: string;
@@ -9,7 +11,12 @@ interface AudioRecorderProps {
   onRecordingComplete: (audioId: string) => void;
 }
 
-export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: AudioRecorderProps) {
+export function AudioRecorder({
+  taskId,
+  initialAudioId,
+  onRecordingComplete,
+}: AudioRecorderProps) {
+  const { state } = useAssessmentStore();
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioId, setAudioId] = useState<string | null>(initialAudioId || null);
@@ -19,24 +26,27 @@ export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: A
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const displayAudioUrl = audioId?.startsWith("http") ? audioId : audioUrl;
   
-  // Load existing audio URL if we have an ID
+  // Load existing locally-cached audio URL if we have an ID
   useEffect(() => {
-    if (audioId) {
-      AudioStore.getAudio(audioId).then(blob => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          setAudioUrl(url);
-        }
-      }).catch(err => {
-        console.error("Failed to load audio from DB:", err);
-      });
+    let currentUrl: string | null = null;
+    if (audioId && !audioId.startsWith("http")) {
+      AudioStore.getAudio(audioId)
+        .then((blob) => {
+          if (blob) {
+            currentUrl = URL.createObjectURL(blob);
+            setAudioUrl(currentUrl);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load audio from DB:", err);
+        });
     }
     
-    // Cleanup URLs on unmount
     return () => {
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
       }
     };
   }, [audioId, audioUrl]);
@@ -68,16 +78,39 @@ export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: A
       
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
-        const newAudioId = `audio_${taskId}_${Date.now()}`;
         
-        await AudioStore.saveAudio(newAudioId, audioBlob);
-        
-        const url = URL.createObjectURL(audioBlob);
+        let finalIdOrUrl = `audio_${taskId}_${Date.now()}`;
+        try {
+          if (state.id && state.linkToken) {
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+              const base64 = reader.result as string;
+              const res = await fetch(edgeFn('save-audio'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: state.id, linkToken: state.linkToken, taskId, audioBase64: base64 })
+              });
+              if (res.ok) {
+                const data = await res.json();
+                finalIdOrUrl = data.url;
+              }
+              finishStop(finalIdOrUrl, audioBlob);
+            };
+            return;
+          }
+        } catch (e) {
+          console.error("Audio upload failed", e);
+        }
+        finishStop(finalIdOrUrl, audioBlob);
+      };
+
+      const finishStop = async (idOrUrl: string, blob: Blob) => {
+        if (!idOrUrl.startsWith("http")) await AudioStore.saveAudio(idOrUrl, blob);
+        const url = idOrUrl.startsWith("http") ? idOrUrl : URL.createObjectURL(blob);
         setAudioUrl(url);
-        setAudioId(newAudioId);
-        onRecordingComplete(newAudioId);
-        
-        // Stop all tracks to release the microphone
+        setAudioId(idOrUrl);
+        onRecordingComplete(idOrUrl);
         stream.getTracks().forEach(track => track.stop());
       };
       
@@ -115,7 +148,9 @@ export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: A
     }
     setAudioId(null);
     if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
+      if (!audioUrl.startsWith("http")) {
+        URL.revokeObjectURL(audioUrl);
+      }
       setAudioUrl(null);
     }
     setIsPlaying(false);
@@ -124,8 +159,8 @@ export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: A
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-lg mx-auto bg-white p-8 rounded-3xl border border-gray-200 shadow-sm">
       {/* Hidden Audio Element for Playback */}
-      {audioUrl && (
-        <audio ref={audioElementRef} src={audioUrl} className="hidden" />
+      {displayAudioUrl && (
+        <audio ref={audioElementRef} src={displayAudioUrl} className="hidden" />
       )}
       
       {/* Visual State & Controls */}
