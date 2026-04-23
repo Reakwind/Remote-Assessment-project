@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { Play, Pause } from "lucide-react";
 ;
 
@@ -53,7 +53,7 @@ export function PlaybackCanvas({ strokes, width = 600, height = 400, backgroundI
     };
   }, [strokes]);
 
-  const drawStrokes = (currentRelativeTime: number) => {
+  const drawStrokes = useCallback((currentRelativeTime: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -91,7 +91,7 @@ export function PlaybackCanvas({ strokes, width = 600, height = 400, backgroundI
       }
       ctx.stroke();
     });
-  };
+    }, [validStrokes, startTime, width, height]);
 
   // Redraw when progress changes manually or via initial render
   useEffect(() => {
