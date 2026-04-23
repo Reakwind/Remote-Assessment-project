@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ChevronRight, FileDown, Download, CheckSquare, Mic } from "lucide-react";
 import { Link, useParams } from "react-router";
+import { supabase } from "../../lib/supabase";
 import { clsx } from "clsx";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import { useAssessmentStore } from "../store/AssessmentContext";
 import { PlaybackCanvas } from "./PlaybackCanvas";
 import { PlaybackAudio } from "./PlaybackAudio";
@@ -18,6 +20,20 @@ const SUMMARY = [
 
 export function ClinicianDashboardDetail() {
   const { patientId } = useParams();
+
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!patientId) return;
+    supabase.from('session_events')
+      .select('*')
+      .eq('session_id', patientId)
+      .order('created_at', { ascending: false })
+      .then(({ data }: any) => {
+        if (data) setAuditLogs(data);
+      });
+  }, [patientId]);
+
   const { state } = useAssessmentStore();
   const [activeTab, setActiveTab] = useState<'clock' | 'cube' | 'trail' | 'memory' | 'digitSpan' | 'serial7' | 'language' | 'abstraction' | 'delayedRecall' | 'orientation'>('clock');
   const [rubrics, setRubrics] = useState({
@@ -359,6 +375,29 @@ export function ClinicianDashboardDetail() {
           </div>
         </div>
       </div>
+
+      {/* Audit Log Section */}
+      <div className="mt-12 bg-white rounded-xl p-6 border border-gray-200">
+        <h3 className="text-xl font-bold mb-4">יומן אירועים (Audit Log)</h3>
+        <div className="text-sm font-mono text-gray-500 max-h-64 overflow-y-auto space-y-2">
+          {auditLogs.length === 0 ? (
+            <div className="text-gray-400">אין אירועים להצגה.</div>
+          ) : (
+            auditLogs.map((log: any) => (
+              <div key={log.id} className="border-b pb-2 flex items-center justify-between">
+                <div>
+                  <span className="font-bold">{new Date(log.created_at).toLocaleString()}</span> - 
+                  <span className="text-blue-600 ml-2">{log.event_type}</span>
+                </div>
+                <div className="text-xs text-gray-400">
+                  {log.actor_id ? "מטפל" : "מטופל"}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
