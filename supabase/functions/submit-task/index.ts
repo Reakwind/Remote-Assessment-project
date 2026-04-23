@@ -21,9 +21,9 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { sessionId, taskType, rawData } = body;
-  if (!sessionId || !taskType || rawData === undefined) {
-    return json({ error: 'Missing required fields: sessionId, taskType, rawData' }, 400);
+  const { sessionId, linkToken, taskType, rawData } = body;
+  if (!sessionId || !linkToken || !taskType || rawData === undefined) {
+    return json({ error: 'Missing required fields: sessionId, linkToken, taskType, rawData' }, 400);
   }
 
   const supabase = createClient(
@@ -32,18 +32,18 @@ Deno.serve(async (req) => {
   );
 
   // Validate session is in_progress
-  const { linkToken } = body;
-  if (!linkToken) return json({ error: 'Unauthorized: missing token' }, 401);
-
-  // Validate session auth
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
     .select('id, status, link_token')
     .eq('id', sessionId)
     .single();
 
-  if (sessionError || !session) return json({ error: 'Session not found' }, 404);
-  if (session.link_token !== linkToken) return json({ error: 'Unauthorized: invalid token' }, 401);
+  if (sessionError || !session) {
+    return json({ error: 'Session not found' }, 404);
+  }
+  if (session.link_token !== linkToken) {
+    return json({ error: 'Unauthorized' }, 401);
+  }
 
   if (session.status !== 'in_progress') {
     // If it's pending, mark it as in_progress

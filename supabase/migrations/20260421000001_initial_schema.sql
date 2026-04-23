@@ -22,6 +22,7 @@ CREATE TABLE sessions (
   used BOOLEAN DEFAULT FALSE,
   education_years INT DEFAULT 12,
   clinician_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  education_years SMALLINT CHECK (education_years BETWEEN 0 AND 40),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,

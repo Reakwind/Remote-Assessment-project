@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -25,10 +24,10 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { sessionId } = body;
+  const { sessionId, linkToken } = body;
   
-  if (!sessionId) {
-    return json({ error: 'Missing required field: sessionId' }, 400);
+  if (!sessionId || !linkToken) {
+    return json({ error: 'Missing required fields: sessionId, linkToken' }, 400);
   }
 
   const supabase = createClient(
@@ -37,18 +36,18 @@ Deno.serve(async (req) => {
   );
 
   // Validate session is in_progress
-  const { linkToken } = body;
-  if (!linkToken) return json({ error: 'Unauthorized: missing token' }, 401);
-
-  // Validate session auth
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
     .select('id, status, link_token')
     .eq('id', sessionId)
     .single();
 
-  if (sessionError || !session) return json({ error: 'Session not found' }, 404);
-  if (session.link_token !== linkToken) return json({ error: 'Unauthorized: invalid token' }, 401);
+  if (sessionError || !session) {
+    return json({ error: 'Session not found' }, 404);
+  }
+  if (session.link_token !== linkToken) {
+    return json({ error: 'Unauthorized' }, 401);
+  }
 
   if (session.status === 'completed') {
     return json({ error: 'Session already completed' }, 409);
