@@ -24,6 +24,9 @@ jobs:
       - name: Run Unit Tests
         working-directory: ./client
         run: npm run test
+      - name: Enforce Unit Coverage Thresholds
+        working-directory: ./client
+        run: npm run test:coverage
       - name: Install Playwright Browsers
         working-directory: ./client
         run: npx playwright install --with-deps

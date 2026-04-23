@@ -33,6 +33,18 @@ describe('scoreOrientation', () => {
     expect(dateItem?.score).toBe(0);
   });
 
+  it('scores wrong month/year/day/place/city as 0', () => {
+    const items = scoreOrientation(
+      { date: '21', month: 'מאי', year: '2025', day: 'רביעי', place: 'בית', city: 'חיפה' },
+      SESSION_DATE, SESSION_LOCATION
+    );
+    expect(items.find(i => i.taskId === 'orientation.month')?.score).toBe(0);
+    expect(items.find(i => i.taskId === 'orientation.year')?.score).toBe(0);
+    expect(items.find(i => i.taskId === 'orientation.day')?.score).toBe(0);
+    expect(items.find(i => i.taskId === 'orientation.place')?.score).toBe(0);
+    expect(items.find(i => i.taskId === 'orientation.city')?.score).toBe(0);
+  });
+
   it('trims whitespace before comparing', () => {
     const items = scoreOrientation(
       { date: ' 21 ', month: 'אפריל', year: '2026', day: 'שלישי', place: 'מרפאה', city: 'תל אביב' },
@@ -48,6 +60,17 @@ describe('scoreOrientation', () => {
       SESSION_DATE, SESSION_LOCATION
     );
     expect(items.reduce((s, i) => s + i.max, 0)).toBe(6);
+  });
+
+  it('scores wrong month/day/place/city as 0', () => {
+    const items = scoreOrientation(
+      { date: '21', month: 'מאי', year: '2026', day: 'שני', place: 'בית', city: 'חיפה' },
+      SESSION_DATE, SESSION_LOCATION
+    );
+    expect(items.find(i => i.taskId === 'orientation.month')?.score).toBe(0);
+    expect(items.find(i => i.taskId === 'orientation.day')?.score).toBe(0);
+    expect(items.find(i => i.taskId === 'orientation.place')?.score).toBe(0);
+    expect(items.find(i => i.taskId === 'orientation.city')?.score).toBe(0);
   });
 });
 
