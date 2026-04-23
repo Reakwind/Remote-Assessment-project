@@ -8,6 +8,8 @@ export interface Session {
   age_band: '60-64' | '65-69' | '70-74' | '75-79' | '80+';
   education_years: number | null;
   patient_phone?: string | null;
+  sms_sent_at?: string | null;
+  sms_delivery_error?: string | null;
   link_token: string;
   used?: boolean;
   status: SessionStatus;

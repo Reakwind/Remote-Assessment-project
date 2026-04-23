@@ -4,10 +4,18 @@ import { clsx } from "clsx";
 import { useClinicianAuth } from "./auth/useClinicianAuth";
 import { supabase } from "../../lib/supabase";
 
+interface DashboardNavItem {
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  to: string;
+  end?: boolean;
+  badge?: number;
+}
+
 export function ClinicianDashboardLayout() {
   const navigate = useNavigate();
   const { profile } = useClinicianAuth();
-  const navItems = [
+  const navItems: DashboardNavItem[] = [
     { name: "מטופלים", icon: Users, to: "/dashboard", end: true },
     { name: "מבחנים אחרונים", icon: Clock, to: "/dashboard/recent" },
     { name: "ניתוחים", icon: BarChart2, to: "/dashboard/analytics" },

@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendAssessmentCompletedEmail } from '../_shared/notifications.ts';
+import { sendEmail } from '../_shared/notifications.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -90,10 +90,10 @@ Deno.serve(async (req) => {
       }
 
       if (clinicianEmail) {
-        await sendAssessmentCompletedEmail({
-          toEmail: clinicianEmail,
-          sessionId: sessionId,
-          caseId: session.case_id ?? sessionId,
+        await sendEmail({
+          to: clinicianEmail,
+          subject: 'Remote Check: מבחן הושלם',
+          html: `<p>שלום,</p><p>המבחן עבור מזהה תיק <strong>${session.case_id ?? sessionId}</strong> הושלם.</p><p>ניתן להיכנס ללוח הבקרה כדי לסקור ולייצא את התוצאות.</p>`,
         });
       }
     }

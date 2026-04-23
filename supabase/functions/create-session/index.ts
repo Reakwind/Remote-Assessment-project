@@ -74,9 +74,8 @@ Deno.serve(async (req) => {
   const { error: smsLogError } = await supabase
     .from('sessions')
     .update({
-      sms_sent_at: smsResult.sent ? new Date().toISOString() : null,
-      sms_delivery_status: smsResult.sent ? 'sent' : 'failed',
-      sms_last_error: smsResult.error ?? null,
+      sms_sent_at: smsResult.ok ? new Date().toISOString() : null,
+      sms_delivery_error: smsResult.error ?? null,
     })
     .eq('id', session.id);
 
@@ -88,7 +87,7 @@ Deno.serve(async (req) => {
     sessionId: session.id,
     linkToken: session.link_token,
     sessionUrl,
-    smsSent: smsResult.sent,
+    smsSent: smsResult.ok,
     smsError: smsResult.error ?? null,
   });
 });

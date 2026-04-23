@@ -4,18 +4,28 @@ import { useNavigate } from "react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useMemo, useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import type { Session } from "../../types/database";
 
 interface DashboardRow {
   id: string;
   caseId: string;
   patientPhone: string | null;
-  ageBand: string | null;
+  ageBand: "60-64" | "65-69" | "70-74" | "75-79" | "80+" | null;
   tests: number;
   lastActive: string;
   status: "review" | "new" | "completed";
   score: string;
   token: string;
+}
+
+interface SessionWithScores {
+  id: string;
+  case_id: string;
+  patient_phone: string | null;
+  age_band: "60-64" | "65-69" | "70-74" | "75-79" | "80+" | null;
+  status: "pending" | "in_progress" | "completed" | "awaiting_review";
+  created_at: string;
+  link_token: string;
+  scoring_reports: { total_score: number | null; needs_review: boolean }[] | null;
 }
 
 export function ClinicianDashboardList() {
@@ -61,7 +71,7 @@ export function ClinicianDashboardList() {
       return;
     }
 
-    const mapped = data.map((s: Session & { scoring_reports?: { total_score: number | null; needs_review: boolean }[] }) => {
+    const mapped: DashboardRow[] = (data as SessionWithScores[]).map((s) => {
       const score = Array.isArray(s.scoring_reports) && s.scoring_reports[0]?.total_score != null
         ? `${s.scoring_reports[0].total_score}/30`
         : "-";
@@ -69,14 +79,14 @@ export function ClinicianDashboardList() {
       return {
         id: s.id,
         caseId: s.case_id,
-        patientPhone: s.patient_phone,
+        patientPhone: s.patient_phone ?? null,
         ageBand: s.age_band,
         tests: 1,
         lastActive: new Date(s.created_at).toLocaleDateString("he-IL"),
         status: needsReview ? "review" : s.status === "completed" ? "completed" : "new",
         score,
         token: s.link_token,
-      } satisfies DashboardRow;
+      };
     });
 
     setRows(mapped);
