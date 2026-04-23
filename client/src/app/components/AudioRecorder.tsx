@@ -12,8 +12,11 @@ interface AudioRecorderProps {
 }
 
 export function AudioRecorder({
+  taskId,
+  initialAudioId,
+  onRecordingComplete,
+}: AudioRecorderProps) {
   const { state } = useAssessmentStore();
- taskId, initialAudioId, onRecordingComplete }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioId, setAudioId] = useState<string | null>(initialAudioId || null);
@@ -23,23 +26,22 @@ export function AudioRecorder({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const displayAudioUrl = audioId?.startsWith("http") ? audioId : audioUrl;
   
-    // Load existing audio URL if we have an ID
+  // Load existing locally-cached audio URL if we have an ID
   useEffect(() => {
     let currentUrl: string | null = null;
-    if (audioId) {
-      if (audioId.startsWith('http')) {
-        setAudioUrl(audioId);
-      } else {
-        AudioStore.getAudio(audioId).then(blob => {
+    if (audioId && !audioId.startsWith("http")) {
+      AudioStore.getAudio(audioId)
+        .then((blob) => {
           if (blob) {
             currentUrl = URL.createObjectURL(blob);
             setAudioUrl(currentUrl);
           }
-        }).catch(err => {
+        })
+        .catch((err) => {
           console.error("Failed to load audio from DB:", err);
         });
-      }
     }
     
     return () => {
@@ -104,8 +106,8 @@ export function AudioRecorder({
       };
 
       const finishStop = async (idOrUrl: string, blob: Blob) => {
-        if (!idOrUrl.startsWith('http')) await AudioStore.saveAudio(idOrUrl, blob);
-        const url = idOrUrl.startsWith('http') ? idOrUrl : URL.createObjectURL(blob);
+        if (!idOrUrl.startsWith("http")) await AudioStore.saveAudio(idOrUrl, blob);
+        const url = idOrUrl.startsWith("http") ? idOrUrl : URL.createObjectURL(blob);
         setAudioUrl(url);
         setAudioId(idOrUrl);
         onRecordingComplete(idOrUrl);
@@ -146,7 +148,9 @@ export function AudioRecorder({
     }
     setAudioId(null);
     if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
+      if (!audioUrl.startsWith("http")) {
+        URL.revokeObjectURL(audioUrl);
+      }
       setAudioUrl(null);
     }
     setIsPlaying(false);
@@ -155,8 +159,8 @@ export function AudioRecorder({
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-lg mx-auto bg-white p-8 rounded-3xl border border-gray-200 shadow-sm">
       {/* Hidden Audio Element for Playback */}
-      {audioUrl && (
-        <audio ref={audioElementRef} src={audioUrl} className="hidden" />
+      {displayAudioUrl && (
+        <audio ref={audioElementRef} src={displayAudioUrl} className="hidden" />
       )}
       
       {/* Visual State & Controls */}
