@@ -2,19 +2,20 @@
 
 ## Prerequisites
 - Supabase account at supabase.com
-- Supabase CLI: `brew install supabase/tap/supabase`
-- A Resend account for email (resend.com) — free tier sufficient for MVP
+- Supabase CLI installed (see official Supabase CLI install docs for your OS)
+- Node.js/npm installed for local frontend validation
 
 ## 1. Create Supabase project
-1. Go to supabase.com → New project
-2. Choose region: **AWS ap-southeast-1 (Singapore)** for now (il-central-1 not yet available in Supabase)
-   - When Supabase supports il-central-1, migrate for full Israeli data residency
-3. Note your **Project URL** and **anon key** (Settings → API)
-4. Note your **service role key** (Settings → API → service_role — keep secret)
+1. Create a new project in Supabase.
+2. Note:
+   - **Project URL**
+   - **anon key**
+   - **service role key** (keep secret; server-only)
 
 ## 2. Initialize and link CLI
+Run from repository root (`/workspace`):
+
 ```bash
-cd "Remote Assessment project"
 supabase init
 supabase login
 supabase link --project-ref YOUR_PROJECT_REF
@@ -24,51 +25,51 @@ supabase link --project-ref YOUR_PROJECT_REF
 ```bash
 supabase db push
 ```
-This applies all 3 migrations:
-- `20260421000001_schema.sql` — tables
-- `20260421000002_rls.sql` — row level security
-- `20260421000003_storage.sql` — drawings bucket
+
+Current repository migrations:
+- `20260421000001_initial_schema.sql`
+- `20260421000004_stimuli_storage.sql`
+- `20260421000005_audit_logs.sql`
+- `20260421000007_audio_storage.sql`
 
 ## 4. Set environment variables
 
-**Client** — copy and fill:
+Client app:
+
 ```bash
 cp client/.env.example client/.env.local
-# Edit client/.env.local with your Project URL and anon key
 ```
 
-**Edge Functions** — set secrets:
-```bash
-supabase secrets set RESEND_API_KEY=re_your-key-here
-# SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically
-```
+Then set values in `client/.env.local`:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
 ## 5. Deploy Edge Functions
+Deploy the functions used by current `main`:
+
 ```bash
+supabase functions deploy create-session
 supabase functions deploy start-session
-supabase functions deploy submit-results
-supabase functions deploy complete-session
+supabase functions deploy submit-task
 supabase functions deploy save-drawing
+supabase functions deploy save-audio
+supabase functions deploy complete-session
+supabase functions deploy export-csv
+supabase functions deploy export-pdf
 ```
 
-## 6. Enable Email Auth
-1. Supabase Dashboard → Authentication → Providers
-2. Enable **Email** provider
-3. Disable **Confirm email** for MVP (re-enable before production)
-
-## 7. Create first clinician account
-```bash
-# In Supabase SQL editor:
-insert into clinicians (id, clinic_name)
-values ('YOUR_AUTH_USER_UUID', 'שם המרפאה');
-```
-
-## 8. Verify setup
-- Create a session row manually in the DB
-- Visit `http://localhost:5173/?t=YOUR_LINK_TOKEN`
-- Should load assessment (not "invalid link")
+## 6. Verify local flow
+1. Start the client app:
+   ```bash
+   npm run dev --prefix "client" -- --host 0.0.0.0 --port 4173
+   ```
+2. Create a session via your clinician flow (or insert test data in DB).
+3. Open patient link with hash route:
+   - `http://localhost:4173/#/session/YOUR_LINK_TOKEN`
 
 ## Notes
-- `link_token` goes in the URL: `/assess?t={token}`
-- Each token is single-use — once patient loads it, it's consumed
-- Drawings stored in `assessment-drawings` bucket, private, signed URLs only
+- Preferred token URL format: `/#/session/{token}`.
+- The client still supports `?t={token}` in some flows for backward compatibility.
+- Storage buckets currently expected by runtime:
+  - `drawings` (used by `save-drawing`)
+  - `audio` (used by `save-audio`)

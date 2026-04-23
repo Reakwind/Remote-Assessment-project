@@ -65,7 +65,9 @@ npm --prefix "client" exec playwright test
 For full backend setup, follow:
 
 - `docs/SUPABASE_SETUP.md`
-- `Skeleton Front End-2/BACKEND_README.md` (implementation-oriented guide)
+- `supabase/` (current Edge Functions and migrations)
+
+Avoid using `Skeleton Front End-2/BACKEND_README.md` as the source of truth for current backend setup; it is retained as historical handoff context.
 
 Common first step for frontend integration:
 
