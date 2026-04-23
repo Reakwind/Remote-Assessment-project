@@ -1,22 +1,52 @@
 # AGENTS.md
 
+## Purpose
+
+Operating guide for coding agents working in this repository.
+
+## Repository map
+
+- `client/`: main React + TypeScript app (primary CI target)
+- `Skeleton Front End-2/`: secondary/reference frontend
+- `supabase/`: database migrations and Edge Functions
+- `docs/`: setup and planning docs
+
 ## Cursor Cloud specific instructions
 
 ### Dependency setup (run from `/workspace`)
 
-Use these commands to install dependencies for both frontend apps:
+Install dependencies for both frontend apps:
 
 - `npm install --prefix "client" --legacy-peer-deps`
 - `npm install --prefix "Skeleton Front End-2"`
 
 ### Preferred development commands
 
-Start each app on a fixed port so parallel agent sessions stay consistent:
+Start each app on fixed ports so parallel agent sessions remain consistent:
 
 - `client` on port `4173`:
   - `npm run dev --prefix "client" -- --host 0.0.0.0 --port 4173`
 - `Skeleton Front End-2` on port `4174`:
   - `npm run dev --prefix "Skeleton Front End-2" -- --host 0.0.0.0 --port 4174`
+
+### Verification commands
+
+Use the smallest high-signal checks for the files you changed:
+
+- For `client/` code changes:
+  - `npm run lint --prefix "client"`
+  - `npm run test --prefix "client"`
+  - `npm run build --prefix "client"` (when build/runtime behavior is affected)
+- For `Skeleton Front End-2/` code changes:
+  - `npm run build --prefix "Skeleton Front End-2"`
+- For docs-only changes:
+  - no frontend test run required
+
+### Editing guardrails
+
+- Quote paths that contain spaces, such as `"Skeleton Front End-2"`.
+- Prefer focused, minimal diffs; avoid unrelated refactors.
+- Do not modify generated lockfiles unless dependency changes require it.
 
 ### External service write guardrail (required)
 
