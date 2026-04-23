@@ -5,8 +5,11 @@ export interface Session {
   id: string;
   clinician_id: string;
   case_id: string;
+  patient_id?: string | null;
   age_band: '60-64' | '65-69' | '70-74' | '75-79' | '80+';
   education_years: number | null;
+  access_code?: string | null;
+  assessment_type?: string;
   patient_phone?: string | null;
   sms_sent_at?: string | null;
   sms_delivery_error?: string | null;

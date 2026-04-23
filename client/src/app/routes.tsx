@@ -19,6 +19,7 @@ import { ClinicianDashboardLayout } from "./components/ClinicianDashboardLayout"
 import { LandingHub } from "./components/LandingHub";
 import { PatientWelcome } from "./components/PatientWelcome";
 import { SessionValidation } from "./components/SessionValidation";
+import { SessionAccessCode } from "./components/SessionAccessCode";
 import { ClinicianAuthPage } from "./components/auth/ClinicianAuthPage";
 import { ClinicianProtectedRoute } from "./components/auth/ClinicianProtectedRoute";
 
@@ -30,6 +31,10 @@ export const router = createHashRouter([
   {
     path: "/session/:token",
     element: <SessionValidation />,
+  },
+  {
+    path: "/session/:token/code",
+    element: <SessionAccessCode />,
   },
   {
     path: "/patient/welcome",

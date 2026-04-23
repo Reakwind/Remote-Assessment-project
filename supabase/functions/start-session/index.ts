@@ -6,6 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+interface StartSessionBody {
+  token: string;
+  accessCode?: string;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -14,14 +19,14 @@ Deno.serve(async (req) => {
     return json({ error: 'Method not allowed' }, 405);
   }
 
-  let body: { token: string };
+  let body: StartSessionBody;
   try {
     body = await req.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { token } = body;
+  const { token, accessCode } = body;
   if (!token) return json({ error: 'Missing token' }, 400);
 
   const supabase = createClient(
@@ -32,7 +37,7 @@ Deno.serve(async (req) => {
   // Look up session by token
   const { data: session, error } = await supabase
     .from('sessions')
-    .select('id, status, used, age_band, education_years, created_at')
+    .select('id, status, used, age_band, education_years, created_at, access_code')
     .eq('link_token', token)
     .single();
 
@@ -49,11 +54,28 @@ Deno.serve(async (req) => {
     return json({ error: 'Session not available' }, 409);
   }
 
-  // Mark in_progress if pending
+  const normalizedCode = accessCode?.trim();
+  const hasConfiguredCode = Boolean(session.access_code);
+
+  if (!normalizedCode && hasConfiguredCode) {
+    return json({
+      status: 'code_required',
+      sessionId: session.id,
+      ageBand: session.age_band,
+      educationYears: session.education_years,
+      sessionDate: new Date().toISOString(),
+      requiresAccessCode: true,
+    });
+  }
+
+  if (hasConfiguredCode && normalizedCode !== session.access_code) {
+    return json({ error: 'Invalid access code' }, 401);
+  }
+
   if (session.status === 'pending') {
     const { error: updateError } = await supabase
       .from('sessions')
-      .update({ started_at: new Date().toISOString(), status: 'in_progress', used: true })
+      .update({ started_at: new Date().toISOString(), status: 'in_progress' })
       .eq('id', session.id);
 
     if (updateError) {
@@ -62,6 +84,7 @@ Deno.serve(async (req) => {
   }
 
   return json({
+    status:         'ready',
     sessionId:      session.id,
     ageBand:        session.age_band,
     educationYears: session.education_years,
