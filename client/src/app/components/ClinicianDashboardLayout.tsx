@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from "react-router";
-import { Users, Clock, BarChart2, BookOpen } from "lucide-react";
+import { Users } from "lucide-react";
 import { clsx } from "clsx";
 import { useClinicianAuth } from "./auth/useClinicianAuth";
 import { supabase } from "../../lib/supabase";
@@ -17,9 +17,6 @@ export function ClinicianDashboardLayout() {
   const { profile } = useClinicianAuth();
   const navItems: DashboardNavItem[] = [
     { name: "מטופלים", icon: Users, to: "/dashboard", end: true },
-    { name: "מבחנים אחרונים", icon: Clock, to: "/dashboard/recent" },
-    { name: "ניתוחים", icon: BarChart2, to: "/dashboard/analytics" },
-    { name: "ספריית מבחנים", icon: BookOpen, to: "/dashboard/library" },
   ];
 
   const handleSignOut = async () => {

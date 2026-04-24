@@ -16,6 +16,7 @@ import { EndScreen } from "./components/EndScreen";
 import { ClinicianDashboardList } from "./components/ClinicianDashboardList";
 import { ClinicianDashboardDetail } from "./components/ClinicianDashboardDetail";
 import { ClinicianDashboardLayout } from "./components/ClinicianDashboardLayout";
+import { PatientProfilePage } from "./components/PatientProfilePage";
 import { LandingHub } from "./components/LandingHub";
 import { PatientWelcome } from "./components/PatientWelcome";
 import { SessionValidation } from "./components/SessionValidation";
@@ -68,7 +69,8 @@ export const router = createHashRouter([
         element: <ClinicianDashboardLayout />,
         children: [
           { index: true, element: <ClinicianDashboardList /> },
-          { path: ":patientId", element: <ClinicianDashboardDetail /> },
+          { path: "patient/:patientId", element: <PatientProfilePage /> },
+          { path: "session/:sessionId", element: <ClinicianDashboardDetail /> },
         ],
       },
     ],
