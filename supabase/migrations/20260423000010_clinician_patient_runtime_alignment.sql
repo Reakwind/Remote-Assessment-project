@@ -1,0 +1,2 @@
+-- Historical placeholder migration.
+-- This file restores version continuity for remote migration history.
