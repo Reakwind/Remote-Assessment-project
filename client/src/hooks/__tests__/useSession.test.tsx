@@ -11,15 +11,21 @@ vi.mock('../../lib/supabase', () => ({
 import { useSession, type SessionState } from '../useSession';
 
 const mockFetch = vi.fn();
-let latestState: SessionState | null = null;
 
 function SessionHarness({ token, code }: { token?: string; code?: string }) {
-  latestState = useSession(token, code);
-  return null;
+  const state = useSession(token, code);
+  return <output data-testid="session-state">{JSON.stringify(state)}</output>;
 }
 
-async function renderAndFlush(token?: string, code?: string) {
-  latestState = null;
+function readSessionState(container: HTMLDivElement): SessionState {
+  const node = container.querySelector('[data-testid="session-state"]');
+  if (!node?.textContent) {
+    throw new Error('Session state output not rendered');
+  }
+  return JSON.parse(node.textContent) as SessionState;
+}
+
+async function renderAndFlush(token?: string, code?: string): Promise<SessionState> {
   const container = document.createElement('div');
   const root = createRoot(container);
 
@@ -31,7 +37,9 @@ async function renderAndFlush(token?: string, code?: string) {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
+  const snapshot = readSessionState(container);
   root.unmount();
+  return snapshot;
 }
 
 describe('useSession', () => {
@@ -48,17 +56,17 @@ describe('useSession', () => {
   it('marks session invalid when no token override is provided', async () => {
     window.history.replaceState({}, '', '/?t=query-token');
 
-    await renderAndFlush();
-    expect(latestState?.status).toBe('invalid');
+    const state = await renderAndFlush();
+    expect(state.status).toBe('invalid');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('surfaces invalid access code responses', async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 401 } as Response);
 
-    await renderAndFlush('session-token', '1234');
-    expect(latestState?.status).toBe('invalid_code');
-    expect(latestState?.requiresAccessCode).toBe(true);
+    const state = await renderAndFlush('session-token', '1234');
+    expect(state.status).toBe('invalid_code');
+    expect(state.requiresAccessCode).toBe(true);
     expect(mockFetch).toHaveBeenCalledWith(
       'https://edge.test/start-session',
       expect.objectContaining({
@@ -75,11 +83,11 @@ describe('useSession', () => {
       json: async () => ({ status: 'code_required', sessionId: 'sess-code' }),
     } as Response);
 
-    await renderAndFlush('session-token');
-    expect(latestState?.status).toBe('code_required');
-    expect(latestState?.sessionId).toBe('sess-code');
-    expect(latestState?.linkToken).toBe('session-token');
-    expect(latestState?.requiresAccessCode).toBe(true);
+    const state = await renderAndFlush('session-token');
+    expect(state.status).toBe('code_required');
+    expect(state.sessionId).toBe('sess-code');
+    expect(state.linkToken).toBe('session-token');
+    expect(state.requiresAccessCode).toBe(true);
   });
 
   it('maps a successful start-session payload into ready scoring context', async () => {
@@ -94,20 +102,20 @@ describe('useSession', () => {
       }),
     } as Response);
 
-    await renderAndFlush('session-token');
-    expect(latestState?.status).toBe('ready');
-    expect(latestState?.linkToken).toBe('session-token');
-    expect(latestState?.scoringContext?.sessionId).toBe('sess-ready');
-    expect(latestState?.scoringContext?.educationYears).toBe(12);
-    expect(latestState?.scoringContext?.patientAge).toBe(67);
+    const state = await renderAndFlush('session-token');
+    expect(state.status).toBe('ready');
+    expect(state.linkToken).toBe('session-token');
+    expect(state.scoringContext?.sessionId).toBe('sess-ready');
+    expect(state.scoringContext?.educationYears).toBe(12);
+    expect(state.scoringContext?.patientAge).toBe(67);
   });
 
   it('moves to error state when start-session request fails', async () => {
     mockFetch.mockRejectedValue(new Error('network down'));
 
-    await renderAndFlush('session-token');
-    expect(latestState?.status).toBe('error');
-    expect(latestState?.sessionId).toBeNull();
-    expect(latestState?.linkToken).toBeNull();
+    const state = await renderAndFlush('session-token');
+    expect(state.status).toBe('error');
+    expect(state.sessionId).toBeNull();
+    expect(state.linkToken).toBeNull();
   });
 });
