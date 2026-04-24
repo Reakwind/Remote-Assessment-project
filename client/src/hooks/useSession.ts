@@ -37,7 +37,10 @@ export function useSession(tokenOverride?: string, accessCodeOverride?: string):
   });
 
   useEffect(() => {
-    const token = tokenOverride || new URLSearchParams(window.location.search).get('t');
+    // The app uses a hash router; a ?t= query param would be parsed by the
+    // hash segment, not window.location.search. Accept token strictly via
+    // the route param passed in as tokenOverride.
+    const token = tokenOverride;
 
     if (!token) {
       setTimeout(
