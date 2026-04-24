@@ -1,14 +1,38 @@
 // @vitest-environment jsdom
-import { renderHook, waitFor } from '@testing-library/react';
+import React from 'react';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../lib/supabase', () => ({
   edgeFn: (name: string) => `https://edge.test/${name}`,
 }));
 
-import { useSession } from '../useSession';
+import { useSession, type SessionState } from '../useSession';
 
 const mockFetch = vi.fn();
+let latestState: SessionState | null = null;
+
+function SessionHarness({ token, code }: { token?: string; code?: string }) {
+  latestState = useSession(token, code);
+  return null;
+}
+
+async function renderAndFlush(token?: string, code?: string) {
+  latestState = null;
+  const container = document.createElement('div');
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(<SessionHarness token={token} code={code} />);
+  });
+
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  root.unmount();
+}
 
 describe('useSession', () => {
   beforeEach(() => {
@@ -24,19 +48,17 @@ describe('useSession', () => {
   it('marks session invalid when no token override is provided', async () => {
     window.history.replaceState({}, '', '/?t=query-token');
 
-    const { result } = renderHook(() => useSession());
-
-    await waitFor(() => expect(result.current.status).toBe('invalid'));
+    await renderAndFlush();
+    expect(latestState?.status).toBe('invalid');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('surfaces invalid access code responses', async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 401 } as Response);
 
-    const { result } = renderHook(() => useSession('session-token', '1234'));
-
-    await waitFor(() => expect(result.current.status).toBe('invalid_code'));
-    expect(result.current.requiresAccessCode).toBe(true);
+    await renderAndFlush('session-token', '1234');
+    expect(latestState?.status).toBe('invalid_code');
+    expect(latestState?.requiresAccessCode).toBe(true);
     expect(mockFetch).toHaveBeenCalledWith(
       'https://edge.test/start-session',
       expect.objectContaining({
@@ -53,12 +75,11 @@ describe('useSession', () => {
       json: async () => ({ status: 'code_required', sessionId: 'sess-code' }),
     } as Response);
 
-    const { result } = renderHook(() => useSession('session-token'));
-
-    await waitFor(() => expect(result.current.status).toBe('code_required'));
-    expect(result.current.sessionId).toBe('sess-code');
-    expect(result.current.linkToken).toBe('session-token');
-    expect(result.current.requiresAccessCode).toBe(true);
+    await renderAndFlush('session-token');
+    expect(latestState?.status).toBe('code_required');
+    expect(latestState?.sessionId).toBe('sess-code');
+    expect(latestState?.linkToken).toBe('session-token');
+    expect(latestState?.requiresAccessCode).toBe(true);
   });
 
   it('maps a successful start-session payload into ready scoring context', async () => {
@@ -73,22 +94,20 @@ describe('useSession', () => {
       }),
     } as Response);
 
-    const { result } = renderHook(() => useSession('session-token'));
-
-    await waitFor(() => expect(result.current.status).toBe('ready'));
-    expect(result.current.linkToken).toBe('session-token');
-    expect(result.current.scoringContext?.sessionId).toBe('sess-ready');
-    expect(result.current.scoringContext?.educationYears).toBe(12);
-    expect(result.current.scoringContext?.patientAge).toBe(67);
+    await renderAndFlush('session-token');
+    expect(latestState?.status).toBe('ready');
+    expect(latestState?.linkToken).toBe('session-token');
+    expect(latestState?.scoringContext?.sessionId).toBe('sess-ready');
+    expect(latestState?.scoringContext?.educationYears).toBe(12);
+    expect(latestState?.scoringContext?.patientAge).toBe(67);
   });
 
   it('moves to error state when start-session request fails', async () => {
     mockFetch.mockRejectedValue(new Error('network down'));
 
-    const { result } = renderHook(() => useSession('session-token'));
-
-    await waitFor(() => expect(result.current.status).toBe('error'));
-    expect(result.current.sessionId).toBeNull();
-    expect(result.current.linkToken).toBeNull();
+    await renderAndFlush('session-token');
+    expect(latestState?.status).toBe('error');
+    expect(latestState?.sessionId).toBeNull();
+    expect(latestState?.linkToken).toBeNull();
   });
 });
