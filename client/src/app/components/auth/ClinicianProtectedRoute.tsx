@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useClinicianAuth } from "./useClinicianAuth";
 
 export function ClinicianProtectedRoute() {
-  const { signedIn, loading } = useClinicianAuth();
+  const { signedIn, loading, mfaRequired, aal } = useClinicianAuth();
   const location = useLocation();
 
   if (loading) {
@@ -22,6 +22,10 @@ export function ClinicianProtectedRoute() {
 
   if (!signedIn) {
     return <Navigate to="/clinician/auth" replace state={{ from: location.pathname }} />;
+  }
+
+  if (mfaRequired || aal !== "aal2") {
+    return <Navigate to="/clinician/2fa" replace state={{ from: location.pathname }} />;
   }
 
   return <Outlet />;

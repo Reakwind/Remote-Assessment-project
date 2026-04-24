@@ -23,6 +23,7 @@ import { SessionValidation } from "./components/SessionValidation";
 import { SessionAccessCode } from "./components/SessionAccessCode";
 import { ClinicianAuthPage } from "./components/auth/ClinicianAuthPage";
 import { ClinicianProtectedRoute } from "./components/auth/ClinicianProtectedRoute";
+import { ClinicianTwoFactorPage } from "./components/auth/ClinicianTwoFactorPage";
 
 export const router = createHashRouter([
   {
@@ -78,5 +79,9 @@ export const router = createHashRouter([
   {
     path: "/clinician/auth",
     element: <ClinicianAuthPage />,
+  },
+  {
+    path: "/clinician/2fa",
+    element: <ClinicianTwoFactorPage />,
   },
 ]);
