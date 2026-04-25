@@ -83,6 +83,7 @@ export function PatientWelcome() {
 
             <div className="mt-10">
               <button
+                data-testid="patient-start"
                 onClick={() => navigate("/patient/trail-making")}
                 className="w-full h-20 bg-black text-white text-2xl font-bold rounded-2xl hover:bg-gray-800 focus:ring-4 focus:ring-black/20 transition-all flex items-center justify-center gap-4"
               >

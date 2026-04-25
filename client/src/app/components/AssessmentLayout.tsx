@@ -1,12 +1,13 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect } from "react";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
+import { hasCapturedTaskData, skippedTaskPayload, TASK_NAME_BY_PATIENT_PATH } from "../../lib/taskMapping";
 
 export function AssessmentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setLastPath } = useAssessmentStore();
+  const { setLastPath, state, updateTaskData } = useAssessmentStore();
 
   useEffect(() => {
     // Keep track of the last path the user was on
@@ -36,6 +37,7 @@ export function AssessmentLayout() {
 
   const currentStep = getStepNumber();
   const totalSteps = 14;
+  const mocaVersion = state.scoringContext?.mocaVersion ?? '8.3';
 
   const getNextRoute = () => {
     switch (currentStep) {
@@ -51,9 +53,16 @@ export function AssessmentLayout() {
       case 11: return '/patient/delayed-recall';
       case 12: return '/patient/orientation';
       case 13: return '/patient/end';
-      case 14: return '/dashboard';
-      default: return '/dashboard';
+      case 14: return '/';
+      default: return '/';
     }
+  };
+
+  const persistSkippedTaskIfNeeded = () => {
+    const taskName = TASK_NAME_BY_PATIENT_PATH[location.pathname];
+    if (!taskName) return;
+    if (hasCapturedTaskData(taskName, state.tasks[taskName])) return;
+    updateTaskData(taskName, skippedTaskPayload(taskName));
   };
 
   const getPrevRoute = () => {
@@ -92,7 +101,7 @@ export function AssessmentLayout() {
 
         <div className="text-center">
           <h1 className="font-bold text-xl">MoCA - עברית</h1>
-          <div className="text-sm text-gray-500">גרסה 8.1</div>
+          <div className="text-sm text-gray-500">גרסה {mocaVersion}</div>
         </div>
 
         <div className="font-mono text-lg font-medium tabular-nums" style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -116,6 +125,7 @@ export function AssessmentLayout() {
       {/* Footer */}
       <footer className="sticky bottom-0 bg-white border-t border-gray-200 px-10 py-5 flex items-center justify-between">
         <button
+          data-testid="patient-back"
           onClick={() => navigate(getPrevRoute())}
           className="flex items-center gap-2 h-[80px] px-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-black font-semibold text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
         >
@@ -124,17 +134,18 @@ export function AssessmentLayout() {
         </button>
 
           <button 
+          data-testid="patient-next"
           onClick={() => {
-            // Optional: you could add validation here based on state.tasks
             if (currentStep === 14) {
-              navigate('/dashboard');
+              navigate('/');
             } else {
+              persistSkippedTaskIfNeeded();
               navigate(getNextRoute());
             }
           }}
           className="flex items-center gap-2 h-[80px] px-10 rounded-lg bg-black hover:bg-gray-900 text-white font-semibold text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
         >
-          <span>{currentStep === 14 ? 'סיום משימה' : 'המשך'}</span>
+          <span>{currentStep === 14 ? 'חזרה לדף הבית' : 'המשך'}</span>
           <ArrowLeft className="w-6 h-6" />
         </button>
       </footer>

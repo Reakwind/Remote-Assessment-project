@@ -1,21 +1,17 @@
-import { useState } from "react";
 import { ListenButton } from "./ListenButton";
 import { BaseCanvas } from "./BaseCanvas";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 
 export function CubeTask() {
   const { state, updateTaskData } = useAssessmentStore();
   
   const savedData = state.tasks.cube || { strokes: [] };
-  const [_, setHasDrawn] = useState(savedData.strokes.length > 0);
-
-  const handleDrawChange = (strokes: any[]) => {
-    setHasDrawn(strokes.length > 0);
-    updateTaskData('cube', { strokes });
+  const handleDrawChange = (nextStrokes: any[]) => {
+    updateTaskData('cube', { strokes: nextStrokes });
   };
 
-  const handleSave = (dataUrl: string) => {
-    updateTaskData('cube', { strokes: savedData.strokes }, dataUrl);
+  const handleSave = (dataUrl: string, savedStrokes: any[][]) => {
+    updateTaskData('cube', { strokes: savedStrokes }, dataUrl);
   };
 
   return (

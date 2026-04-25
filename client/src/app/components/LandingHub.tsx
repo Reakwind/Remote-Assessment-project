@@ -1,17 +1,22 @@
 import { Link, useNavigate } from "react-router";
 import { User, Lock, ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useEffect, useState } from "react";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 
 export function LandingHub() {
   const navigate = useNavigate();
   const [token, setToken] = useState("");
-  const { hasInProgressAssessment, state } = useAssessmentStore();
+  const { clearAssessment, hasInProgressAssessment, state } = useAssessmentStore();
+
+  useEffect(() => {
+    if (state.isComplete) clearAssessment();
+  }, [clearAssessment, state.isComplete]);
 
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (token.trim()) {
-      navigate(`/session/${token.trim()}`);
+    const normalizedToken = extractSessionToken(token);
+    if (normalizedToken) {
+      navigate(`/session/${normalizedToken}`);
     }
   };
 
@@ -55,7 +60,7 @@ export function LandingHub() {
                 type="text"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder="הזן קוד מבחן..."
+                placeholder="הזן קוד מבחן או הדבק קישור..."
                 className="w-full h-20 text-center text-3xl font-bold border-2 border-gray-300 rounded-2xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none transition-all placeholder:text-gray-400 placeholder:font-normal"
                 autoFocus
               />
@@ -96,4 +101,17 @@ export function LandingHub() {
       </div>
     </div>
   );
+}
+
+function extractSessionToken(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  const hashMatch = trimmed.match(/#\/session\/([^/?#]+)/);
+  if (hashMatch?.[1]) return decodeURIComponent(hashMatch[1]);
+
+  const pathMatch = trimmed.match(/\/session\/([^/?#]+)/);
+  if (pathMatch?.[1]) return decodeURIComponent(pathMatch[1]);
+
+  return trimmed;
 }

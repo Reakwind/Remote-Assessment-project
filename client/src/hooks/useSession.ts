@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { edgeFn } from '../lib/supabase';
+import { edgeAnonHeaders, edgeFn } from '../lib/supabase';
 import type { ScoringContext } from '../types/scoring';
+import { getResumeStateForToken } from '../app/store/assessmentPersistence';
 
 export type SessionStatus = 'loading' | 'ready' | 'already_used' | 'invalid' | 'error';
 
@@ -12,11 +13,9 @@ export interface SessionState {
 }
 
 const AGE_BAND_MAP: Record<string, number> = {
-  '60-64': 62,
-  '65-69': 67,
-  '70-74': 72,
-  '75-79': 77,
-  '80+':   85,
+  '60-69': 65,
+  '70-79': 75,
+  '80+': 85,
 };
 
 export function useSession(tokenOverride?: string): SessionState {
@@ -35,9 +34,20 @@ export function useSession(tokenOverride?: string): SessionState {
       return;
     }
 
+    const resumeState = getResumeStateForToken(token);
+    if (resumeState) {
+      setState({
+        status: 'ready',
+        sessionId: resumeState.id,
+        linkToken: token,
+        scoringContext: resumeState.scoringContext,
+      });
+      return;
+    }
+
     fetch(edgeFn('start-session'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: edgeAnonHeaders,
       body: JSON.stringify({ token }),
     })
       .then(async (res) => {
@@ -58,16 +68,17 @@ export function useSession(tokenOverride?: string): SessionState {
           scoringContext: {
             sessionId:       data.sessionId,
             sessionDate:     new Date(data.sessionDate),
+            mocaVersion:     data.mocaVersion,
             educationYears:  data.educationYears || 12,
             patientAge:      AGE_BAND_MAP[data.ageBand] ?? 70,
-            sessionLocation: { place: 'Home', city: 'Israel' },
+            sessionLocation: { place: data.locationPlace ?? '', city: data.locationCity ?? '' },
           },
         });
       })
       .catch(() => {
         setState({ status: 'error', sessionId: null, linkToken: null, scoringContext: null });
       });
-  }, []);
+  }, [tokenOverride]);
 
   return state;
 }

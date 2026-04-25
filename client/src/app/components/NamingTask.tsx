@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { ListenButton } from "./ListenButton";
 import { clsx } from "clsx";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 
 const ANIMALS = [
   { id: "lion", name: "אריה", options: ["נמר", "אריה", "כלב", "חתול"], image: "https://images.unsplash.com/photo-1776144743260-8c22afcde559?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaW9uJTIwbGluZSUyMGFydCUyMGlsbHVzdHJhdGlvbnxlbnwxfHx8fDE3NzY3NTM4NTR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },

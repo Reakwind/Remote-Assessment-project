@@ -1,23 +1,17 @@
-import { useState } from "react";
 import { ListenButton } from "./ListenButton";
 import { BaseCanvas } from "./BaseCanvas";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 
 export function ClockTask() {
   const { state, updateTaskData } = useAssessmentStore();
   
   const savedData = state.tasks.clock || { strokes: [] };
-  const [_, setHasDrawn] = useState(savedData.strokes.length > 0);
-
-  const handleDrawChange = (strokes: any[]) => {
-    setHasDrawn(strokes.length > 0);
-    // Sync strokes data immediately
-    updateTaskData('clock', { strokes });
+  const handleDrawChange = (nextStrokes: any[]) => {
+    updateTaskData('clock', { strokes: nextStrokes });
   };
 
-  const handleSave = (dataUrl: string) => {
-    // Sync base64 image
-    updateTaskData('clock', { strokes: savedData.strokes }, dataUrl);
+  const handleSave = (dataUrl: string, savedStrokes: any[][]) => {
+    updateTaskData('clock', { strokes: savedStrokes }, dataUrl);
   };
 
   return (

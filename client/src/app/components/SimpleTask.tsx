@@ -1,6 +1,6 @@
 import { ListenButton } from "./ListenButton";
 import { AudioRecorder } from "./AudioRecorder";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 
 export function SimpleTask({
   stepNumber,
@@ -23,8 +23,8 @@ export function SimpleTask({
   // Safe cast since tasks is an indexable object in the store
   const savedData = (state.tasks as any)[taskId] || { audioId: null };
 
-  const handleRecordingComplete = (audioId: string) => {
-    updateTaskData(taskId as any, { audioId });
+  const handleRecordingComplete = (audioId: string, audioBlob: Blob) => {
+    updateTaskData(taskId as any, { audioId }, undefined, audioBlob);
   };
 
   return (

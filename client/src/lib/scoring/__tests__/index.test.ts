@@ -43,7 +43,7 @@ describe('scoreSession', () => {
 
   it('totalRaw excludes drawing scores (they are 0 pending)', () => {
     const report = scoreSession(FULL_RESULTS, CTX);
-    // auto-scored max = 6+2+1+3+3+2+5+3 = 25, all correct
+    // rule-scored max = 6+2+1+3+3+2+5+3 = 25, all correct
     expect(report.totalRaw).toBe(25);
   });
 
@@ -81,14 +81,29 @@ describe('scoreSession', () => {
     expect(allTaskIds.some(id => id.includes('memory-learning'))).toBe(false);
   });
 
-  it('auto-score failure falls back to needsReview', () => {
+  it('rule scoring failure falls back to needsReview', () => {
     const badResults = { ...FULL_RESULTS, 'moca-serial-7s': 'not-an-array' };
     const report = scoreSession(badResults, CTX);
     const serial = report.domains
       .flatMap(d => d.items)
       .find(i => i.taskId === 'moca-serial-7s');
     expect(serial?.needsReview).toBe(true);
-    expect(serial?.reviewReason).toBe('auto_score_failed');
+    expect(serial?.reviewReason).toBe('rule_score_unavailable');
+  });
+
+  it('skipped task payloads require clinician review', () => {
+    const skippedResults = {
+      ...FULL_RESULTS,
+      'moca-naming': { skipped: true, requiresReview: true, reason: 'patient_advanced_without_response' },
+    };
+    const report = scoreSession(skippedResults, CTX);
+    const naming = report.domains
+      .flatMap(d => d.items)
+      .find(i => i.taskId === 'moca-naming');
+
+    expect(naming?.needsReview).toBe(true);
+    expect(naming?.reviewReason).toBe('rule_score_unavailable');
+    expect(naming?.rawData).toEqual(skippedResults['moca-naming']);
   });
 
   it('sets completedAt as ISO string', () => {

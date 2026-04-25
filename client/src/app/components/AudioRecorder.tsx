@@ -6,7 +6,7 @@ import { AudioStore } from "../store/audioStore";
 interface AudioRecorderProps {
   taskId: string;
   initialAudioId?: string;
-  onRecordingComplete: (audioId: string) => void;
+  onRecordingComplete: (audioId: string, audioBlob: Blob) => void;
 }
 
 export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: AudioRecorderProps) {
@@ -22,10 +22,13 @@ export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: A
   
   // Load existing audio URL if we have an ID
   useEffect(() => {
+    let createdUrl: string | null = null;
+
     if (audioId) {
       AudioStore.getAudio(audioId).then(blob => {
         if (blob) {
           const url = URL.createObjectURL(blob);
+          createdUrl = url;
           setAudioUrl(url);
         }
       }).catch(err => {
@@ -35,8 +38,8 @@ export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: A
     
     // Cleanup URLs on unmount
     return () => {
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
+      if (createdUrl) {
+        URL.revokeObjectURL(createdUrl);
       }
     };
   }, [audioId]);
@@ -75,7 +78,7 @@ export function AudioRecorder({ taskId, initialAudioId, onRecordingComplete }: A
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
         setAudioId(newAudioId);
-        onRecordingComplete(newAudioId);
+        onRecordingComplete(newAudioId, audioBlob);
         
         // Stop all tracks to release the microphone
         stream.getTracks().forEach(track => track.stop());

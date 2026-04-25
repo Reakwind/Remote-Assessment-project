@@ -1,74 +1,28 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { ScoringContext } from '../../types/scoring';
-import { edgeFn } from '../../lib/supabase';
+import { edgeAnonHeaders, edgeFn } from '../../lib/supabase';
+import { DRAWING_TASKS, TASK_TYPE_BY_LOCAL, toCanonicalTaskPayload, type LocalTaskName } from '../../lib/taskMapping';
+import {
+  DEFAULT_ASSESSMENT_STATE,
+  readAssessmentState,
+  writeAssessmentState,
+  type AssessmentState,
+} from './assessmentPersistence';
+import { AssessmentContext } from './AssessmentContextValue';
 
-// Define the shape of our assessment data
-export interface AssessmentState {
-  id: string | null;
-  linkToken: string | null;
-  scoringContext: ScoringContext | null;
-  lastPath: string;
-  isComplete: boolean;
-  tasks: {
-    trailMaking?: any;
-    cube?: any;
-    clock?: any;
-    naming?: any;
-    memory?: any;
-    digitSpan?: any;
-    vigilance?: any;
-    serial7?: any;
-    language?: any;
-    abstraction?: any;
-    delayedRecall?: any;
-    orientation?: any;
-  };
-}
-
-const DEFAULT_STATE: AssessmentState = {
-  id: null,
-  linkToken: null,
-  scoringContext: null,
-  lastPath: '/patient/trail-making',
-  isComplete: false,
-  tasks: {},
-};
-
-const STORAGE_KEY = 'moca_assessment_state';
-
-interface AssessmentContextType {
-  state: AssessmentState;
-  startNewAssessment: (sessionId: string, linkToken: string, scoringContext: ScoringContext) => void;
-  resumeAssessment: () => void;
-  updateTaskData: (taskName: keyof AssessmentState['tasks'], data: any, imageBase64?: string) => void;
-  setLastPath: (path: string) => void;
-  completeAssessment: () => void;
-  hasInProgressAssessment: boolean;
-}
-
-const AssessmentContext = createContext<AssessmentContextType | null>(null);
+export type { AssessmentState } from './assessmentPersistence';
 
 export function AssessmentProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AssessmentState>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Failed to load assessment state from local storage', e);
-    }
-    return DEFAULT_STATE;
-  });
+  const [state, setState] = useState<AssessmentState>(() => readAssessmentState());
 
   // Keep localStorage perfectly in sync with our React state
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    writeAssessmentState(state);
   }, [state]);
 
   const startNewAssessment = useCallback((sessionId: string, linkToken: string, scoringContext: ScoringContext) => {
     const newState: AssessmentState = {
-      ...DEFAULT_STATE,
+      ...DEFAULT_ASSESSMENT_STATE,
       id: sessionId,
       linkToken,
       scoringContext,
@@ -80,7 +34,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     // Already in state, just a placeholder for potential API fetch in the future
   }, []);
 
-  const updateTaskData = useCallback((taskName: keyof AssessmentState['tasks'], data: any, imageBase64?: string) => {
+  const updateTaskData = useCallback((taskName: LocalTaskName, data: any, imageBase64?: string, audioBlob?: Blob) => {
     setState((prev) => {
       if (prev.tasks[taskName] === data) return prev;
       
@@ -92,39 +46,80 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
         },
       };
 
-      // Sync with backend
       if (prev.id) {
-        const taskType = `moca-${taskName}`;
-        
-        if (imageBase64 && ['trailMaking', 'cube', 'clock'].includes(taskName)) {
-          // Drawing task: save image first
+        const taskType = TASK_TYPE_BY_LOCAL[taskName];
+        const rawData = toCanonicalTaskPayload(taskName, data);
+        const linkToken = prev.linkToken;
+
+        if (!linkToken) {
+          console.error('Cannot sync task data without a patient link token');
+          return newState;
+        }
+
+        if (DRAWING_TASKS.has(taskName) && imageBase64) {
           fetch(edgeFn('save-drawing'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: prev.id, taskId: taskType, imageBase64 }),
+            headers: edgeAnonHeaders,
+            body: JSON.stringify({
+              sessionId: prev.id,
+              linkToken,
+              taskId: taskType,
+              strokesData: data?.strokes ?? [],
+              imageBase64,
+            }),
           })
             .then(res => res.ok ? res.json() : Promise.reject())
-            .then(({ url }) => {
+            .then(({ storagePath }) =>
               fetch(edgeFn('submit-results'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: edgeAnonHeaders,
                 body: JSON.stringify({ 
                   sessionId: prev.id, 
+                  linkToken,
                   taskType, 
-                  rawData: { ...data, drawingUrl: url } 
+                  rawData: { ...data, storagePath } 
                 }),
-              });
-            })
+              })
+            )
             .catch(err => console.error('Failed to save drawing:', err));
+        } else if (audioBlob) {
+          blobToDataUrl(audioBlob)
+            .then(audioBase64 =>
+              fetch(edgeFn('save-audio'), {
+                method: 'POST',
+                headers: edgeAnonHeaders,
+                body: JSON.stringify({
+                  sessionId: prev.id,
+                  linkToken,
+                  taskType,
+                  audioBase64,
+                  contentType: audioBlob.type || 'audio/webm',
+                }),
+              })
+            )
+            .then(res => res.ok ? res.json() : Promise.reject())
+            .then(({ storagePath, contentType }) =>
+              fetch(edgeFn('submit-results'), {
+                method: 'POST',
+                headers: edgeAnonHeaders,
+                body: JSON.stringify({
+                  sessionId: prev.id,
+                  linkToken,
+                  taskType,
+                  rawData: withAudioStorage(rawData, storagePath, contentType),
+                }),
+              })
+            )
+            .catch(err => console.error('Failed to save audio task:', err));
         } else {
-          // Normal task
           fetch(edgeFn('submit-results'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: edgeAnonHeaders,
             body: JSON.stringify({ 
               sessionId: prev.id, 
+              linkToken,
               taskType, 
-              rawData: data 
+              rawData,
             }),
           }).catch(err => console.error('Failed to sync task data:', err));
         }
@@ -146,24 +141,20 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       if (prev.isComplete) return prev;
       
       // Notify backend that assessment is complete
-      if (prev.id) {
-        // In a real app, we'd trigger the full scoring engine here
-        // For now we just call complete-session
+      if (prev.id && prev.linkToken) {
         fetch(edgeFn('complete-session'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            sessionId: prev.id,
-            // Drawing URLs and other data would be passed here in a production app
-            // For MVP we just signal completion
-            scoringReport: { totalRaw: 0, totalAdjusted: 0, totalProvisional: true, pendingReviewCount: 1, domains: {} },
-            drawingUrls: []
-          }),
+          headers: edgeAnonHeaders,
+          body: JSON.stringify({ sessionId: prev.id, linkToken: prev.linkToken }),
         }).catch(err => console.error('Failed to complete session:', err));
       }
 
       return { ...prev, isComplete: true };
     });
+  }, []);
+
+  const clearAssessment = useCallback(() => {
+    setState(DEFAULT_ASSESSMENT_STATE);
   }, []);
 
   const hasInProgressAssessment = state.id !== null && !state.isComplete;
@@ -176,9 +167,10 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       updateTaskData,
       setLastPath,
       completeAssessment,
+      clearAssessment,
       hasInProgressAssessment,
     }),
-    [state, startNewAssessment, resumeAssessment, updateTaskData, setLastPath, completeAssessment, hasInProgressAssessment]
+    [state, startNewAssessment, resumeAssessment, updateTaskData, setLastPath, completeAssessment, clearAssessment, hasInProgressAssessment]
   );
 
   return (
@@ -188,10 +180,18 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
   );
 }
 
-export function useAssessmentStore() {
-  const context = useContext(AssessmentContext);
-  if (!context) {
-    throw new Error('useAssessmentStore must be used within an AssessmentProvider');
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function withAudioStorage(rawData: unknown, storagePath: string, contentType: string): unknown {
+  if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
+    return { ...rawData, audioStoragePath: storagePath, audioContentType: contentType };
   }
-  return context;
+  return { value: rawData, audioStoragePath: storagePath, audioContentType: contentType };
 }

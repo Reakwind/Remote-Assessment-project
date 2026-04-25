@@ -1,363 +1,479 @@
-import { ChevronRight, FileDown, Download, CheckSquare, Mic } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ChevronRight, FileDown, Save } from "lucide-react";
 import { Link, useParams } from "react-router";
-import { clsx } from "clsx";
-import { useState } from "react";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { callClinicianFunction } from "../../lib/api";
+import type { DBScoringReport, DrawingReview, ScoringItemReview, Session, TaskResult } from "../../types/database";
 import { PlaybackCanvas } from "./PlaybackCanvas";
-import { PlaybackAudio } from "./PlaybackAudio";
 
-const SUMMARY = [
-  { label: "סך הכל MoCA", value: "24/30", color: "warn" },
-  { label: "מרחבי-חזותי", value: "3/5", color: "warn" },
-  { label: "שיום", value: "3/3", color: "pass" },
-  { label: "זכירה מושהית", value: "2/5", color: "warn" },
-  { label: "קשב", value: "6/6", color: "pass" },
-  { label: "משך זמן", value: "14:20", color: "neutral" },
-];
+type SessionDetail = Session & {
+  task_results: TaskResult[];
+  scoring_report: DBScoringReport | null;
+  drawings: DrawingReview[];
+  scoring_reviews: ScoringItemReview[];
+};
+
+const DRAWING_LABELS: Record<string, string> = {
+  "moca-visuospatial": "חיבור נקודות",
+  "moca-cube": "קובייה",
+  "moca-clock": "שעון",
+};
+
+const DRAWING_MAX: Record<string, number> = {
+  "moca-visuospatial": 1,
+  "moca-cube": 1,
+  "moca-clock": 3,
+};
 
 export function ClinicianDashboardDetail() {
   const { patientId } = useParams();
-  const { state } = useAssessmentStore();
-  const [activeTab, setActiveTab] = useState<'clock' | 'cube' | 'trail' | 'memory' | 'digitSpan' | 'serial7' | 'language' | 'abstraction' | 'delayedRecall' | 'orientation'>('clock');
-  const [rubrics, setRubrics] = useState({
-    clock: { contour: true, numbers: false, hands: false },
-    cube: { shape: false, lines: false, parallel: false },
-    trail: { correct: false, noLinesCrossed: false },
-    memory: { recall1: false, recall2: false, recall3: false, recall4: false, recall5: false },
-    digitSpan: { forward: false, backward: false },
-    serial7: { first: false, second: false, third: false, fourth: false, fifth: false },
-    language: { sentence1: false, sentence2: false, fluency: false },
-    abstraction: { train: false, watch: false },
-    delayedRecall: { word1: false, word2: false, word3: false, word4: false, word5: false },
-    orientation: { day: false, month: false, year: false, dayOfWeek: false, place: false, city: false }
-  });
+  const [session, setSession] = useState<SessionDetail | null>(null);
+  const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
+  const [scores, setScores] = useState<Record<string, number>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [itemScores, setItemScores] = useState<Record<string, number>>({});
+  const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Extract stroke data from assessment state
-  const clockStrokes = state.tasks.clock?.strokes || [];
-  const cubeStrokes = state.tasks.cube?.strokes || [];
-  const trailStrokes = state.tasks.trailMaking?.strokes || [];
+  const loadSession = useCallback(async () => {
+    if (!patientId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await callClinicianFunction<{ session: SessionDetail }>(`get-session?sessionId=${encodeURIComponent(patientId)}`, {
+        method: "GET",
+        headers: {},
+      });
+      setSession(res.session);
+      const initialScores = Object.fromEntries((res.session.drawings ?? []).map(review => [review.id, review.clinician_score ?? 0]));
+      const initialNotes = Object.fromEntries((res.session.drawings ?? []).map(review => [review.id, review.clinician_notes ?? ""]));
+      const initialItemScores = Object.fromEntries((res.session.scoring_reviews ?? []).map(review => [review.id, review.clinician_score ?? 0]));
+      const initialItemNotes = Object.fromEntries((res.session.scoring_reviews ?? []).map(review => [review.id, review.clinician_notes ?? ""]));
+      setScores(initialScores);
+      setNotes(initialNotes);
+      setItemScores(initialItemScores);
+      setItemNotes(initialItemNotes);
+      setActiveReviewId(res.session.drawings?.[0]?.id ?? null);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load session");
+    } finally {
+      setLoading(false);
+    }
+  }, [patientId]);
 
-  const getDrawingStats = (strokes: any[][]) => {
-    const valid = (strokes || []).filter(s => s && s.length > 0);
-    if (valid.length === 0) return { count: 0, duration: '0s', usedPen: false };
+  useEffect(() => {
+    loadSession();
+  }, [loadSession]);
 
-    const firstPoint = valid[0][0];
-    const lastStroke = valid[valid.length - 1];
-    const lastPoint = lastStroke[lastStroke.length - 1];
-    const durationMs = lastPoint.time - firstPoint.time;
-    const duration = durationMs > 0 ? (durationMs / 1000).toFixed(1) + 's' : '0s';
+  const activeReview = useMemo(
+    () => session?.drawings.find(review => review.id === activeReviewId) ?? session?.drawings[0] ?? null,
+    [session, activeReviewId]
+  );
 
-    const usedPen = valid.some(s => s.some(pt => pt.pointerType === 'pen'));
+  const report = session?.scoring_report ?? null;
+  const taskCount = session?.task_results?.length ?? 0;
+  const scoringReviewCount = session?.scoring_reviews?.length ?? 0;
 
-    return { count: valid.length, duration, usedPen };
-  };
+  const handleSaveReview = async (review: DrawingReview) => {
+    setSaving(review.id);
+    setError(null);
+    try {
+      const res = await callClinicianFunction<{ scoringReport: any }>("update-drawing-review", {
+        method: "POST",
+        body: JSON.stringify({
+          reviewId: review.id,
+          clinicianScore: Number(scores[review.id] ?? 0),
+          clinicianNotes: notes[review.id] ?? "",
+        }),
+      });
 
-  const currentStrokes = activeTab === 'clock' ? clockStrokes : activeTab === 'cube' ? cubeStrokes : trailStrokes;
-  const currentStats = getDrawingStats(currentStrokes);
-
-  const toggleRubric = (key: string) => {
-    setRubrics(prev => ({
-      ...prev,
-      [activeTab]: {
-        ...prev[activeTab],
-        [key]: !prev[activeTab][key as keyof typeof prev[typeof activeTab]]
-      }
-    }));
-  };
-
-  const getRubricData = () => {
-    if (activeTab === 'clock') {
-      return {
-        max: 3,
-        score: (rubrics.clock.contour ? 1 : 0) + (rubrics.clock.numbers ? 1 : 0) + (rubrics.clock.hands ? 1 : 0),
-        items: [
-          { id: "contour", label: "מתאר", desc: "המעגל סגור ופרופורציונלי" },
-          { id: "numbers", label: "מספרים", desc: "כל המספרים נמצאים במיקום הנכון" },
-          { id: "hands", label: "מחוגים", desc: "השעה 11:10 בדיוק" },
-        ]
-      };
-    } else if (activeTab === 'cube') {
-      return {
-        max: 1,
-        score: (rubrics.cube.shape && rubrics.cube.lines && rubrics.cube.parallel) ? 1 : 0,
-        items: [
-          { id: "shape", label: "תלת מימד", desc: "הצורה היא תלת מימדית" },
-          { id: "lines", label: "כל הקווים מצוירים", desc: "כל הקווים הפנימיים קיימים" },
-          { id: "parallel", label: "קווים מקבילים", desc: "הקווים מקבילים פחות או יותר" },
-        ]
-      };
-    } else if (activeTab === 'trail') {
-      return {
-        max: 1,
-        score: (rubrics.trail.correct && rubrics.trail.noLinesCrossed) ? 1 : 0,
-        items: [
-          { id: "correct", label: "סדר נכון", desc: "מתח קו מ-1 ל-א, ל-2 וכו' עד ה" },
-          { id: "noLinesCrossed", label: "קווים לא נחתכים", desc: "המסלול לא חותך את עצמו" },
-        ]
-      };
-    } else if (activeTab === 'memory') {
-      return {
-        max: 0,
-        score: 0,
-        items: [
-          { id: "recall1", label: "פנים", desc: "הנבדק חזר על המילה" },
-          { id: "recall2", label: "קטיפה", desc: "הנבדק חזר על המילה" },
-          { id: "recall3", label: "כנסייה", desc: "הנבדק חזר על המילה" },
-          { id: "recall4", label: "חרצית", desc: "הנבדק חזר על המילה" },
-          { id: "recall5", label: "אדום", desc: "הנבדק חזר על המילה" },
-        ]
-      };
-    } else if (activeTab === 'digitSpan') {
-      return {
-        max: 2,
-        score: (rubrics.digitSpan.forward ? 1 : 0) + (rubrics.digitSpan.backward ? 1 : 0),
-        items: [
-          { id: "forward", label: "2-1-8-5-4 קדימה", desc: "חזר על הסדרה בסדר מדויק" },
-          { id: "backward", label: "7-4-2 אחורה", desc: "חזר על הסדרה בסדר הפוך מדויק" },
-        ]
-      };
-    } else if (activeTab === 'serial7') {
-      return {
-        max: 3,
-        score: Object.values(rubrics.serial7).filter(v => v).length,
-        items: [
-          { id: "first", label: "93", desc: "תשובה ראשונה נכונה" },
-          { id: "second", label: "86", desc: "תשובה שנייה נכונה" },
-          { id: "third", label: "79", desc: "תשובה שלישית נכונה" },
-          { id: "fourth", label: "72", desc: "תשובה רביעית נכונה" },
-          { id: "fifth", label: "65", desc: "תשובה חמישית נכונה" },
-        ]
-      };
-    } else if (activeTab === 'language') {
-      return {
-        max: 3,
-        score: (rubrics.language.sentence1 ? 1 : 0) + (rubrics.language.sentence2 ? 1 : 0) + (rubrics.language.fluency ? 1 : 0),
-        items: [
-          { id: "sentence1", label: "משפט 1", desc: "חזר על המשפט בדיוק רב" },
-          { id: "sentence2", label: "משפט 2", desc: "חזר על המשפט בדיוק רב" },
-          { id: "fluency", label: "שטף מילולי", desc: "מנה מעל 11 מילים" },
-        ]
-      };
-    } else if (activeTab === 'abstraction') {
-      return {
-        max: 2,
-        score: (rubrics.abstraction.train ? 1 : 0) + (rubrics.abstraction.watch ? 1 : 0),
-        items: [
-          { id: "train", label: "רכבת/אופניים", desc: "אמצעי תחבורה / כלי רכב" },
-          { id: "watch", label: "שעון/סרגל", desc: "כלי מדידה" },
-        ]
-      };
-    } else if (activeTab === 'delayedRecall') {
-      return {
-        max: 5,
-        score: Object.values(rubrics.delayedRecall).filter(v => v).length,
-        items: [
-          { id: "word1", label: "פנים", desc: "נזכר ספונטנית" },
-          { id: "word2", label: "קטיפה", desc: "נזכר ספונטנית" },
-          { id: "word3", label: "כנסייה", desc: "נזכר ספונטנית" },
-          { id: "word4", label: "חרצית", desc: "נזכר ספונטנית" },
-          { id: "word5", label: "אדום", desc: "נזכר ספונטנית" },
-        ]
-      };
-    } else {
-      return {
-        max: 6,
-        score: Object.values(rubrics.orientation).filter(v => v).length,
-        items: [
-          { id: "day", label: "יום בחודש", desc: "תאריך מדויק" },
-          { id: "month", label: "חודש", desc: "חודש מדויק" },
-          { id: "year", label: "שנה", desc: "שנה מדויקה" },
-          { id: "dayOfWeek", label: "יום בשבוע", desc: "היום המדויק" },
-          { id: "place", label: "מקום/מוסד", desc: "שם המוסד/מקום" },
-          { id: "city", label: "עיר", desc: "העיר הנכונה" },
-        ]
-      };
+      setSession(prev => prev ? {
+        ...prev,
+        scoring_report: res.scoringReport ? {
+          ...toDbScoringReport(res.scoringReport, prev),
+        } : prev.scoring_report,
+        status: res.scoringReport?.totalProvisional === false ? "completed" : "awaiting_review",
+        drawings: prev.drawings.map(item =>
+          item.id === review.id
+            ? { ...item, clinician_score: Number(scores[review.id] ?? 0), clinician_notes: notes[review.id] ?? "", reviewed_at: new Date().toISOString() }
+            : item
+        ),
+      } : prev);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save review");
+    } finally {
+      setSaving(null);
     }
   };
 
-  const rubricData = getRubricData();
+  const handleSaveScoringReview = async (review: ScoringItemReview) => {
+    setSaving(review.id);
+    setError(null);
+    try {
+      const res = await callClinicianFunction<{ scoringReport: any }>("update-scoring-review", {
+        method: "POST",
+        body: JSON.stringify({
+          reviewId: review.id,
+          clinicianScore: Number(itemScores[review.id] ?? 0),
+          clinicianNotes: itemNotes[review.id] ?? "",
+        }),
+      });
 
-  const renderTaskContent = () => {
-    if (['clock', 'cube', 'trail'].includes(activeTab)) {
-      return (
-        <div className="flex flex-col items-center">
-          <PlaybackCanvas strokes={currentStrokes} width={450} height={400} />
-          
-          <div className="mt-8 w-full border-t border-gray-100 pt-6">
-            <h4 className="font-bold text-gray-500 text-sm mb-3">סטטיסטיקת ציור</h4>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-gray-50 p-4 rounded-xl text-center">
-                <div className="text-xs font-bold text-gray-500 mb-1">מספר משיכות</div>
-                <div className="text-2xl font-extrabold tabular-nums text-black">{currentStats.count}</div>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-xl text-center">
-                <div className="text-xs font-bold text-gray-500 mb-1">משך זמן ברוטו</div>
-                <div className="text-2xl font-extrabold tabular-nums text-black">{currentStats.duration}</div>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-xl text-center">
-                <div className="text-xs font-bold text-gray-500 mb-1">מגע לעומת עט</div>
-                <div className="text-2xl font-extrabold tabular-nums text-blue-600">
-                  {currentStats.usedPen ? 'עט חכם' : 'אצבע/עכבר'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    } else {
-      const audioId = (state.tasks as any)[activeTab]?.audioId || null;
-      return (
-        <div className="flex flex-col items-center w-full min-h-[400px] justify-center">
-          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-8 shadow-sm">
-            <Mic className="w-10 h-10" />
-          </div>
-          <h3 className="text-2xl font-extrabold text-black mb-10">האזן להקלטת המטופל</h3>
-          
-          <PlaybackAudio audioId={audioId} />
-        </div>
-      );
+      setSession(prev => prev ? {
+        ...prev,
+        scoring_report: res.scoringReport ? toDbScoringReport(res.scoringReport, prev) : prev.scoring_report,
+        status: res.scoringReport?.totalProvisional === false ? "completed" : "awaiting_review",
+        scoring_reviews: prev.scoring_reviews.map(item =>
+          item.id === review.id
+            ? { ...item, clinician_score: Number(itemScores[review.id] ?? 0), clinician_notes: itemNotes[review.id] ?? "", reviewed_at: new Date().toISOString() }
+            : item
+        ),
+      } : prev);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save scoring review");
+    } finally {
+      setSaving(null);
     }
   };
+
+  const handlePdf = () => {
+    window.print();
+  };
+
+  if (loading) {
+    return <div className="p-10 text-center text-gray-500 font-bold">טוען תיק...</div>;
+  }
+
+  if (!session) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <Link to="/dashboard" className="text-gray-500 font-bold hover:text-black flex items-center gap-2 w-fit">
+          <ChevronRight className="w-5 h-5" />
+          <span>חזרה לרשימה</span>
+        </Link>
+        <div className="mt-8 rounded-xl border border-red-200 bg-red-50 text-red-800 px-5 py-4 font-medium">
+          {error === "Session not found" ? "התיק לא נמצא או שאינו משויך לחשבון הקלינאי המחובר." : error ?? "התיק לא נמצא"}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
       <div className="mb-6">
         <Link to="/dashboard" className="text-gray-500 font-bold hover:text-black flex items-center gap-2 transition-colors w-fit">
           <ChevronRight className="w-5 h-5" />
-          <span>מטופלים / ישראל ישראלי</span>
+          <span>מטופלים / {session.case_id}</span>
         </Link>
       </div>
 
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 text-red-800 px-5 py-4 font-medium">
+          {error}
+        </div>
+      )}
+
       <div className="flex items-start justify-between mb-8 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
-        <div className="flex gap-6 items-center">
-          <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-3xl">
-            י
-          </div>
-          <div>
-            <h1 className="text-3xl font-extrabold text-black mb-2">ישראל ישראלי</h1>
-            <div className="flex gap-4 text-gray-500 font-medium text-lg items-center">
-              <span className="font-mono bg-gray-100 px-2 py-0.5 rounded-md">{patientId || "P-1049"}</span>
-              <span>גיל 72</span>
-              <span>מבחן שני</span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-800">
-                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                בבדיקה
-              </span>
-            </div>
+        <div>
+          <h1 className="text-3xl font-extrabold text-black mb-3">{session.case_id}</h1>
+          <div className="flex flex-wrap gap-4 text-gray-500 font-medium text-lg items-center">
+            <span>גיל {session.age_band}</span>
+            <span>MoCA {session.moca_version}</span>
+            <span>{session.education_years} שנות לימוד</span>
+            <span>{session.location_place}, {session.location_city}</span>
+            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded-md">{session.id}</span>
           </div>
         </div>
-
-        <div className="flex gap-4">
-          <button className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-white border-2 border-gray-200 hover:border-black transition-colors text-black">
-            <FileDown className="w-5 h-5" />
-            <span>PDF</span>
-          </button>
-          <button className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-white border-2 border-gray-200 hover:border-black transition-colors text-black">
-            <Download className="w-5 h-5" />
-            <span>CSV</span>
-          </button>
-          <button className="px-8 py-3 rounded-xl font-bold bg-black text-white hover:bg-gray-800 transition-colors shadow-md text-lg">
-            סגור מבחן
-          </button>
-        </div>
+        <button
+          onClick={handlePdf}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-white border-2 border-gray-200 hover:border-black transition-colors text-black focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600"
+        >
+          <FileDown className="w-5 h-5" />
+          <span>PDF</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-6 gap-4 mb-8">
-        {SUMMARY.map((item, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-            <div className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">{item.label}</div>
-            <div className={clsx(
-              "text-3xl font-extrabold tabular-nums",
-              item.color === 'warn' ? 'text-red-600' : item.color === 'pass' ? 'text-green-600' : 'text-black'
-            )}>
-              {item.value}
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <SummaryCard testId="summary-total" label="סך הכל MoCA" value={report ? `${report.total_adjusted}/30` : "-"} warn={!!report?.total_provisional} />
+        <SummaryCard testId="summary-status" label="סטטוס" value={statusLabel(session.status)} />
+        <SummaryCard testId="summary-task-count" label="משימות שנשמרו" value={`${taskCount}/12`} />
+        <SummaryCard testId="summary-pending-review" label="ממתינים לסקירה" value={String(report?.pending_review_count ?? session.drawings.length + scoringReviewCount)} warn={(report?.pending_review_count ?? 0) > 0} />
+        <SummaryCard testId="summary-percentile" label="אחוזון" value={report?.norm_percentile == null ? "-" : String(report.norm_percentile)} />
       </div>
 
-      <div className="flex items-center gap-6 mb-6 mt-12 border-b border-gray-200 overflow-x-auto pb-1 scrollbar-hide">
-        {[
-          { id: 'clock', label: 'שעון' },
-          { id: 'cube', label: 'קוביה' },
-          { id: 'trail', label: 'מסלול' },
-          { id: 'memory', label: 'זיכרון' },
-          { id: 'digitSpan', label: 'קיבולת זיכרון' },
-          { id: 'serial7', label: 'סדרת 7' },
-          { id: 'language', label: 'שפה' },
-          { id: 'abstraction', label: 'הפשטה' },
-          { id: 'delayedRecall', label: 'שליפה' },
-          { id: 'orientation', label: 'התמצאות' },
-        ].map((tab) => (
-          <h2 
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={clsx(
-              "text-xl font-extrabold pb-4 border-b-4 cursor-pointer transition-colors whitespace-nowrap",
-              activeTab === tab.id ? "border-black text-black" : "border-transparent text-gray-400 hover:text-gray-600"
-            )}
-          >{tab.label}</h2>
-        ))}
-      </div>
-      
-      <div className="grid grid-cols-12 gap-8">
-        {/* Right side: Drawing/Audio */}
-        <div className="col-span-7 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center">
-          {renderTaskContent()}
-        </div>
-
-        {/* Left side: Rubric */}
-        <div className="col-span-5 bg-gray-50 p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
-            <h3 className="text-2xl font-extrabold text-black">ניקוד</h3>
-            <div className="text-3xl font-extrabold tabular-nums bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200">
-              <span className="text-black">{rubricData.score}</span>
-              <span className="text-gray-400">/{rubricData.max}</span>
-            </div>
-          </div>
-
-          <div className="space-y-3 mb-8 flex-1">
-            {rubricData.items.map((crit) => {
-              const isChecked = (rubrics[activeTab] as any)[crit.id];
-              return (
-                <div 
-                  key={crit.id}
-                  onClick={() => toggleRubric(crit.id)}
-                  className={clsx(
-                    "flex gap-4 p-5 rounded-xl cursor-pointer transition-all border-2",
-                    isChecked 
-                      ? "bg-[#ecfdf5] border-green-200" 
-                      : "bg-white border-transparent hover:border-gray-200"
-                  )}
-                >
-                  <div className={clsx(
-                    "mt-1 w-6 h-6 rounded flex items-center justify-center flex-shrink-0 transition-colors",
-                    isChecked ? "bg-green-600 text-white" : "bg-gray-200 text-transparent"
-                  )}>
-                    <CheckSquare className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className={clsx("font-bold text-lg", isChecked ? "text-green-900" : "text-black")}>
-                      {crit.label}
-                    </div>
-                    <div className={clsx("text-sm mt-1", isChecked ? "text-green-700" : "text-gray-500")}>
-                      {crit.desc}
-                    </div>
-                  </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm h-fit">
+          <h2 className="text-xl font-extrabold text-black mb-4">ציורים לסקירה</h2>
+          <div className="space-y-2">
+            {session.drawings.length === 0 ? (
+              <div className="text-gray-500 font-medium">לא נשמרו ציורים</div>
+            ) : session.drawings.map(review => (
+              <button
+                data-testid="drawing-review-tab"
+                key={review.id}
+                onClick={() => setActiveReviewId(review.id)}
+                className={`w-full text-right rounded-xl px-4 py-3 border font-bold transition-colors ${
+                  activeReview?.id === review.id ? "border-black bg-gray-50" : "border-gray-200 bg-white hover:border-black"
+                }`}
+              >
+                <div>{DRAWING_LABELS[review.task_id] ?? review.task_id}</div>
+                <div className="text-sm text-gray-500 mt-1">
+                  {review.clinician_score == null ? "טרם נסקר" : `${review.clinician_score}/${DRAWING_MAX[review.task_id]}`}
                 </div>
-              );
-            })}
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-500 mb-2">הערות</label>
-            <textarea 
-              placeholder="הוסף הערה קלינית…" 
-              className="w-full h-32 p-4 bg-white border border-gray-200 rounded-xl resize-none text-lg focus:outline-none focus:ring-4 focus:ring-blue-600 focus:border-blue-600 transition-all"
-            />
+              </button>
+            ))}
           </div>
         </div>
+
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm min-h-[620px]">
+          {activeReview ? (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              <div>
+                <h2 className="text-2xl font-extrabold text-black mb-4">{DRAWING_LABELS[activeReview.task_id]}</h2>
+                {activeReview.signedUrl ? (
+                  <img
+                    src={activeReview.signedUrl}
+                    alt={DRAWING_LABELS[activeReview.task_id]}
+                    className="w-full max-h-[420px] object-contain rounded-xl border border-gray-200 bg-white"
+                  />
+                ) : (
+                  <PlaybackCanvas strokes={activeReview.strokes_data ?? []} width={460} height={360} />
+                )}
+              </div>
+
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6">
+                <h3 className="text-xl font-extrabold text-black mb-4">ניקוד קליני</h3>
+                <label className="flex flex-col gap-2 mb-5">
+                  <span className="text-sm font-bold text-gray-500">ציון מתוך {DRAWING_MAX[activeReview.task_id]}</span>
+                  <input
+                    data-testid="drawing-review-score"
+                    type="number"
+                    min={0}
+                    max={DRAWING_MAX[activeReview.task_id]}
+                    value={scores[activeReview.id] ?? 0}
+                    onChange={event => setScores(prev => ({ ...prev, [activeReview.id]: Number(event.target.value) }))}
+                    className="h-14 rounded-xl border border-gray-200 bg-white px-4 text-xl font-bold focus:outline-none focus:ring-4 focus:ring-blue-600"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 mb-5">
+                  <span className="text-sm font-bold text-gray-500">הערות</span>
+                  <textarea
+                    value={notes[activeReview.id] ?? ""}
+                    onChange={event => setNotes(prev => ({ ...prev, [activeReview.id]: event.target.value }))}
+                    className="min-h-36 rounded-xl border border-gray-200 bg-white p-4 focus:outline-none focus:ring-4 focus:ring-blue-600"
+                  />
+                </label>
+                <button
+                  data-testid="drawing-review-save"
+                  onClick={() => handleSaveReview(activeReview)}
+                  disabled={saving === activeReview.id}
+                  className="h-14 px-6 rounded-xl bg-black text-white font-bold flex items-center gap-2 disabled:bg-gray-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600"
+                >
+                  <Save className="w-5 h-5" />
+                  שמור ניקוד
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500 font-bold">
+              אין פריטי ציור לסקירה
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div>
+            <h2 className="text-2xl font-extrabold text-black">פריטי ניקוד נוספים</h2>
+            <p className="text-sm font-bold text-gray-500 mt-1">פריטים שהניקוד האוטומטי לא הצליח לחשב וממתינים להחלטת קלינאי</p>
+          </div>
+          <div className="text-sm font-bold text-gray-500">{scoringReviewCount} פריטים</div>
+        </div>
+
+        {scoringReviewCount === 0 ? (
+          <div className="rounded-xl bg-gray-50 border border-gray-100 p-5 font-medium text-gray-500">אין פריטי ניקוד נוספים לסקירה.</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {session.scoring_reviews.map(review => (
+              <div key={review.id} data-testid="scoring-review" className="py-5 grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-5">
+                <div>
+                  <div className="flex flex-wrap items-center gap-3 mb-3">
+                    <h3 className="text-lg font-extrabold text-black">{scoringItemLabel(review.item_id)}</h3>
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">{scoringItemDomain(review.task_type)}</span>
+                    <span className={review.clinician_score == null ? "rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700" : "rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"}>
+                      {review.clinician_score == null ? "טרם נסקר" : `${review.clinician_score}/${review.max_score}`}
+                    </span>
+                  </div>
+
+                  <EvidencePanel review={review} />
+                </div>
+
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                  <label className="flex flex-col gap-2 mb-4">
+                    <span className="text-sm font-bold text-gray-500">ציון מתוך {review.max_score}</span>
+                    <input
+                      data-testid="scoring-review-score"
+                      type="number"
+                      min={0}
+                      max={review.max_score}
+                      value={itemScores[review.id] ?? 0}
+                      onChange={event => setItemScores(prev => ({ ...prev, [review.id]: Number(event.target.value) }))}
+                      className="h-12 rounded-xl border border-gray-200 bg-white px-4 text-lg font-bold focus:outline-none focus:ring-4 focus:ring-blue-600"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 mb-4">
+                    <span className="text-sm font-bold text-gray-500">הערות</span>
+                    <textarea
+                      value={itemNotes[review.id] ?? ""}
+                      onChange={event => setItemNotes(prev => ({ ...prev, [review.id]: event.target.value }))}
+                      className="min-h-24 rounded-xl border border-gray-200 bg-white p-3 focus:outline-none focus:ring-4 focus:ring-blue-600"
+                    />
+                  </label>
+                  <button
+                    data-testid="scoring-review-save"
+                    onClick={() => handleSaveScoringReview(review)}
+                    disabled={saving === review.id}
+                    className="h-12 w-full px-4 rounded-xl bg-black text-white font-bold flex items-center justify-center gap-2 disabled:bg-gray-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600"
+                  >
+                    <Save className="w-5 h-5" />
+                    שמור
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function SummaryCard({ label, value, warn = false, testId }: { label: string; value: string; warn?: boolean; testId?: string }) {
+  return (
+    <div data-testid={testId} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm text-center">
+      <div className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">{label}</div>
+      <div className={warn ? "text-3xl font-extrabold tabular-nums text-red-600" : "text-3xl font-extrabold tabular-nums text-black"}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function statusLabel(status: Session["status"]): string {
+  return {
+    pending: "ממתין",
+    in_progress: "בתהליך",
+    awaiting_review: "בסקירה",
+    completed: "הושלם",
+  }[status];
+}
+
+function toDbScoringReport(scoringReport: any, session: SessionDetail): DBScoringReport {
+  return {
+    ...(session.scoring_report ?? {}),
+    id: session.scoring_report?.id ?? "",
+    session_id: session.id,
+    total_raw: scoringReport.totalRaw,
+    total_adjusted: scoringReport.totalAdjusted,
+    total_provisional: scoringReport.totalProvisional,
+    norm_percentile: scoringReport.normPercentile,
+    norm_sd: scoringReport.normSd,
+    pending_review_count: scoringReport.pendingReviewCount,
+    domains: scoringReport.domains,
+    completed_at: scoringReport.completedAt,
+  } as DBScoringReport;
+}
+
+function scoringItemLabel(itemId: string): string {
+  return {
+    "moca-digit-span": "חזרה על מספרים",
+    "moca-vigilance": "קשב",
+    "moca-serial-7s": "סדרת 7",
+    "moca-language": "שפה",
+    "moca-abstraction": "הפשטה",
+    "moca-delayed-recall": "זכירה מושהית",
+    "moca-orientation-task": "התמצאות",
+    "moca-naming": "שיום",
+  }[itemId] ?? itemId;
+}
+
+function scoringItemDomain(taskType: string): string {
+  return {
+    "moca-digit-span": "קשב",
+    "moca-vigilance": "קשב",
+    "moca-serial-7s": "קשב",
+    "moca-language": "שפה",
+    "moca-abstraction": "הפשטה",
+    "moca-delayed-recall": "זיכרון",
+    "moca-orientation-task": "התמצאות",
+    "moca-naming": "שיום",
+  }[taskType] ?? taskType;
+}
+
+function EvidencePanel({ review }: { review: ScoringItemReview }) {
+  const rawData = review.raw_data ?? {};
+  const skipped = rawData?.skipped === true;
+
+  if (skipped) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-extrabold">לא נקלטה עדות מהמטופל</div>
+            <div className="text-sm font-medium mt-1">
+              המטופל התקדם במשימה ללא ציור, הקלטה או תשובה מובנית. יש לקבוע ציון לפי שיקול קליני ולתעד הערה.
+            </div>
+          </div>
+        </div>
+        <EvidenceDetails rawData={rawData} />
+      </div>
+    );
+  }
+
+  if (rawData?.audioSignedUrl) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <div className="text-sm font-bold text-gray-500 mb-2">הקלטת מטופל</div>
+          <audio controls src={rawData.audioSignedUrl} className="w-full max-w-xl" />
+        </div>
+        <EvidenceDetails rawData={rawData} />
+      </div>
+    );
+  }
+
+  if (rawData?.audioId) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span>קיימת הפניה להקלטה מקומית שלא הועלתה לשרת. בדיקות חדשות יעלו אודיו לסקירה.</span>
+        </div>
+        <EvidenceDetails rawData={rawData} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-600">
+        עדות מובנית זמינה לסקירת קלינאי.
+      </div>
+      <EvidenceDetails rawData={rawData} />
+    </div>
+  );
+}
+
+function EvidenceDetails({ rawData }: { rawData: unknown }) {
+  return (
+    <details className="rounded-xl border border-gray-100 bg-white">
+      <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-gray-500">נתוני עדות גולמיים</summary>
+      <pre className="max-h-40 overflow-auto border-t border-gray-100 p-4 text-xs text-gray-600 text-left direction-ltr">
+        {JSON.stringify(rawData ?? {}, null, 2)}
+      </pre>
+    </details>
   );
 }

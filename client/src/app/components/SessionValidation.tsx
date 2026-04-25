@@ -1,21 +1,42 @@
 import { useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { Loader2, AlertTriangle, ArrowRight } from "lucide-react";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 import { useSession } from "../../hooks/useSession";
 
 export function SessionValidation() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { startNewAssessment } = useAssessmentStore();
+  const { hasInProgressAssessment, startNewAssessment, state: assessmentState } = useAssessmentStore();
   const session = useSession(token);
 
   useEffect(() => {
     if (session.status === 'ready' && session.sessionId && session.linkToken && session.scoringContext) {
+      const isSameDeviceResume =
+        hasInProgressAssessment &&
+        assessmentState.id === session.sessionId &&
+        assessmentState.linkToken === session.linkToken;
+
+      if (isSameDeviceResume) {
+        navigate(assessmentState.lastPath || "/patient/welcome");
+        return;
+      }
+
       startNewAssessment(session.sessionId, session.linkToken, session.scoringContext);
       navigate("/patient/welcome");
     }
-  }, [session.status, session.sessionId, session.linkToken, session.scoringContext, navigate, startNewAssessment]);
+  }, [
+    assessmentState.id,
+    assessmentState.lastPath,
+    assessmentState.linkToken,
+    hasInProgressAssessment,
+    navigate,
+    session.linkToken,
+    session.scoringContext,
+    session.sessionId,
+    session.status,
+    startNewAssessment,
+  ]);
 
   const getErrorMessage = () => {
     if (session.status === 'already_used') return "הקישור כבר שומש. אנא פנה למטפל לקישור חדש.";

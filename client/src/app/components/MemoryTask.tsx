@@ -1,6 +1,6 @@
 import { ListenButton } from "./ListenButton";
 import { AudioRecorder } from "./AudioRecorder";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 
 export function MemoryTask() {
   const { state, updateTaskData } = useAssessmentStore();
@@ -9,8 +9,8 @@ export function MemoryTask() {
   // 5 words for MoCA memory in Hebrew
   const words = ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"];
 
-  const handleRecordingComplete = (audioId: string) => {
-    updateTaskData('memory', { audioId });
+  const handleRecordingComplete = (audioId: string, audioBlob: Blob) => {
+    updateTaskData('memory', { audioId }, undefined, audioBlob);
   };
   
   return (

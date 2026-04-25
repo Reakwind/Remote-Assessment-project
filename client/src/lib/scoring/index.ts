@@ -9,10 +9,20 @@ import { lookupNorm, computePercentile } from './norms';
 import config from '../../data/scoring-config.json' with { type: 'json' };
 import normsData from '../../data/lifshitz-norms.json' with { type: 'json' };
 
+function isSkippedPayload(value: unknown): boolean {
+  return !!value && typeof value === 'object' && !Array.isArray(value) && (value as { skipped?: unknown }).skipped === true;
+}
+
+function maxForTask(taskId: string): number {
+  return config.domains.flatMap(d => d.tasks).find(t => t.taskId === taskId)?.max ?? 0;
+}
+
 function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext): ItemScore[] {
   if ((config.drawingTasks as string[]).includes(taskId)) {
-    const domainTask = config.domains.flatMap(d => d.tasks).find(t => t.taskId === taskId);
-    return scoreDrawing(taskId, domainTask?.max ?? 1);
+    return scoreDrawing(taskId, maxForTask(taskId) || 1);
+  }
+  if (isSkippedPayload(rawData)) {
+    return [{ taskId, score: 0, max: maxForTask(taskId), needsReview: true, reviewReason: 'rule_score_unavailable', rawData }];
   }
   if ((config.noScoreTasks as string[]).includes(taskId)) return [];
 

@@ -11,7 +11,7 @@ export function BaseCanvas({
   width?: number; 
   height?: number;
   onDrawChange?: (strokes: any[]) => void;
-  onSave?: (dataUrl: string) => void;
+  onSave?: (dataUrl: string, strokes: any[][]) => void;
   initialStrokes?: any[][];
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -117,7 +117,7 @@ export function BaseCanvas({
       const newStrokes = [...strokes, currentStrokeRef.current];
       setStrokes(newStrokes);
       if (onDrawChange) onDrawChange(newStrokes);
-      if (onSave && canvas) onSave(canvas.toDataURL());
+      if (onSave && canvas) onSave(canvas.toDataURL(), newStrokes);
     }
     currentStrokeRef.current = [];
   };
@@ -132,7 +132,7 @@ export function BaseCanvas({
     ctx.fillRect(0, 0, width, height);
     setStrokes([]);
     if (onDrawChange) onDrawChange([]);
-    if (onSave) onSave("");
+    if (onSave) onSave("", []);
   };
 
   const handleUndo = () => {
@@ -161,7 +161,7 @@ export function BaseCanvas({
       ctx.stroke();
     });
 
-    if (onSave) onSave(canvas.toDataURL());
+    if (onSave) onSave(canvas.toDataURL(), newStrokes);
   };
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 import { ListenButton } from "./ListenButton";
 
 export function EndScreen() {
@@ -10,7 +10,7 @@ export function EndScreen() {
   }, [completeAssessment]);
 
   return (
-    <div className="flex flex-col h-full max-w-5xl mx-auto w-full">
+    <div data-testid="patient-complete" className="flex flex-col h-full max-w-5xl mx-auto w-full">
       <div className="flex justify-between items-start mb-10">
         <div>
           <div className="text-gray-500 font-bold uppercase tracking-wider text-sm mb-3">

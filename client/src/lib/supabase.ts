@@ -11,3 +11,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnon);
 
 export const edgeFn = (name: string) =>
   `${supabaseUrl}/functions/v1/${name}`;
+
+export const edgeAnonHeaders = {
+  'Content-Type': 'application/json',
+  apikey: supabaseAnon,
+  Authorization: `Bearer ${supabaseAnon}`,
+};

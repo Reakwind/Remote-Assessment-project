@@ -1,21 +1,17 @@
-import { useState } from "react";
 import { ListenButton } from "./ListenButton";
 import { BaseCanvas } from "./BaseCanvas";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { useAssessmentStore } from "../store/useAssessmentStore";
 
 export function TrailMakingTask() {
   const { state, updateTaskData } = useAssessmentStore();
   
   const savedData = state.tasks.trailMaking || { strokes: [] };
-  const [_, setHasDrawn] = useState(savedData.strokes.length > 0);
-
-  const handleDrawChange = (strokes: any[]) => {
-    setHasDrawn(strokes.length > 0);
-    updateTaskData('trailMaking', { strokes });
+  const handleDrawChange = (nextStrokes: any[]) => {
+    updateTaskData('trailMaking', { strokes: nextStrokes });
   };
 
-  const handleSave = (dataUrl: string) => {
-    updateTaskData('trailMaking', { strokes: savedData.strokes }, dataUrl);
+  const handleSave = (dataUrl: string, savedStrokes: any[][]) => {
+    updateTaskData('trailMaking', { strokes: savedStrokes }, dataUrl);
   };
 
   return (
