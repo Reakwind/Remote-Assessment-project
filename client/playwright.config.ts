@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.E2E_APP_URL ?? 'http://127.0.0.1:5173';
+const defaultBaseURL = 'http://127.0.0.1:5173';
+const baseURL = process.env.E2E_APP_URL ?? defaultBaseURL;
+const shouldStartWebServer = !process.env.E2E_APP_URL;
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,10 +19,16 @@ export default defineConfig({
     channel: 'chrome',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: 'npm run dev -- --host 127.0.0.1',
-    url: baseURL,
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  ...(shouldStartWebServer
+    ? {
+        webServer: {
+          command: 'npm run dev -- --host 127.0.0.1 --port 5173 --strictPort',
+          url: defaultBaseURL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+          stdout: 'pipe' as const,
+          stderr: 'pipe' as const,
+        },
+      }
+    : {}),
 });
