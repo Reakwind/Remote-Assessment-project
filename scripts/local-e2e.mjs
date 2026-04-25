@@ -241,6 +241,16 @@ async function runVersion(version) {
     `[${version}] completion email notification event recorded`,
     notificationEvents.body,
   );
+  assert(
+    (notificationEvents.body || []).some(event =>
+      event.notification_type === 'patient_session_sms' &&
+      event.channel === 'sms' &&
+      event.provider === 'twilio' &&
+      ['sent', 'skipped', 'failed'].includes(event.status)
+    ),
+    `[${version}] patient SMS notification event recorded`,
+    notificationEvents.body,
+  );
 
   console.log(`[${version}] OK session=${sessionId} adjusted=${finalDetail.session.scoring_report.total_adjusted}/30 percentile=${finalDetail.session.scoring_report.norm_percentile}`);
 }

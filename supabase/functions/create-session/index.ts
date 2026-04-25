@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { writeAuditEvent } from '../_shared/audit.ts';
-import { sendSms } from '../_shared/notifications.ts';
+import { recordNotificationOutcome, sendSms } from '../_shared/notifications.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -148,13 +148,19 @@ Deno.serve(async (req) => {
         to: patientPhone!,
         message: `Remote Check: כדי להתחיל את המבדק, פתחו את הקישור ${sessionUrl}. קוד חד-פעמי: ${session.access_code ?? accessCode}`,
       })
-    : { ok: false, error: 'No patient phone number supplied' };
+    : {
+        channel: 'sms' as const,
+        provider: 'twilio' as const,
+        status: 'skipped' as const,
+        reason: 'No patient phone number supplied',
+      };
+  const smsSent = smsResult.status === 'sent';
 
   const { error: smsLogError } = await supabase
     .from('sessions')
     .update({
-      sms_sent_at: smsResult.ok ? new Date().toISOString() : null,
-      sms_delivery_error: smsResult.error ?? null,
+      sms_sent_at: smsSent ? new Date().toISOString() : null,
+      sms_delivery_error: smsResult.reason ?? null,
     })
     .eq('id', session.id);
 
@@ -162,12 +168,22 @@ Deno.serve(async (req) => {
     console.error('Failed to persist SMS status', smsLogError);
   }
 
+  try {
+    await recordNotificationOutcome(supabase, {
+      sessionId: session.id,
+      notificationType: 'patient_session_sms',
+      result: smsResult,
+    });
+  } catch (notificationError) {
+    console.error('Failed to persist SMS notification outcome', notificationError);
+  }
+
   await writeAuditEvent(supabase, {
     eventType: 'session_created',
     sessionId: session.id,
     actorType: 'clinician',
     actorUserId: user.id,
-    metadata: { assessmentType, mocaVersion: session.moca_version, smsSent: smsResult.ok },
+    metadata: { assessmentType, mocaVersion: session.moca_version, smsSent },
   });
 
   return json({
@@ -175,8 +191,8 @@ Deno.serve(async (req) => {
     linkToken: session.link_token,
     sessionUrl,
     accessCode: session.access_code ?? accessCode,
-    smsSent: smsResult.ok,
-    smsError: smsResult.error ?? null,
+    smsSent,
+    smsError: smsResult.reason ?? null,
     assessmentType,
     mocaVersion: session.moca_version,
     patientId: patientRecordId,

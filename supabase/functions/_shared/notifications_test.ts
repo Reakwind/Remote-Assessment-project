@@ -1,6 +1,7 @@
 import {
   notifyClinicianSessionCompleted,
   recordNotificationOutcome,
+  sendSms,
 } from "./notifications.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -130,4 +131,54 @@ Deno.test("recordNotificationOutcome creates retry-ready row for failed sends", 
     typeof row.next_retry_at === "string",
     "expected failed notification to include next_retry_at",
   );
+});
+
+Deno.test("sendSms skips Twilio when credentials are missing", async () => {
+  const result = await sendSms(
+    { to: "+15551234567", message: "hello" },
+    { env: () => undefined },
+  );
+
+  assertEquals(result.status, "skipped");
+  assertEquals(result.provider, "twilio");
+  assertEquals(result.reason, "Missing TWILIO credentials");
+  assertEquals(result.recipient, "+15551234567");
+});
+
+Deno.test("sendSms sends through Twilio provider and returns provider message id", async () => {
+  const calls: Array<{ url: string; body: string | null }> = [];
+  const fakeFetch = ((
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => {
+    calls.push({
+      url: String(input),
+      body: init?.body ? String(init.body) : null,
+    });
+
+    return Promise.resolve(
+      new Response(JSON.stringify({ sid: "SM123" }), { status: 201 }),
+    );
+  }) as typeof fetch;
+
+  const result = await sendSms(
+    { to: "+15551234567", message: "patient link" },
+    {
+      env: (name: string) =>
+        ({
+          TWILIO_ACCOUNT_SID: "AC123",
+          TWILIO_AUTH_TOKEN: "secret",
+          TWILIO_FROM_NUMBER: "+15557654321",
+          TWILIO_API_BASE: "https://twilio.test/Accounts",
+        })[name],
+      fetch: fakeFetch,
+    },
+  );
+
+  assertEquals(result.status, "sent");
+  assertEquals(result.providerMessageId, "SM123");
+  assertEquals(calls[0].url, "https://twilio.test/Accounts/AC123/Messages.json");
+  assert(calls[0].body?.includes("To=%2B15551234567"), "expected Twilio To field");
+  assert(calls[0].body?.includes("From=%2B15557654321"), "expected Twilio From field");
+  assert(calls[0].body?.includes("Body=patient+link"), "expected Twilio Body field");
 });

@@ -42,7 +42,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 |---|---|---|---|
 | Login | Clinician signs into `/dashboard`. | Supabase Auth identifies clinician. | Current target. |
 | Create session | Clinician enters case ID, MoCA version, age band, education years, place, city. | `create-session` creates `sessions` row with `pending` status, `moca_version`, and `link_token`; writes `session_created` audit event. | Current target. |
-| Share link/code | Clinician copies/generated patient URL or sends it through clinic workflow. | Target SMS provider is Twilio behind a swappable provider interface. | Current supports generated URL. SMS provider abstraction is future hardening. |
+| Share link/code | Clinician copies/generated patient URL or sends it through clinic workflow. | SMS delivery uses the Twilio provider path behind a provider switch and records `patient_session_sms` outcomes. | Current. |
 | Wait for completion | Clinician waits for a completion notification, then opens the dashboard when ready. | `complete-session` attempts clinician completion email, records a `notification_events` outcome, and audits `clinician_completion_email_*`. | Current. Email-first completion ping. |
 | Review session | Clinician opens dashboard detail for completed/awaiting review session and sees stored patient evidence. | `get-session` returns task results, scoring report, drawing reviews, scoring item reviews, signed drawing/audio URLs. | Current. |
 | Score manual items | Clinician scores drawings and any rule-unavailable items from the stored evidence view. | `update-drawing-review` and `update-scoring-review` persist clinician score/notes, recalculate report, write audit events. | Current. |
@@ -95,7 +95,7 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 | Rule scoring | Server-side scoring for supported structured tasks. | Version-aware deterministic scoring by active test manual. | Some tasks still require more structured payloads/version-specific rules. |
 | Completion notification | Email outcome via Resend when configured; sent/skipped/failed outcome is stored in `notification_events` and audited. | Email-first clinician ping when test is done, with retry-ready failure records. | Dedicated retry worker and production sender monitoring are future hardening. |
 | Dashboard review | Real session list/detail, review updates, finalized PDF export, and completed-session CSV export. | Efficient clinician review, finalization, then export. | Export templates can be refined for clinical formatting. |
-| SMS | Generated link exists; Twilio is direction. | Twilio-first patient SMS behind provider abstraction. | Provider interface and message lifecycle not fully built. |
+| SMS | Generated link exists; Twilio-first patient SMS runs through a provider switch and stores sent/skipped/failed notification outcomes. | Twilio-first patient SMS behind provider abstraction. | Delivery webhook handling and local gateway evaluation are future hardening. |
 | STT | Audio evidence storage exists. | External STT creates transcript evidence only. | Vendor/job model and clinician transcript editing are future. |
 
 ## Parking Lot
@@ -123,3 +123,4 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 - 2026-04-25: Patient start consumes links atomically; drawing saves send current strokes with PNG evidence; naming scoring accepts the active client answers object.
 - 2026-04-25: Completion emails write `notification_events` records for sent, skipped, and failed outcomes so notification delivery is observable and retry-ready.
 - 2026-04-25: Same-device patient resume now works when reopening the original token link, filters stale local state, and shows the active MoCA version in the patient header.
+- 2026-04-25: Patient SMS session-link delivery uses the Twilio provider path behind `SMS_PROVIDER` and records `patient_session_sms` notification outcomes.

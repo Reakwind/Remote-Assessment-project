@@ -6,6 +6,15 @@ export interface SmsPayload {
   message: string;
 }
 
+export interface SmsDeliveryResult {
+  channel: 'sms';
+  provider: 'twilio';
+  status: 'sent' | 'skipped' | 'failed';
+  reason?: string;
+  recipient?: string;
+  providerMessageId?: string;
+}
+
 export interface ClinicianCompletionNotificationResult {
   channel: 'email';
   provider: 'resend';
@@ -28,18 +37,45 @@ interface NotificationDependencies {
 
 interface NotificationOutcome {
   sessionId: string;
-  notificationType: 'clinician_completion_email';
-  result: ClinicianCompletionNotificationResult;
+  notificationType: 'clinician_completion_email' | 'patient_session_sms';
+  result: ClinicianCompletionNotificationResult | SmsDeliveryResult;
 }
 
-export async function sendSms(payload: SmsPayload): Promise<{ ok: boolean; providerMessageId?: string; error?: string }> {
-  const sid = Deno.env.get('TWILIO_ACCOUNT_SID');
-  const token = Deno.env.get('TWILIO_AUTH_TOKEN');
-  const from = Deno.env.get('TWILIO_FROM_NUMBER');
-  const gateway = Deno.env.get('TWILIO_API_BASE') || DEFAULT_SMS_GATEWAY;
+export async function sendSms(
+  payload: SmsPayload,
+  deps: NotificationDependencies = {},
+): Promise<SmsDeliveryResult> {
+  const providerName = (readEnv(deps, 'SMS_PROVIDER') ?? 'twilio').trim().toLowerCase();
+  if (providerName !== 'twilio') {
+    return {
+      channel: 'sms',
+      provider: 'twilio',
+      status: 'failed',
+      reason: `Unsupported SMS_PROVIDER: ${providerName}`,
+      recipient: payload.to,
+    };
+  }
+
+  return sendTwilioSms(payload, deps);
+}
+
+async function sendTwilioSms(
+  payload: SmsPayload,
+  deps: NotificationDependencies,
+): Promise<SmsDeliveryResult> {
+  const sid = readEnv(deps, 'TWILIO_ACCOUNT_SID');
+  const token = readEnv(deps, 'TWILIO_AUTH_TOKEN');
+  const from = readEnv(deps, 'TWILIO_FROM_NUMBER');
+  const gateway = readEnv(deps, 'TWILIO_API_BASE') || DEFAULT_SMS_GATEWAY;
 
   if (!sid || !token || !from) {
-    return { ok: false, error: 'Missing TWILIO credentials' };
+    return {
+      channel: 'sms',
+      provider: 'twilio',
+      status: 'skipped',
+      reason: 'Missing TWILIO credentials',
+      recipient: payload.to,
+    };
   }
 
   const body = new URLSearchParams({
@@ -49,7 +85,7 @@ export async function sendSms(payload: SmsPayload): Promise<{ ok: boolean; provi
   });
 
   try {
-    const response = await fetch(`${gateway}/${sid}/Messages.json`, {
+    const response = await (deps.fetch ?? fetch)(`${gateway}/${sid}/Messages.json`, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
@@ -60,13 +96,31 @@ export async function sendSms(payload: SmsPayload): Promise<{ ok: boolean; provi
 
     if (!response.ok) {
       const text = await response.text();
-      return { ok: false, error: `Twilio error: ${text}` };
+      return {
+        channel: 'sms',
+        provider: 'twilio',
+        status: 'failed',
+        reason: `Twilio returned ${response.status}${text ? `: ${text.slice(0, 200)}` : ''}`,
+        recipient: payload.to,
+      };
     }
 
     const data = (await response.json()) as { sid?: string };
-    return { ok: true, providerMessageId: data.sid };
+    return {
+      channel: 'sms',
+      provider: 'twilio',
+      status: 'sent',
+      recipient: payload.to,
+      providerMessageId: data.sid,
+    };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Unknown SMS error' };
+    return {
+      channel: 'sms',
+      provider: 'twilio',
+      status: 'failed',
+      reason: error instanceof Error ? error.message : 'Unknown SMS error',
+      recipient: payload.to,
+    };
   }
 }
 
@@ -78,6 +132,11 @@ function dashboardUrl(sessionId: string, deps: NotificationDependencies): string
   const publicUrl = readEnv(deps, 'PUBLIC_URL')?.trim();
   if (!publicUrl) return undefined;
   return `${publicUrl.replace(/\/$/, '')}/dashboard/${sessionId}`;
+}
+
+function notificationRecipient(result: ClinicianCompletionNotificationResult | SmsDeliveryResult): string | null {
+  if (result.channel === 'email') return result.recipientEmail ?? null;
+  return result.recipient ?? null;
 }
 
 export async function notifyClinicianSessionCompleted(
@@ -178,7 +237,7 @@ export async function recordNotificationOutcome(
       channel: outcome.result.channel,
       provider: outcome.result.provider,
       status: outcome.result.status,
-      recipient: outcome.result.recipientEmail ?? null,
+      recipient: notificationRecipient(outcome.result),
       provider_message_id: outcome.result.providerMessageId ?? null,
       attempts: 1,
       error_message: outcome.result.reason ?? null,
