@@ -3,21 +3,25 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { ListenButton } from "./ListenButton";
 import { clsx } from "clsx";
 import { useAssessmentStore } from "../store/AssessmentContext";
+import { DevStimulusNotice, useStimuliManifest } from "./StimuliManifestProvider";
 
 const ANIMALS = [
-  { id: "lion", name: "אריה", options: ["נמר", "אריה", "כלב", "חתול"], image: "https://images.unsplash.com/photo-1776144743260-8c22afcde559?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaW9uJTIwbGluZSUyMGFydCUyMGlsbHVzdHJhdGlvbnxlbnwxfHx8fDE3NzY3NTM4NTR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
-  { id: "rhino", name: "קרנף", options: ["פיל", "קרנף", "היפופוטם", "זברה"], image: "https://images.unsplash.com/photo-1745029795642-35953130a9c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyaGlubyUyMGxpbmUlMjBhcnQlMjBpbGx1c3RyYXRpb258ZW58MXx8fHwxNzc2NzUzODU1fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
-  { id: "camel", name: "גמל", options: ["סוס", "גמל", "פרד", "שור"], image: "https://images.unsplash.com/photo-1525056477279-1527aee289f9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjYW1lbCUyMGxpbmUlMjBhcnQlMjBpbGx1c3RyYXRpb258ZW58MXx8fHwxNzc2NzUzODU1fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
+  { id: "lion", assetId: "item-1", name: "אריה", options: ["נמר", "אריה", "כלב", "חתול"], image: "https://images.unsplash.com/photo-1776144743260-8c22afcde559?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaW9uJTIwbGluZSUyMGFydCUyMGlsbHVzdHJhdGlvbnxlbnwxfHx8fDE3NzY3NTM4NTR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
+  { id: "rhino", assetId: "item-2", name: "קרנף", options: ["פיל", "קרנף", "היפופוטם", "זברה"], image: "https://images.unsplash.com/photo-1745029795642-35953130a9c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyaGlubyUyMGxpbmUlMjBhcnQlMjBpbGx1c3RyYXRpb258ZW58MXx8fHwxNzc2NzUzODU1fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
+  { id: "camel", assetId: "item-3", name: "גמל", options: ["סוס", "גמל", "פרד", "שור"], image: "https://images.unsplash.com/photo-1525056477279-1527aee289f9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjYW1lbCUyMGxpbmUlMjBhcnQlMjBpbGx1c3RyYXRpb258ZW58MXx8fHwxNzc2NzUzODU1fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
 ];
 
 export function NamingTask() {
   const { state, updateTaskData } = useAssessmentStore();
+  const { getAsset } = useStimuliManifest();
   const [currentIndex, setCurrentIndex] = useState(0);
   
   const savedData = state.tasks.naming || { answers: {} };
   const [answers, setAnswers] = useState<Record<string, string>>(savedData.answers);
 
   const currentAnimal = ANIMALS[currentIndex];
+  const stimulusAsset = getAsset("moca-naming", currentAnimal.assetId);
+  const imageSrc = stimulusAsset?.signedUrl ?? currentAnimal.image;
   const selectedAnswer = answers[currentAnimal.id];
   const isAnswered = !!selectedAnswer;
 
@@ -62,12 +66,13 @@ export function NamingTask() {
 
       <div className="grid grid-cols-2 gap-10 bg-gray-50 p-10 rounded-2xl border border-gray-100 flex-1 min-h-[500px]">
         {/* Right half (RTL): Image */}
-        <div className="flex items-center justify-center bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className="flex flex-col items-center justify-center gap-4 bg-white rounded-xl shadow-sm border border-gray-100 p-8">
           <img
-            src={currentAnimal.image}
+            src={imageSrc}
             alt="Animal outline"
             className="w-[360px] h-[360px] object-contain rounded-lg shadow-inner grayscale contrast-125"
           />
+          {!stimulusAsset?.signedUrl && <DevStimulusNotice className="w-full text-center" />}
         </div>
 
         {/* Left half (RTL): Answers */}

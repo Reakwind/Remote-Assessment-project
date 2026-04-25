@@ -1,0 +1,53 @@
+{
+  "versions": ["8.1", "8.2", "8.3"],
+  "assets": [
+    {
+      "taskType": "moca-visuospatial",
+      "assetId": "trail-template",
+      "label": "Trail Making visual template",
+      "kind": "image",
+      "contentType": "image/png",
+      "required": true
+    },
+    {
+      "taskType": "moca-cube",
+      "assetId": "cube-stimulus",
+      "label": "Cube copy stimulus",
+      "kind": "image",
+      "contentType": "image/png",
+      "required": true
+    },
+    {
+      "taskType": "moca-naming",
+      "assetId": "item-1",
+      "label": "Naming item 1",
+      "kind": "image",
+      "contentType": "image/png",
+      "required": true
+    },
+    {
+      "taskType": "moca-naming",
+      "assetId": "item-2",
+      "label": "Naming item 2",
+      "kind": "image",
+      "contentType": "image/png",
+      "required": true
+    },
+    {
+      "taskType": "moca-naming",
+      "assetId": "item-3",
+      "label": "Naming item 3",
+      "kind": "image",
+      "contentType": "image/png",
+      "required": true
+    },
+    {
+      "taskType": "moca-memory-learning",
+      "assetId": "word-list-audio",
+      "label": "Memory learning audio prompt",
+      "kind": "audio",
+      "contentType": "audio/mpeg",
+      "required": true
+    }
+  ]
+}

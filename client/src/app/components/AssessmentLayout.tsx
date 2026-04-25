@@ -2,6 +2,7 @@ import { Outlet, useNavigate, useLocation } from "react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect } from "react";
 import { useAssessmentStore } from "../store/AssessmentContext";
+import { StimuliManifestProvider, StimulusReadinessBanner } from "./StimuliManifestProvider";
 
 export function AssessmentLayout() {
   const navigate = useNavigate();
@@ -78,7 +79,8 @@ export function AssessmentLayout() {
   const progressPercent = (currentStep / totalSteps) * 100;
 
   return (
-    <div dir="rtl" className="min-h-screen flex flex-col bg-white text-black font-['Heebo',sans-serif]">
+    <StimuliManifestProvider>
+      <div dir="rtl" className="min-h-screen flex flex-col bg-white text-black font-['Heebo',sans-serif]">
       {/* Header */}
       <header className="flex items-center justify-between px-10 py-5 border-b border-gray-200 bg-white z-10">
         <div className="flex items-center gap-3">
@@ -100,6 +102,7 @@ export function AssessmentLayout() {
           שלב {currentStep} מתוך {totalSteps}
         </div>
       </header>
+      <StimulusReadinessBanner />
 
       {/* Progress Bar */}
       <div className="h-1 bg-gray-100 w-full">
@@ -139,6 +142,7 @@ export function AssessmentLayout() {
           <ArrowLeft className="w-6 h-6" />
         </button>
       </footer>
-    </div>
+      </div>
+    </StimuliManifestProvider>
   );
 }

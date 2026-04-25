@@ -55,6 +55,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 | Open link | Patient opens `/#/session/{token}`. | Browser uses stored same-device session state or calls `start-session` for a new token. | Current. |
 | Start once | Valid unused token starts session; reopening the same token on the same device resumes saved progress. | `start-session` atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410 unless local same-device resume state matches. | Current. |
 | Complete tasks | Patient progresses through Hebrew MoCA task flow with selected MoCA version visible in the assessment header. Advancing without captured evidence records a skipped/requires-review payload. | Each task result is submitted with canonical `moca-*` task IDs and active client payload shapes, and the session keeps MoCA version context. | Current. |
+| Load stimuli | Patient tasks request the versioned stimulus manifest for the active session and prefer short-lived signed URLs from private Storage. | `get-stimuli` returns version-scoped asset keys and signed URLs for uploaded licensed assets. Missing assets produce an explicit development placeholder state. | Current architecture. Licensed assets remain external. |
 | Draw/audio evidence | Drawing tasks save current strokes/PNG; audio tasks can save audio evidence. | Private Storage paths and stroke data are stored; clinician receives signed URLs only. | Current. External STT transcript evidence is future. |
 | Autosave | Per-task submit/save should survive refresh enough for MVP testing. | `submit-results`, `save-drawing`, and `save-audio` persist evidence during `in_progress`. | Current target. Full offline-first retry queue is future hardening. |
 | Finish | Patient sees a completion screen only; returning home clears completed local resume state. | `complete-session` runs server scoring, creates review rows, sets status, writes audit, records notification outcome, and triggers clinician email. | Current. |
@@ -65,6 +66,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 |---|---|---|
 | `create-session` | Clinician | Create pending session and patient link token. |
 | `start-session` | Patient | Validate one-time token and return scoring context. |
+| `get-stimuli` | Patient | Return the active MoCA version's private stimulus manifest with short-lived signed URLs. |
 | `submit-results` / `submit-task` | Patient | Idempotently persist task result payloads. |
 | `save-drawing` | Patient | Store drawing strokes and optional PNG in private storage/review row. |
 | `save-audio` | Patient | Store audio evidence in private storage and attach path to raw data. |
@@ -73,7 +75,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 | `update-drawing-review` | Clinician | Persist drawing score/rubric/notes and recalculate final report. |
 | `update-scoring-review` | Clinician | Persist clinician score for non-drawing manual review items and recalculate final report. |
 
-Storage buckets are private. Browser-facing review access uses short-lived signed URLs. Audit events are part of the journey and should exist for create, start, task/audio/drawing save, completion, review updates, and notification outcome. Completion emails also create a `notification_events` row so sent, skipped, and failed outcomes are observable and retry-ready.
+Storage buckets are private. Patient-facing stimulus access and clinician-facing review access use short-lived signed URLs. Audit events are part of the journey and should exist for create, start, stimulus manifest request, task/audio/drawing save, completion, review updates, and notification outcome. Completion emails also create a `notification_events` row so sent, skipped, and failed outcomes are observable and retry-ready.
 
 ## Scoring Journey
 
@@ -88,8 +90,9 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 
 | Area | Current implementation | Target MVP | Known gap |
 |---|---|---|---|
-| Session creation | Case ID, MoCA version, age band, education, location, generated link token. | Same, with MoCA version visible in clinician and patient workflow and preserved for reporting. | Version-specific scoring/stimulus policy still needs deeper implementation. |
+| Session creation | Case ID, MoCA version, age band, education, location, generated link token. | Same, with MoCA version visible in clinician and patient workflow and preserved for reporting. | Current target. |
 | Patient start | One-time token moves session to `in_progress`; same-device resume uses stored in-progress state and matching token links reopen saved progress. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
+| Stimulus delivery | `get-stimuli` returns versioned private Storage paths and signed URLs when licensed assets are uploaded. Patient UI uses explicit development placeholders when assets are missing. | Licensed MoCA assets are uploaded to private Storage by version and task before clinical use, then validated with `scripts/verify-stimuli.mjs`. | Production asset validation should be part of release readiness. |
 | Task persistence | Per-task submit, skipped-task review payloads, drawings, audio evidence. | Reliable autosave for every task; refresh preserves saved progress in normal use. | Full offline retry queue remains future hardening. |
 | Drawing review | Clinician dashboard reads stored drawing/audio evidence, signed URLs, and review rows from `get-session`; score updates persist through review functions. | Clinician rubric scoring from stored evidence. | Rubric UX can be refined for clinical ergonomics. |
 | Rule scoring | Server-side scoring selects an explicit `8.1`, `8.2`, or `8.3` MoCA config and preserves version in the scoring report. | Version-aware deterministic scoring by active test manual. | Some tasks still require more structured payloads and licensed manual validation before clinical use. |
@@ -104,7 +107,7 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 - Full offline-first browser queue and retry reconciliation.
 - External speech-to-text job model, transcript review/editing, and privacy review.
 - Twilio provider abstraction, message templates, delivery status, and retry handling.
-- Version-specific scoring/stimulus policy beyond storing selected MoCA version.
+- Production release checklist for licensed stimulus validation.
 - Arabic/Russian/English future batteries.
 - Report comparison across prior sessions.
 
@@ -125,3 +128,5 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 - 2026-04-25: Same-device patient resume now works when reopening the original token link, filters stale local state, and shows the active MoCA version in the patient header.
 - 2026-04-25: Patient SMS session-link delivery uses the Twilio provider path behind `SMS_PROVIDER` and records `patient_session_sms` notification outcomes.
 - 2026-04-25: Scoring now uses explicit per-version MoCA config for `8.1`, `8.2`, and `8.3`; licensed stimuli remain outside the repo.
+- 2026-04-25: Patient stimulus delivery uses a versioned private Storage manifest and short-lived signed URLs; missing licensed assets show development placeholders.
+- 2026-04-25: Licensed stimulus readiness is verified through `scripts/verify-stimuli.mjs` and `docs/STIMULI_ASSET_RUNBOOK.md`.

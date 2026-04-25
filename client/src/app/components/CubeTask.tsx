@@ -3,9 +3,11 @@ import { useState } from "react";
 import { ListenButton } from "./ListenButton";
 import { BaseCanvas } from "./BaseCanvas";
 import { useAssessmentStore } from "../store/AssessmentContext";
+import { DevStimulusNotice, useStimuliManifest } from "./StimuliManifestProvider";
 
 export function CubeTask() {
   const { state, updateTaskData } = useAssessmentStore();
+  const { getAsset } = useStimuliManifest();
   
   const savedData = state.tasks.cube || { strokes: [] };
   const [, setHasDrawn] = useState(savedData.strokes.length > 0);
@@ -18,6 +20,7 @@ export function CubeTask() {
   const handleSave = (dataUrl: string, strokes: any[][]) => {
     updateTaskData('cube', { strokes }, dataUrl);
   };
+  const cubeStimulus = getAsset("moca-cube", "cube-stimulus");
 
   return (
     <div className="flex flex-col h-full max-w-5xl mx-auto w-full">
@@ -40,13 +43,23 @@ export function CubeTask() {
         <div className="grid grid-cols-2 gap-8 w-full max-w-4xl">
           <div className="flex flex-col items-center gap-4">
             <span className="text-gray-500 font-bold uppercase tracking-widest text-sm">המקור</span>
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm w-full aspect-square flex items-center justify-center">
-              {/* MoCA Cube stimulus - simplified SVG for now */}
-              <svg viewBox="0 0 100 100" className="w-48 h-48">
-                <path d="M20 40 L50 40 L50 70 L20 70 Z" fill="none" stroke="black" strokeWidth="2" />
-                <path d="M40 20 L70 20 L70 50 L40 50 Z" fill="none" stroke="black" strokeWidth="2" />
-                <path d="M20 40 L40 20 M50 40 L70 20 M50 70 L70 50 M20 70 L40 50" fill="none" stroke="black" strokeWidth="2" />
-              </svg>
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm w-full aspect-square flex flex-col items-center justify-center gap-4">
+              {cubeStimulus?.signedUrl ? (
+                <img
+                  src={cubeStimulus.signedUrl}
+                  alt="Cube copy stimulus"
+                  className="h-56 w-56 object-contain"
+                />
+              ) : (
+                <>
+                  <svg viewBox="0 0 100 100" className="w-48 h-48" aria-label="Development cube placeholder">
+                    <path d="M20 40 L50 40 L50 70 L20 70 Z" fill="none" stroke="black" strokeWidth="2" />
+                    <path d="M40 20 L70 20 L70 50 L40 50 Z" fill="none" stroke="black" strokeWidth="2" />
+                    <path d="M20 40 L40 20 M50 40 L70 20 M50 70 L70 50 M20 70 L40 50" fill="none" stroke="black" strokeWidth="2" />
+                  </svg>
+                  <DevStimulusNotice className="w-full text-center" />
+                </>
+              )}
             </div>
           </div>
           <div className="flex flex-col items-center gap-4">

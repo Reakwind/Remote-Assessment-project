@@ -24,7 +24,7 @@ From the repo root:
 ```bash
 supabase start
 supabase db reset
-supabase functions serve create-session start-session submit-results submit-task save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review --env-file /dev/null
+supabase functions serve create-session start-session get-stimuli submit-results submit-task save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null
 ```
 
 `supabase db reset` is destructive for the local database. Use it only when local test data can be discarded.
@@ -59,12 +59,18 @@ Open the Vite URL in Chrome, then:
 
 ## Verification Commands
 
-The scripted local E2E flow validates the three local licensed Hebrew MoCA PDF pairs by file path and hash, then exercises the backend clinician-to-patient-to-review flow with generated local fixture answers. It also confirms the backend keeps start tokens single-use. The script does not copy or extract licensed MoCA stimuli into the repository.
+The scripted local E2E flow validates the three local licensed Hebrew MoCA PDF pairs by file path and hash, then exercises the backend clinician-to-patient-to-review flow with generated local fixture answers. It also confirms the backend keeps start tokens single-use and that the patient stimulus manifest returns version-scoped private Storage keys for the selected MoCA version. The script does not copy or extract licensed MoCA stimuli into the repository.
 
 From the repo root, with Supabase and Edge Functions running:
 
 ```bash
 node scripts/local-e2e.mjs --all-versions
+```
+
+To verify uploaded private stimulus assets before clinical testing:
+
+```bash
+SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SECRET_KEY="<local Secret value>" node scripts/verify-stimuli.mjs --all-versions
 ```
 
 To run only one version:
@@ -82,7 +88,7 @@ npm run e2e:browser
 npm run build
 npm run lint
 cd ..
-deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/submit-results/index.ts supabase/functions/submit-task/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts
+deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/get-stimuli/index.ts supabase/functions/submit-results/index.ts supabase/functions/submit-task/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts supabase/functions/export-pdf/index.ts supabase/functions/export-csv/index.ts
 ```
 
 Expected current lint status: no errors and no warnings.
@@ -121,6 +127,6 @@ This starts or reuses Vite and expects local Supabase plus Edge Functions to alr
 ## Known Clinical Blockers
 
 - Official licensed MoCA stimuli are still required before clinical pilot use and must not be committed to this repository.
-- The local E2E script verifies the PDF files exist locally. The clinician-facing MoCA version selector stores the selected version on each session for traceability; licensed stimuli are still handled outside the repo.
+- The local E2E script verifies the PDF files exist locally. The clinician-facing MoCA version selector stores the selected version on each session for traceability; licensed stimuli are loaded from private Storage by version/task and verified with `scripts/verify-stimuli.mjs`.
 - Audio/manual tasks are supported through clinician review, but fully structured rule-based scoring is still incomplete for several tasks.
 - External speech-to-text is future transcript evidence only; it must not become an automated scoring authority.

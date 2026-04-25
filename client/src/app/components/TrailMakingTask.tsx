@@ -3,9 +3,11 @@ import { useState } from "react";
 import { ListenButton } from "./ListenButton";
 import { BaseCanvas } from "./BaseCanvas";
 import { useAssessmentStore } from "../store/AssessmentContext";
+import { DevStimulusNotice, useStimuliManifest } from "./StimuliManifestProvider";
 
 export function TrailMakingTask() {
   const { state, updateTaskData } = useAssessmentStore();
+  const { getAsset } = useStimuliManifest();
   
   const savedData = state.tasks.trailMaking || { strokes: [] };
   const [, setHasDrawn] = useState(savedData.strokes.length > 0);
@@ -18,6 +20,7 @@ export function TrailMakingTask() {
   const handleSave = (dataUrl: string, strokes: any[][]) => {
     updateTaskData('trailMaking', { strokes }, dataUrl);
   };
+  const trailTemplate = getAsset("moca-visuospatial", "trail-template");
 
   return (
     <div className="flex flex-col h-full max-w-5xl mx-auto w-full">
@@ -37,12 +40,21 @@ export function TrailMakingTask() {
       </div>
 
       <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden">
-        {/* Background stimuli for Trail Making */}
-        <div className="absolute inset-0 pointer-events-none opacity-20 flex items-center justify-center">
-           {/* Trail Making template placeholder */}
-           <div className="w-[600px] h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 font-bold italic">
-             [Trail Making Template: 1-א-2-ב-3-ג-4-ד-5-ה]
-           </div>
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          {trailTemplate?.signedUrl ? (
+            <img
+              src={trailTemplate.signedUrl}
+              alt="Trail Making template"
+              className="h-[400px] w-[800px] object-contain"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-4 opacity-70">
+              <div className="w-[600px] h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 font-bold italic">
+                [Trail Making Template: 1-א-2-ב-3-ג-4-ד-5-ה]
+              </div>
+              <DevStimulusNotice className="pointer-events-auto" />
+            </div>
+          )}
         </div>
 
         <BaseCanvas 

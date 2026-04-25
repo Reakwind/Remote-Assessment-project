@@ -11,6 +11,7 @@ Canonical files:
 3. [JOURNEY.md](JOURNEY.md)
 4. [CONTEXT.md](CONTEXT.md)
 5. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
+6. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
 
 `JOURNEY.md` is the patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
 
@@ -45,6 +46,7 @@ Generated local artifacts stay out of Git: `.env.local`, `.playwright-mcp/`, `cl
 - Notify clinicians when a patient completes a test.
 - Use Twilio as the MVP SMS default behind a provider abstraction.
 - Keep licensed MoCA stimuli outside the repository.
+- Load licensed stimuli from private Storage through versioned manifests and signed URLs.
 
 ## Verification
 
@@ -52,8 +54,10 @@ Before handing off backend/scoring changes, run:
 
 ```bash
 cd client && npm test && npm run e2e:browser && npm run build && npm run lint
-deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/submit-results/index.ts supabase/functions/submit-task/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts
+deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/get-stimuli/index.ts supabase/functions/submit-results/index.ts supabase/functions/submit-task/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts supabase/functions/export-pdf/index.ts supabase/functions/export-csv/index.ts
 node scripts/local-e2e.mjs --all-versions
 ```
 
 For browser or UX changes, verify the affected flow in Chrome when practical.
+
+For licensed stimulus storage or clinical-readiness changes, also run `node scripts/verify-stimuli.mjs --all-versions` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY` configured.

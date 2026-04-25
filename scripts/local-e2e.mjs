@@ -104,6 +104,13 @@ async function runVersion(version) {
   });
   assert(started.status === 200 && started.body?.sessionId === sessionId && started.body?.mocaVersion === version, `[${version}] start patient session`, started);
 
+  const stimuli = await request('/functions/v1/get-stimuli', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ sessionId, linkToken }),
+  });
+  assertStimuliManifest(stimuli, version);
+
   const reusedStart = await request('/functions/v1/start-session', {
     method: 'POST',
     headers,
@@ -221,7 +228,7 @@ async function runVersion(version) {
     headers: clinicianHeaders,
   });
   const eventTypes = (audits.body || []).map(row => row.event_type);
-  for (const eventType of ['session_created', 'session_started', 'task_result_submitted', 'audio_saved', 'drawing_saved', 'session_completed']) {
+  for (const eventType of ['session_created', 'session_started', 'stimuli_manifest_requested', 'task_result_submitted', 'audio_saved', 'drawing_saved', 'session_completed']) {
     assert(eventTypes.includes(eventType), `[${version}] audit includes ${eventType}`, eventTypes);
   }
   assert(
@@ -294,6 +301,24 @@ async function getSession(headers, sessionId) {
   });
   assert(detail.status === 200 && detail.body?.session, `get session ${sessionId}`, detail);
   return detail.body;
+}
+
+function assertStimuliManifest(response, version) {
+  assert(response.status === 200, `[${version}] get versioned stimulus manifest`, response);
+  const body = response.body;
+  assert(body?.mocaVersion === version, `[${version}] stimulus manifest preserves MoCA version`, body);
+  assert(body?.bucket === 'stimuli', `[${version}] stimulus manifest uses private stimuli bucket`, body);
+  assert(Array.isArray(body?.assets) && body.assets.length >= 6, `[${version}] stimulus manifest has expected assets`, body);
+  assert(
+    body.assets.every((asset) => typeof asset.storagePath === 'string' && asset.storagePath.startsWith(`${version}/`)),
+    `[${version}] stimulus storage paths are version scoped`,
+    body.assets,
+  );
+  assert(
+    body.assets.some((asset) => asset.taskType === 'moca-naming' && asset.assetId === 'item-1'),
+    `[${version}] stimulus manifest includes naming assets`,
+    body.assets,
+  );
 }
 
 async function request(path, init) {
