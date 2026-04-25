@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ChevronRight, FileDown, Download, CheckSquare, Mic, Save } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, ClipboardCheck, Download, FileDown, Mic, Save } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { supabase } from "../../lib/supabase";
 import { clsx } from "clsx";
@@ -49,6 +49,8 @@ interface SessionWithPatient extends DBSession {
   scoring_report?: DBScoringReport | null;
 }
 
+type RubricState = Record<ReviewTab, Record<string, boolean>>;
+
 function formatDuration(startIso: string | null | undefined, endIso: string | null | undefined): string {
   if (!startIso || !endIso) return "—";
   const start = new Date(startIso).getTime();
@@ -70,6 +72,32 @@ const SUBSCORE_CAPS: Record<string, number> = {
   orientation: 6,
 };
 
+const REVIEW_TABS: Array<{ id: ReviewTab; label: string; kind: "drawing" | "manual" }> = [
+  { id: "clock", label: "שעון", kind: "drawing" },
+  { id: "cube", label: "קוביה", kind: "drawing" },
+  { id: "trail", label: "מסלול", kind: "drawing" },
+  { id: "memory", label: "זיכרון", kind: "manual" },
+  { id: "digitSpan", label: "קיבולת זיכרון", kind: "manual" },
+  { id: "serial7", label: "סדרת 7", kind: "manual" },
+  { id: "language", label: "שפה", kind: "manual" },
+  { id: "abstraction", label: "הפשטה", kind: "manual" },
+  { id: "delayedRecall", label: "שליפה", kind: "manual" },
+  { id: "orientation", label: "התמצאות", kind: "manual" },
+];
+
+const DEFAULT_RUBRICS: RubricState = {
+  clock: { contour: true, numbers: false, hands: false },
+  cube: { shape: false, lines: false, parallel: false },
+  trail: { correct: false, noLinesCrossed: false },
+  memory: { recall1: false, recall2: false, recall3: false, recall4: false, recall5: false },
+  digitSpan: { forward: false, backward: false },
+  serial7: { first: false, second: false, third: false, fourth: false, fifth: false },
+  language: { sentence1: false, sentence2: false, fluency: false },
+  abstraction: { train: false, watch: false },
+  delayedRecall: { word1: false, word2: false, word3: false, word4: false, word5: false },
+  orientation: { day: false, month: false, year: false, dayOfWeek: false, place: false, city: false },
+};
+
 function getReportTotal(report: DBScoringReport | null): number | null {
   return report?.total_adjusted ?? report?.total_score ?? null;
 }
@@ -84,6 +112,22 @@ function getPendingReviewCount(report: DBScoringReport | null): number {
   return report.pending_review_count ?? (getReportNeedsReview(report) ? 1 : 0);
 }
 
+function hydrateSavedRubrics(current: RubricState, drawings: DrawingReviewRow[]): RubricState {
+  let next = current;
+  for (const drawing of drawings) {
+    const tab = REVIEW_TABS.find((item) => DRAWING_TAB_TO_TASK_ID[item.id] === drawing.task_id)?.id;
+    if (!tab || !drawing.rubric_items || typeof drawing.rubric_items !== "object" || Array.isArray(drawing.rubric_items)) {
+      continue;
+    }
+    if (next === current) next = { ...current };
+    next[tab] = {
+      ...next[tab],
+      ...(drawing.rubric_items as Record<string, boolean>),
+    };
+  }
+  return next;
+}
+
 export function ClinicianDashboardDetail() {
   const { sessionId } = useParams();
   const [sessionRecord, setSessionRecord] = useState<SessionWithPatient | null>(null);
@@ -92,6 +136,9 @@ export function ClinicianDashboardDetail() {
   const [reviewNotesByTab, setReviewNotesByTab] = useState<Partial<Record<ReviewTab, string>>>({});
   const [savingReview, setSavingReview] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState<ReviewTab>("clock");
+  const [rubrics, setRubrics] = useState<RubricState>(DEFAULT_RUBRICS);
 
   const loadDashboardSession = useCallback(async () => {
     if (!sessionId) return;
@@ -112,6 +159,7 @@ export function ClinicianDashboardDetail() {
     const loadedSession = payload.session as SessionWithPatient;
     setSessionRecord(loadedSession);
     setReportRecord(loadedSession.scoring_report ?? null);
+    setRubrics((prev) => hydrateSavedRubrics(prev, loadedSession.drawings ?? []));
   }, [sessionId]);
 
   useEffect(() => {
@@ -143,22 +191,32 @@ export function ClinicianDashboardDetail() {
     return Array.isArray(raw) ? raw[0] ?? null : raw;
   }, [sessionRecord]);
 
-  const [activeTab, setActiveTab] = useState<ReviewTab>("clock");
-  const [rubrics, setRubrics] = useState({
-    clock: { contour: true, numbers: false, hands: false },
-    cube: { shape: false, lines: false, parallel: false },
-    trail: { correct: false, noLinesCrossed: false },
-    memory: { recall1: false, recall2: false, recall3: false, recall4: false, recall5: false },
-    digitSpan: { forward: false, backward: false },
-    serial7: { first: false, second: false, third: false, fourth: false, fifth: false },
-    language: { sentence1: false, sentence2: false, fluency: false },
-    abstraction: { train: false, watch: false },
-    delayedRecall: { word1: false, word2: false, word3: false, word4: false, word5: false },
-    orientation: { day: false, month: false, year: false, dayOfWeek: false, place: false, city: false },
-  });
+  const reviewQueue = useMemo(() => {
+    return REVIEW_TABS.map((tab) => {
+      const tabDrawingTaskId = DRAWING_TAB_TO_TASK_ID[tab.id];
+      const tabScoringTaskId = SCORING_TAB_TO_TASK_ID[tab.id];
+      const review = tabDrawingTaskId
+        ? sessionRecord?.drawings?.find((row) => row.task_id === tabDrawingTaskId)
+        : sessionRecord?.scoring_reviews?.find((row) => row.item_id === tabScoringTaskId || row.task_type === tabScoringTaskId);
+      const maxScore = tabDrawingTaskId ? (tab.id === "clock" ? 3 : 1) : (review as ScoringReviewRow | undefined)?.max_score;
+      return {
+        ...tab,
+        review,
+        maxScore,
+        isReviewed: review?.clinician_score != null,
+      };
+    }).filter((tab) => !!tab.review);
+  }, [sessionRecord]);
 
-  const drawingTaskId = DRAWING_TAB_TO_TASK_ID[activeTab];
-  const scoringTaskId = SCORING_TAB_TO_TASK_ID[activeTab];
+  const pendingQueue = useMemo(() => reviewQueue.filter((tab) => !tab.isReviewed), [reviewQueue]);
+  const completedQueue = useMemo(() => reviewQueue.filter((tab) => tab.isReviewed), [reviewQueue]);
+  const visibleReviewTabs = showPendingOnly && pendingQueue.length > 0 ? pendingQueue : reviewQueue;
+  const activeReviewTab = reviewQueue.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : (pendingQueue[0] ?? reviewQueue[0])?.id ?? activeTab;
+
+  const drawingTaskId = DRAWING_TAB_TO_TASK_ID[activeReviewTab];
+  const scoringTaskId = SCORING_TAB_TO_TASK_ID[activeReviewTab];
   const currentDrawing = drawingTaskId
     ? sessionRecord?.drawings?.find((review) => review.task_id === drawingTaskId)
     : null;
@@ -173,7 +231,7 @@ export function ClinicianDashboardDetail() {
   const currentImageUrl = currentDrawing?.signedUrl ?? null;
   const currentAudioUrl = typeof currentEvidence?.audioSignedUrl === "string" ? currentEvidence.audioSignedUrl : null;
   const currentReview = currentDrawing ?? currentScoringReview;
-  const reviewNotes = reviewNotesByTab[activeTab] ?? currentReview?.clinician_notes ?? "";
+  const reviewNotes = reviewNotesByTab[activeReviewTab] ?? currentReview?.clinician_notes ?? "";
 
   const getDrawingStats = (strokes: any[][]) => {
     const valid = (strokes || []).filter((s) => s && s.length > 0);
@@ -195,15 +253,15 @@ export function ClinicianDashboardDetail() {
     setSaveMessage(null);
     setRubrics((prev) => ({
       ...prev,
-      [activeTab]: {
-        ...prev[activeTab],
-        [key]: !prev[activeTab][key as keyof (typeof prev)[typeof activeTab]],
+      [activeReviewTab]: {
+        ...prev[activeReviewTab],
+        [key]: !prev[activeReviewTab][key],
       },
     }));
   };
 
   const getRubricData = () => {
-    if (activeTab === "clock") {
+    if (activeReviewTab === "clock") {
       return {
         max: 3,
         score:
@@ -214,7 +272,7 @@ export function ClinicianDashboardDetail() {
           { id: "hands", label: "מחוגים", desc: "השעה 11:10 בדיוק" },
         ],
       };
-    } else if (activeTab === "cube") {
+    } else if (activeReviewTab === "cube") {
       return {
         max: 1,
         score: rubrics.cube.shape && rubrics.cube.lines && rubrics.cube.parallel ? 1 : 0,
@@ -224,7 +282,7 @@ export function ClinicianDashboardDetail() {
           { id: "parallel", label: "קווים מקבילים", desc: "הקווים מקבילים פחות או יותר" },
         ],
       };
-    } else if (activeTab === "trail") {
+    } else if (activeReviewTab === "trail") {
       return {
         max: 1,
         score: rubrics.trail.correct && rubrics.trail.noLinesCrossed ? 1 : 0,
@@ -233,7 +291,7 @@ export function ClinicianDashboardDetail() {
           { id: "noLinesCrossed", label: "קווים לא נחתכים", desc: "המסלול לא חותך את עצמו" },
         ],
       };
-    } else if (activeTab === "memory") {
+    } else if (activeReviewTab === "memory") {
       return {
         max: 0,
         score: 0,
@@ -245,7 +303,7 @@ export function ClinicianDashboardDetail() {
           { id: "recall5", label: "אדום", desc: "הנבדק חזר על המילה" },
         ],
       };
-    } else if (activeTab === "digitSpan") {
+    } else if (activeReviewTab === "digitSpan") {
       return {
         max: 2,
         score: (rubrics.digitSpan.forward ? 1 : 0) + (rubrics.digitSpan.backward ? 1 : 0),
@@ -254,7 +312,7 @@ export function ClinicianDashboardDetail() {
           { id: "backward", label: "7-4-2 אחורה", desc: "חזר על הסדרה בסדר הפוך מדויק" },
         ],
       };
-    } else if (activeTab === "serial7") {
+    } else if (activeReviewTab === "serial7") {
       return {
         max: 3,
         score: Object.values(rubrics.serial7).filter((v) => v).length,
@@ -266,7 +324,7 @@ export function ClinicianDashboardDetail() {
           { id: "fifth", label: "65", desc: "תשובה חמישית נכונה" },
         ],
       };
-    } else if (activeTab === "language") {
+    } else if (activeReviewTab === "language") {
       return {
         max: 3,
         score:
@@ -277,7 +335,7 @@ export function ClinicianDashboardDetail() {
           { id: "fluency", label: "שטף מילולי", desc: "מנה מעל 11 מילים" },
         ],
       };
-    } else if (activeTab === "abstraction") {
+    } else if (activeReviewTab === "abstraction") {
       return {
         max: 2,
         score: (rubrics.abstraction.train ? 1 : 0) + (rubrics.abstraction.watch ? 1 : 0),
@@ -286,7 +344,7 @@ export function ClinicianDashboardDetail() {
           { id: "watch", label: "שעון/סרגל", desc: "כלי מדידה" },
         ],
       };
-    } else if (activeTab === "delayedRecall") {
+    } else if (activeReviewTab === "delayedRecall") {
       return {
         max: 5,
         score: Object.values(rubrics.delayedRecall).filter((v) => v).length,
@@ -318,6 +376,7 @@ export function ClinicianDashboardDetail() {
 
   const handleSaveReview = async () => {
     if (!currentReview) return;
+    const nextPendingTab = pendingQueue.find((tab) => tab.id !== activeReviewTab)?.id ?? null;
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -333,7 +392,7 @@ export function ClinicianDashboardDetail() {
       ? {
           reviewId: currentDrawing.id,
           clinicianScore: rubricData.score,
-          rubricItems: rubrics[activeTab],
+          rubricItems: rubrics[activeReviewTab],
           clinicianNotes: reviewNotes,
         }
       : {
@@ -367,6 +426,7 @@ export function ClinicianDashboardDetail() {
 
     setSaveMessage("הניקוד נשמר.");
     await loadDashboardSession();
+    if (nextPendingTab) setActiveTab(nextPendingTab);
   };
 
   const summary = useMemo(() => {
@@ -402,7 +462,19 @@ export function ClinicianDashboardDetail() {
   }, [reportRecord, sessionRecord]);
 
   const renderTaskContent = () => {
-    if (["clock", "cube", "trail"].includes(activeTab)) {
+    if (!currentReview) {
+      return (
+        <div className="flex min-h-[360px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+          <ClipboardCheck className="mb-4 h-10 w-10 text-gray-400" />
+          <h3 className="text-xl font-extrabold text-black">אין פריט סקירה למשימה הזו</h3>
+          <p className="mt-2 max-w-md text-sm font-bold text-gray-500">
+            פריטי סקירה נוצרים אחרי שהמטופל מסיים את המבחן או כאשר נשמרה עדות שדורשת ניקוד קלינאי.
+          </p>
+        </div>
+      );
+    }
+
+    if (["clock", "cube", "trail"].includes(activeReviewTab)) {
       return (
         <div className="flex flex-col items-center">
           <PlaybackCanvas strokes={currentStrokes} width={450} height={400} backgroundImageUrl={currentImageUrl ?? undefined} />
@@ -527,6 +599,15 @@ export function ClinicianDashboardDetail() {
   const reportNeedsReview = getReportNeedsReview(reportRecord);
   const canExportPdf =
     sessionRecord?.status === "completed" && !reportNeedsReview && getPendingReviewCount(reportRecord) === 0;
+  const pendingReviewCount = getPendingReviewCount(reportRecord);
+  const reviewTabsForDisplay = visibleReviewTabs.length > 0
+    ? visibleReviewTabs
+    : REVIEW_TABS.map((tab) => ({ ...tab, review: null, maxScore: undefined, isReviewed: false }));
+  const exportBlockReason = canExportPdf
+    ? "הדוח מוכן לייצוא"
+    : pendingReviewCount > 0
+    ? `נותרו ${pendingReviewCount} פריטי סקירה`
+    : "ניתן לייצא לאחר השלמת הסקירה";
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
@@ -625,30 +706,88 @@ export function ClinicianDashboardDetail() {
         ))}
       </div>
 
-      <div className="flex items-center gap-6 mb-6 mt-12 border-b border-gray-200 overflow-x-auto pb-1 scrollbar-hide">
-        {[
-          { id: "clock", label: "שעון" },
-          { id: "cube", label: "קוביה" },
-          { id: "trail", label: "מסלול" },
-          { id: "memory", label: "זיכרון" },
-          { id: "digitSpan", label: "קיבולת זיכרון" },
-          { id: "serial7", label: "סדרת 7" },
-          { id: "language", label: "שפה" },
-          { id: "abstraction", label: "הפשטה" },
-          { id: "delayedRecall", label: "שליפה" },
-          { id: "orientation", label: "התמצאות" },
-        ].map((tab) => (
-          <h2
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={clsx(
-              "text-xl font-extrabold pb-4 border-b-4 cursor-pointer transition-colors whitespace-nowrap",
-              activeTab === tab.id ? "border-black text-black" : "border-transparent text-gray-400 hover:text-gray-600",
-            )}
-          >
-            {tab.label}
-          </h2>
-        ))}
+      <div className="mb-6 mt-12 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <ClipboardCheck className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold text-black">סקירה קלינית</h2>
+              <p className="text-sm font-bold text-gray-500">
+                {reviewQueue.length > 0
+                  ? `${pendingQueue.length} ממתינים · ${completedQueue.length} נשמרו · ${reviewQueue.length} פריטים`
+                  : "אין פריטי סקירה מוכנים להצגה"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span
+              className={clsx(
+                "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-extrabold",
+                canExportPdf ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-800",
+              )}
+            >
+              {canExportPdf ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              {exportBlockReason}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowPendingOnly((value) => !value)}
+              disabled={pendingQueue.length === 0}
+              className={clsx(
+                "rounded-xl border px-4 py-2 text-sm font-extrabold transition-colors",
+                showPendingOnly
+                  ? "border-black bg-black text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-400",
+                pendingQueue.length === 0 && "cursor-not-allowed opacity-50",
+              )}
+            >
+              {showPendingOnly ? "הצג הכל" : "הצג ממתינים"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-stretch gap-3 overflow-x-auto pb-1 scrollbar-hide">
+          {reviewTabsForDisplay.map((tab) => {
+            const isActive = activeReviewTab === tab.id;
+            const score = tab.review?.clinician_score;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={clsx(
+                  "min-w-[150px] rounded-xl border p-4 text-right transition-colors",
+                  isActive
+                    ? "border-black bg-black text-white"
+                    : tab.isReviewed
+                    ? "border-green-200 bg-green-50 text-green-950 hover:border-green-300"
+                    : tab.review
+                    ? "border-amber-200 bg-amber-50 text-amber-950 hover:border-amber-300"
+                    : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300",
+                )}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-base font-extrabold">{tab.label}</span>
+                  {tab.isReviewed ? (
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+                  ) : tab.review ? (
+                    <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                  ) : null}
+                </div>
+                <div className={clsx("mt-2 text-xs font-bold", isActive ? "text-white/75" : "text-current/70")}>
+                  {tab.isReviewed
+                    ? `נשמר ${score}/${tab.maxScore ?? "?"}`
+                    : tab.review
+                    ? "ממתין לניקוד"
+                    : "אין פריט סקירה"}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-8">
@@ -678,7 +817,7 @@ export function ClinicianDashboardDetail() {
 
           <div className="space-y-3 mb-8 flex-1">
             {rubricData.items.map((crit) => {
-              const isChecked = (rubrics[activeTab] as any)[crit.id];
+              const isChecked = rubrics[activeReviewTab][crit.id];
               return (
                 <div
                   key={crit.id}
@@ -694,7 +833,7 @@ export function ClinicianDashboardDetail() {
                       isChecked ? "bg-green-600 text-white" : "bg-gray-200 text-transparent",
                     )}
                   >
-                    <CheckSquare className="w-5 h-5" />
+                    <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <div>
                     <div className={clsx("font-bold text-lg", isChecked ? "text-green-900" : "text-black")}>
@@ -715,7 +854,7 @@ export function ClinicianDashboardDetail() {
               value={reviewNotes}
               onChange={(event) => {
                 setSaveMessage(null);
-                setReviewNotesByTab((prev) => ({ ...prev, [activeTab]: event.target.value }));
+                setReviewNotesByTab((prev) => ({ ...prev, [activeReviewTab]: event.target.value }));
               }}
               placeholder="הוסף הערה קלינית…"
               className="w-full h-32 p-4 bg-white border border-gray-200 rounded-xl resize-none text-lg focus:outline-none focus:ring-4 focus:ring-blue-600 focus:border-blue-600 transition-all"
