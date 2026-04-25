@@ -6,7 +6,8 @@ import { useAssessmentStore } from "../store/AssessmentContext";
 export function AssessmentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setLastPath } = useAssessmentStore();
+  const { state, setLastPath } = useAssessmentStore();
+  const mocaVersion = state.scoringContext?.mocaVersion ?? "8.3";
 
   useEffect(() => {
     // Keep track of the last path the user was on
@@ -92,7 +93,7 @@ export function AssessmentLayout() {
 
         <div className="text-center">
           <h1 className="font-bold text-xl">MoCA - עברית</h1>
-          <div className="text-sm text-gray-500">גרסה 8.1</div>
+          <div className="text-sm text-gray-500">גרסה {mocaVersion}</div>
         </div>
 
         <div className="font-mono text-lg font-medium tabular-nums" style={{ fontVariantNumeric: "tabular-nums" }}>
