@@ -133,7 +133,7 @@ async function runVersion(version) {
   ]);
   await submitResult(headers, sessionId, linkToken, 'moca-language', { rep1: true, rep2: true, fluencyCount: 11 });
   await submitResult(headers, sessionId, linkToken, 'moca-abstraction', { pair1: true, pair2: true });
-  await submitResult(headers, sessionId, linkToken, 'moca-delayed-recall', { recalled: ['פנס', 'חסידה', 'ורד', 'ירח', 'אמת'] });
+  await submitResult(headers, sessionId, linkToken, 'moca-delayed-recall', { recalled: ['פנים', 'קטיפה', 'כנסייה', 'חרצית', 'אדום'] });
 
   const audio = await request('/functions/v1/save-audio', {
     method: 'POST',

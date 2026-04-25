@@ -5,7 +5,7 @@ type SupabaseClient = any;
 export async function recalculateReviewedReport(supabase: SupabaseClient, sessionId: string, finalizedBy: string | null) {
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .select('id, age_band, education_years, location_place, location_city, started_at, created_at')
+    .select('id, age_band, education_years, location_place, location_city, started_at, created_at, moca_version')
     .eq('id', sessionId)
     .single();
   if (sessionError || !session) throw new Error('Session not found');
@@ -37,11 +37,12 @@ export async function recalculateReviewedReport(supabase: SupabaseClient, sessio
       .map((row: any) => [row.item_id, row.clinician_score]),
   ]);
 
-  const updatedReport = applyManualScores(dbReportToScoringReport(scoringReport, session.education_years), {
+  const updatedReport = applyManualScores(dbReportToScoringReport(scoringReport, session.education_years, session.moca_version), {
     sessionId: session.id,
     sessionDate: new Date(session.started_at ?? session.created_at),
     educationYears: session.education_years,
     patientAge: ageFromBand(session.age_band),
+    mocaVersion: session.moca_version,
     sessionLocation: { place: session.location_place, city: session.location_city },
   }, manualScores);
 
@@ -75,9 +76,10 @@ export async function recalculateReviewedReport(supabase: SupabaseClient, sessio
   return updatedReport;
 }
 
-function dbReportToScoringReport(scoringReport: any, educationYears: number): ScoringReport {
+function dbReportToScoringReport(scoringReport: any, educationYears: number, mocaVersion: string | null | undefined): ScoringReport {
   return {
     sessionId: scoringReport.session_id,
+    mocaVersion: mocaVersion ?? '8.3',
     totalRaw: scoringReport.total_raw,
     totalAdjusted: scoringReport.total_adjusted,
     totalProvisional: scoringReport.total_provisional,

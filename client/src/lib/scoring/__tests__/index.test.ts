@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { scoreSession } from '../index';
+import { scoreSession, scoreSessionWithConfig } from '../index';
+import { getMocaVersionConfig, SUPPORTED_MOCA_VERSIONS, type MocaScoringConfig } from '../moca-config';
 import type { ScoringContext } from '../../../types/scoring';
-import scoringConfig from '../../../data/scoring-config.json' with { type: 'json' };
 
 const CTX: ScoringContext = {
   sessionId: 'test-session-1',
@@ -30,6 +30,23 @@ describe('scoreSession', () => {
   it('returns a ScoringReport with sessionId', () => {
     const report = scoreSession(FULL_RESULTS, CTX);
     expect(report.sessionId).toBe('test-session-1');
+  });
+
+  it('uses default MoCA version 8.3 when context has no version', () => {
+    const report = scoreSession(FULL_RESULTS, CTX);
+    expect(report.mocaVersion).toBe('8.3');
+  });
+
+  it.each(SUPPORTED_MOCA_VERSIONS)('uses selected MoCA version %s config', (version) => {
+    const report = scoreSession(FULL_RESULTS, { ...CTX, mocaVersion: version });
+    expect(report.mocaVersion).toBe(version);
+    expect(report.domains.map((domain) => domain.domain)).toEqual(
+      getMocaVersionConfig(version).domains.map((domain) => domain.id),
+    );
+  });
+
+  it('throws on unsupported MoCA versions instead of scoring with the wrong contract', () => {
+    expect(() => scoreSession(FULL_RESULTS, { ...CTX, mocaVersion: '7.1' })).toThrow('Unsupported MoCA version');
   });
 
   it('drawing tasks always set pendingReviewCount > 0', () => {
@@ -169,17 +186,9 @@ describe('scoreSession', () => {
   });
 
   it('computes norm metrics when config has no manual-review tasks', () => {
-    const cfg = scoringConfig as unknown as {
-      domains: Array<{ id: string; label: string; tasks: Array<{ taskId: string; max: number }> }>;
-      drawingTasks: string[];
-      noScoreTasks: string[];
-    };
-    const originalDomains = cfg.domains;
-    const originalDrawingTasks = cfg.drawingTasks;
-    const originalNoScoreTasks = cfg.noScoreTasks;
-
-    try {
-      cfg.domains = [
+    const cfg: MocaScoringConfig = {
+      ...getMocaVersionConfig('8.3'),
+      domains: [
         {
           id: 'language',
           label: 'Language',
@@ -188,142 +197,93 @@ describe('scoreSession', () => {
             { taskId: 'moca-unknown', max: 1 },
           ],
         },
-      ];
-      cfg.drawingTasks = [];
-      cfg.noScoreTasks = [];
+      ],
+      drawingTasks: [],
+      noScoreTasks: [],
+    };
 
-      const report = scoreSession(
-        {
-          'moca-language': { rep1: true, rep2: true, fluencyCount: 12 },
-          'moca-unknown': { any: 'value' },
-        },
-        CTX,
-      );
+    const report = scoreSessionWithConfig(
+      {
+        'moca-language': { rep1: true, rep2: true, fluencyCount: 12 },
+        'moca-unknown': { any: 'value' },
+      },
+      CTX,
+      cfg,
+    );
 
-      expect(report.totalProvisional).toBe(false);
-      expect(report.normPercentile).not.toBeNull();
-      expect(report.normSd).not.toBeNull();
-      const unknownItems = report.domains.flatMap((d) => d.items).filter((i) => i.taskId === 'moca-unknown');
-      expect(unknownItems).toHaveLength(0);
-    } finally {
-      cfg.domains = originalDomains;
-      cfg.drawingTasks = originalDrawingTasks;
-      cfg.noScoreTasks = originalNoScoreTasks;
-    }
+    expect(report.totalProvisional).toBe(false);
+    expect(report.normPercentile).not.toBeNull();
+    expect(report.normSd).not.toBeNull();
+    const unknownItems = report.domains.flatMap((d) => d.items).filter((i) => i.taskId === 'moca-unknown');
+    expect(unknownItems).toHaveLength(0);
   });
 
   it('skips tasks that are configured as no-score', () => {
-    const cfg = scoringConfig as unknown as {
-      domains: Array<{ id: string; label: string; tasks: Array<{ taskId: string; max: number }> }>;
-      drawingTasks: string[];
-      noScoreTasks: string[];
+    const cfg: MocaScoringConfig = {
+      ...getMocaVersionConfig('8.3'),
+      domains: [{ id: 'memory', label: 'Memory', tasks: [{ taskId: 'moca-memory-learning', max: 0 }] }],
+      drawingTasks: [],
+      noScoreTasks: ['moca-memory-learning'],
     };
-    const originalDomains = cfg.domains;
-    const originalDrawingTasks = cfg.drawingTasks;
-    const originalNoScoreTasks = cfg.noScoreTasks;
 
-    try {
-      cfg.domains = [{ id: 'memory', label: 'Memory', tasks: [{ taskId: 'moca-memory-learning', max: 0 }] }];
-      cfg.drawingTasks = [];
-      cfg.noScoreTasks = ['moca-memory-learning'];
+    const report = scoreSessionWithConfig(
+      { 'moca-memory-learning': { registered: true } },
+      CTX,
+      cfg,
+    );
 
-      const report = scoreSession(
-        { 'moca-memory-learning': { registered: true } },
-        CTX,
-      );
-
-      expect(report.totalProvisional).toBe(false);
-      expect(report.domains[0].items).toHaveLength(0);
-      expect(report.totalRaw).toBe(0);
-    } finally {
-      cfg.domains = originalDomains;
-      cfg.drawingTasks = originalDrawingTasks;
-      cfg.noScoreTasks = originalNoScoreTasks;
-    }
+    expect(report.totalProvisional).toBe(false);
+    expect(report.domains[0].items).toHaveLength(0);
+    expect(report.totalRaw).toBe(0);
   });
 
   it('returns null norm metrics when no matching norm exists and review is not pending', () => {
-    const cfg = scoringConfig as unknown as {
-      domains: Array<{ id: string; label: string; tasks: Array<{ taskId: string; max: number }> }>;
-      drawingTasks: string[];
-      noScoreTasks: string[];
+    const cfg: MocaScoringConfig = {
+      ...getMocaVersionConfig('8.3'),
+      domains: [{ id: 'language', label: 'Language', tasks: [{ taskId: 'moca-language', max: 3 }] }],
+      drawingTasks: [],
+      noScoreTasks: [],
     };
-    const originalDomains = cfg.domains;
-    const originalDrawingTasks = cfg.drawingTasks;
-    const originalNoScoreTasks = cfg.noScoreTasks;
 
-    try {
-      cfg.domains = [{ id: 'language', label: 'Language', tasks: [{ taskId: 'moca-language', max: 3 }] }];
-      cfg.drawingTasks = [];
-      cfg.noScoreTasks = [];
+    const report = scoreSessionWithConfig(
+      { 'moca-language': { rep1: true, rep2: true, fluencyCount: 12 } },
+      { ...CTX, patientAge: 40 },
+      cfg,
+    );
 
-      const report = scoreSession(
-        { 'moca-language': { rep1: true, rep2: true, fluencyCount: 12 } },
-        { ...CTX, patientAge: 40 },
-      );
-
-      expect(report.totalProvisional).toBe(false);
-      expect(report.normPercentile).toBeNull();
-      expect(report.normSd).toBeNull();
-    } finally {
-      cfg.domains = originalDomains;
-      cfg.drawingTasks = originalDrawingTasks;
-      cfg.noScoreTasks = originalNoScoreTasks;
-    }
+    expect(report.totalProvisional).toBe(false);
+    expect(report.normPercentile).toBeNull();
+    expect(report.normSd).toBeNull();
   });
 
   it('scores drawing task id as pending review when manually configured in drawingTasks', () => {
-    const cfg = scoringConfig as unknown as {
-      domains: Array<{ id: string; label: string; tasks: Array<{ taskId: string; max: number }> }>;
-      drawingTasks: string[];
-      noScoreTasks: string[];
+    const cfg: MocaScoringConfig = {
+      ...getMocaVersionConfig('8.3'),
+      domains: [{ id: 'custom', label: 'Custom', tasks: [{ taskId: 'moca-free-draw', max: 2 }] }],
+      drawingTasks: ['moca-free-draw'],
+      noScoreTasks: [],
     };
-    const originalDomains = cfg.domains;
-    const originalDrawingTasks = cfg.drawingTasks;
-    const originalNoScoreTasks = cfg.noScoreTasks;
 
-    try {
-      cfg.domains = [{ id: 'custom', label: 'Custom', tasks: [{ taskId: 'moca-free-draw', max: 2 }] }];
-      cfg.drawingTasks = ['moca-free-draw'];
-      cfg.noScoreTasks = [];
-
-      const report = scoreSession({ 'moca-free-draw': { strokes: [] } }, CTX);
-      const drawingItem = report.domains[0]?.items[0];
-      expect(drawingItem?.taskId).toBe('moca-free-draw');
-      expect(drawingItem?.needsReview).toBe(true);
-      expect(drawingItem?.reviewReason).toBe('drawing');
-      expect(drawingItem?.max).toBe(2);
-    } finally {
-      cfg.domains = originalDomains;
-      cfg.drawingTasks = originalDrawingTasks;
-      cfg.noScoreTasks = originalNoScoreTasks;
-    }
+    const report = scoreSessionWithConfig({ 'moca-free-draw': { strokes: [] } }, CTX, cfg);
+    const drawingItem = report.domains[0]?.items[0];
+    expect(drawingItem?.taskId).toBe('moca-free-draw');
+    expect(drawingItem?.needsReview).toBe(true);
+    expect(drawingItem?.reviewReason).toBe('drawing');
+    expect(drawingItem?.max).toBe(2);
   });
 
   it('uses fallback max=1 for drawing tasks when configured task max is undefined', () => {
-    const cfg = scoringConfig as unknown as {
-      domains: Array<{ id: string; label: string; tasks: Array<{ taskId: string; max?: number }> }>;
-      drawingTasks: string[];
-      noScoreTasks: string[];
-    };
-    const originalDomains = cfg.domains;
-    const originalDrawingTasks = cfg.drawingTasks;
-    const originalNoScoreTasks = cfg.noScoreTasks;
+    const cfg = {
+      ...getMocaVersionConfig('8.3'),
+      domains: [{ id: 'custom', label: 'Custom', tasks: [{ taskId: 'moca-free-draw-no-max' }] }],
+      drawingTasks: ['moca-free-draw-no-max'],
+      noScoreTasks: [],
+    } as MocaScoringConfig;
 
-    try {
-      cfg.domains = [{ id: 'custom', label: 'Custom', tasks: [{ taskId: 'moca-free-draw-no-max' }] }];
-      cfg.drawingTasks = ['moca-free-draw-no-max'];
-      cfg.noScoreTasks = [];
-
-      const report = scoreSession({ 'moca-free-draw-no-max': { strokes: [] } }, CTX);
-      const drawingItem = report.domains[0]?.items[0];
-      expect(drawingItem?.taskId).toBe('moca-free-draw-no-max');
-      expect(drawingItem?.needsReview).toBe(true);
-      expect(drawingItem?.max).toBe(1);
-    } finally {
-      cfg.domains = originalDomains;
-      cfg.drawingTasks = originalDrawingTasks;
-      cfg.noScoreTasks = originalNoScoreTasks;
-    }
+    const report = scoreSessionWithConfig({ 'moca-free-draw-no-max': { strokes: [] } }, CTX, cfg);
+    const drawingItem = report.domains[0]?.items[0];
+    expect(drawingItem?.taskId).toBe('moca-free-draw-no-max');
+    expect(drawingItem?.needsReview).toBe(true);
+    expect(drawingItem?.max).toBe(1);
   });
 });

@@ -116,10 +116,10 @@ Supabase Edge Function `save-drawing`:
 client/src/
 ├── types/scoring.ts
 ├── data/
-│   ├── lifshitz-norms.json
-│   └── scoring-config.json
+│   └── lifshitz-norms.json
 ├── lib/scoring/
 │   ├── index.ts        — scoreSession() orchestrator
+│   ├── moca-config.ts  — supported MoCA versions and rule config
 │   ├── scorers.ts      — per-task pure functions
 │   ├── norms.ts        — norm lookup + percentile
 │   └── utils.ts        — Hebrew normalizer + safe wrapper
@@ -134,7 +134,7 @@ supabase/functions/save-drawing/
 ## Implementation Order
 
 1. `types/scoring.ts`
-2. `data/scoring-config.json`
+2. `lib/scoring/moca-config.ts`
 3. `data/lifshitz-norms.json`
 4. `lib/scoring/utils.ts`
 5. `lib/scoring/scorers.ts` (TDD)

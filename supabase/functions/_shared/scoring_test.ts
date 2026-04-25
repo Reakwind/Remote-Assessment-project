@@ -9,8 +9,16 @@ const CTX: ScoringContext = {
   sessionDate: new Date('2026-04-21T00:00:00Z'),
   educationYears: 16,
   patientAge: 72,
+  mocaVersion: '8.3',
   sessionLocation: { place: 'מרפאה', city: 'תל אביב' },
 };
+
+Deno.test('scoreSession preserves selected MoCA version', () => {
+  for (const version of ['8.1', '8.2', '8.3']) {
+    const report = scoreSession({}, { ...CTX, mocaVersion: version });
+    assertEquals(report.mocaVersion, version);
+  }
+});
 
 Deno.test('scoreSession scores active naming answers object', () => {
   const report = scoreSession({
@@ -26,9 +34,27 @@ Deno.test('scoreSession scores active naming answers object', () => {
   assertEquals(report.domains.find((domain) => domain.domain === 'naming')?.raw, 3);
 });
 
+Deno.test('scoreSession uses configured recall words shared with patient flow', () => {
+  const report = scoreSession({
+    'moca-delayed-recall': { recalled: ['פנים', 'קטיפה', 'כנסייה', 'חרצית', 'אדום'] },
+  }, CTX);
+
+  assertEquals(report.domains.find((domain) => domain.domain === 'memory')?.raw, 5);
+});
+
 Deno.test('scoreSession routes malformed naming answers to review', () => {
   const report = scoreSession({ 'moca-naming': { answers: { lion: 'אריה' } } }, CTX);
   const namingItem = report.domains.find((domain) => domain.domain === 'naming')?.items[0];
   assertEquals(namingItem?.needsReview, true);
   assertEquals(namingItem?.reviewReason, 'rule_score_unavailable');
+});
+
+Deno.test('scoreSession rejects unsupported MoCA versions', () => {
+  let threw = false;
+  try {
+    scoreSession({}, { ...CTX, mocaVersion: '7.1' });
+  } catch (error) {
+    threw = error instanceof Error && error.message.includes('Unsupported MoCA version');
+  }
+  assertEquals(threw, true);
 });
