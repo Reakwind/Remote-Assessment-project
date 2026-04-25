@@ -7,13 +7,15 @@ export function BaseCanvas({
   height = 500, 
   onDrawChange,
   onSave,
-  initialStrokes = []
+  initialStrokes = [],
+  backgroundImageUrl,
 }: { 
   width?: number; 
   height?: number;
   onDrawChange?: (strokes: any[]) => void;
   onSave?: (dataUrl: string, strokes: any[][]) => void;
   initialStrokes?: any[][];
+  backgroundImageUrl?: string | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
@@ -22,6 +24,7 @@ export function BaseCanvas({
   const [stylusOnly, setStylusOnly] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d", { desynchronized: true });
@@ -40,24 +43,15 @@ export function BaseCanvas({
     ctx.lineJoin = "round";
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#000000";
-    
-    // Fill white background initially
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    
-    // Draw initial strokes if present
-    if (initialStrokes.length > 0) {
-      initialStrokes.forEach(stroke => {
-        if (!stroke || stroke.length === 0) return;
-        ctx.beginPath();
-        ctx.moveTo(stroke[0].x, stroke[0].y);
-        for (let i = 1; i < stroke.length; i++) {
-          ctx.lineTo(stroke[i].x, stroke[i].y);
-        }
-        ctx.stroke();
-      });
-    }
-  }, [width, height, initialStrokes]);
+
+    redrawCanvas(ctx, width, height, initialStrokes, backgroundImageUrl).catch((error) => {
+      if (!cancelled) console.error("Failed to draw canvas background:", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [width, height, initialStrokes, backgroundImageUrl]);
 
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (stylusOnly && e.pointerType === "touch") return;
@@ -129,8 +123,9 @@ export function BaseCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
+    redrawCanvas(ctx, width, height, [], backgroundImageUrl).catch((error) => {
+      console.error("Failed to clear canvas background:", error);
+    });
     setStrokes([]);
     if (onDrawChange) onDrawChange([]);
     if (onSave) onSave("", []);
@@ -148,18 +143,8 @@ export function BaseCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    // Redraw everything
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    
-    newStrokes.forEach(stroke => {
-      if (stroke.length === 0) return;
-      ctx.beginPath();
-      ctx.moveTo(stroke[0].x, stroke[0].y);
-      for (let i = 1; i < stroke.length; i++) {
-        ctx.lineTo(stroke[i].x, stroke[i].y);
-      }
-      ctx.stroke();
+    redrawCanvas(ctx, width, height, newStrokes, backgroundImageUrl).catch((error) => {
+      console.error("Failed to undo canvas stroke:", error);
     });
 
     if (onSave) onSave(canvas.toDataURL(), newStrokes);
@@ -225,4 +210,59 @@ export function BaseCanvas({
       </div>
     </div>
   );
+}
+
+async function redrawCanvas(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  strokes: any[][],
+  backgroundImageUrl?: string | null,
+) {
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+
+  if (backgroundImageUrl) {
+    const image = await loadImage(backgroundImageUrl);
+    drawContainedImage(ctx, image, width, height);
+  }
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#000000";
+
+  strokes.forEach(stroke => {
+    if (!stroke || stroke.length === 0) return;
+    ctx.beginPath();
+    ctx.moveTo(stroke[0].x, stroke[0].y);
+    for (let i = 1; i < stroke.length; i++) {
+      ctx.lineTo(stroke[i].x, stroke[i].y);
+    }
+    ctx.stroke();
+  });
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    image.src = src;
+  });
+}
+
+function drawContainedImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  width: number,
+  height: number,
+) {
+  const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const x = (width - drawWidth) / 2;
+  const y = (height - drawHeight) / 2;
+  ctx.drawImage(image, x, y, drawWidth, drawHeight);
 }

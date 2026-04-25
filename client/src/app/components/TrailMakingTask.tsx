@@ -40,26 +40,21 @@ export function TrailMakingTask() {
       </div>
 
       <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          {trailTemplate?.signedUrl ? (
-            <img
-              src={trailTemplate.signedUrl}
-              alt="Trail Making template"
-              className="h-[400px] w-[800px] object-contain"
-            />
-          ) : (
+        {!trailTemplate?.signedUrl && (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
             <div className="flex flex-col items-center gap-4 opacity-70">
               <div className="w-[600px] h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 font-bold italic">
                 [Trail Making Template: 1-א-2-ב-3-ג-4-ד-5-ה]
               </div>
               <DevStimulusNotice className="pointer-events-auto" />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <BaseCanvas 
           width={800} 
           height={400} 
+          backgroundImageUrl={trailTemplate?.signedUrl}
           initialStrokes={savedData.strokes}
           onDrawChange={handleDrawChange}
           onSave={handleSave}
