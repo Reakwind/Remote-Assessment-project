@@ -28,7 +28,7 @@ A remote, web-based platform for cognitive assessment of the 60+ population in I
 4. **Scoring Engine + Supabase Schema:** Logic for Israeli norms + full DB design. (DONE)
    - lib/scoring/{index,scorers,norms,utils}.ts — pure functions, TDD'd, 95/95 tests
    - Drawing tasks (cube/clock/trails) → needsReview=true, clinician manual rubric per SPEC 3.6.2
-   - Auto-score failures → needsReview=true, rawData preserved, never silently zero
+   - Unsupported or malformed rule-scoring payloads → needsReview=true, rawData preserved, never silently zero
    - Norm percentile computed locally from lifshitz-norms.json (no external calls)
    - useScoring hook bridges battery state to scoreSession
    - save-drawing Edge Function: canvas PNG → Supabase Storage only

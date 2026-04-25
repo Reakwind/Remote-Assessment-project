@@ -3,9 +3,9 @@ export interface ItemScore {
   score: number;
   max: number;
   needsReview: boolean;
-  reviewReason?: 'drawing' | 'auto_score_failed';
+  reviewReason?: 'drawing' | 'rule_score_unavailable';
   rawData?: unknown;
-  aiConfidence?: never; // reserved — no AI scoring, see clinical priorities
+  aiConfidence?: never;
 }
 
 export interface DomainScore {
