@@ -62,6 +62,12 @@ Future work proceeds feature by feature: create a branch from current `origin/ma
 - Backend: Supabase Postgres/Auth/Storage/Edge Functions on Deno.
 - Local verification: Supabase CLI plus `scripts/local-e2e.mjs`.
 
+## CI And Local E2E
+
+GitHub CI is the stable required baseline for every PR: install dependencies, lint, unit tests, scoring coverage thresholds, production build, and Deno type checks for Supabase Edge Functions.
+
+Full browser/Supabase E2E is a required local pre-merge check for backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes. Run `docs/LOCAL_E2E_VERIFICATION.md` locally for those branches and record any skipped checks in the PR.
+
 ## Repo Map
 
 - `client/` - active frontend.
