@@ -16,6 +16,22 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router/')) {
+            return 'react-vendor';
+          }
+          if (id.includes('/@radix-ui/') || id.includes('/lucide-react/') || id.includes('/recharts/')) {
+            return 'ui-vendor';
+          }
+          return 'vendor';
+        },
+      },
+    },
+  },
   plugins: [
     tailwindcss(),
     figmaAssetResolver(),
