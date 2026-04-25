@@ -1,28 +1,31 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { decode } from 'https://deno.land/std@0.198.0/encoding/base64.ts';
+import { writeAuditEvent } from '../_shared/audit.ts';
+import { corsResponse, json, methodNotAllowed } from '../_shared/http.ts';
+import { DRAWING_TASKS } from '../_shared/tasks.ts';
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
-  }
+  if (req.method === 'OPTIONS') return corsResponse(req);
+  if (req.method !== 'POST') return methodNotAllowed(req);
 
-  let body: { sessionId: string; taskId: string; strokesData?: any[]; imageBase64?: string };
+  let body: { sessionId: string; linkToken: string; taskId: string; strokesData?: unknown[]; imageBase64?: string };
   try {
     body = await req.json();
   } catch {
-    return json({ error: 'Invalid JSON' }, 400);
+    return json({ error: 'Invalid JSON' }, 400, req);
   }
 
-  const { sessionId, taskId, strokesData, imageBase64 } = body;
-  
-  if (!sessionId || !taskId) {
-    return json({ error: 'Missing required fields: sessionId, taskId' }, 400);
+  const { sessionId, linkToken, taskId, strokesData, imageBase64 } = body;
+  if (!sessionId || !linkToken || !taskId) return json({ error: 'Missing required fields: sessionId, linkToken, taskId' }, 400, req);
+  if (!DRAWING_TASKS.has(taskId)) return json({ error: 'Invalid drawing taskId' }, 400, req);
+  if (strokesData !== undefined && !Array.isArray(strokesData)) return json({ error: 'strokesData must be an array' }, 400, req);
+  if (imageBase64 && !imageBase64.startsWith('data:image/png;base64,')) {
+    return json({ error: 'imageBase64 must be a PNG data URL' }, 400, req);
   }
-
-  const taskName = taskId.replace(/^moca-/, '');
-
-  if (!['cube', 'clock', 'trailMaking'].includes(taskName)) {
-    return json({ error: 'Invalid drawing task name' }, 400);
+  if (imageBase64 && imageBase64.length > 7_000_000) {
+    return json({ error: 'Drawing image is too large' }, 413, req);
   }
 
   const supabase = createClient(
@@ -30,69 +33,66 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   );
 
-  let storagePath: string | null = null;
-  let publicUrl: string | null = null;
+  const { data: session, error: sessionError } = await supabase
+    .from('sessions')
+    .select('id, status')
+    .eq('id', sessionId)
+    .eq('link_token', linkToken)
+    .single();
+  if (sessionError || !session) return json({ error: 'Session not found' }, 404, req);
+  if (session.status !== 'in_progress') return json({ error: 'Session not in progress' }, 409, req);
 
+  let storagePath: string | null = null;
   if (imageBase64) {
     try {
-      // imageBase64 might come with a prefix like "data:image/png;base64,"
       const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
       const imageBytes = decode(base64Data);
-      
-      const fileName = `${sessionId}/${taskName}.png`;
-
+      if (!hasPngSignature(imageBytes)) return json({ error: 'imageBase64 is not a valid PNG' }, 400, req);
+      storagePath = `${sessionId}/${taskId}.png`;
       const { error: uploadError } = await supabase.storage
         .from('drawings')
-        .upload(fileName, imageBytes, {
-          contentType: 'image/png',
-          upsert: true
-        });
+        .upload(storagePath, imageBytes, { contentType: 'image/png', upsert: true });
 
       if (uploadError) {
-        console.error('Storage upload error:', uploadError);
-        return json({ error: 'Failed to upload image' }, 500);
+        console.error('Drawing upload failed:', uploadError);
+        return json({ error: 'Failed to upload image' }, 500, req);
       }
-
-      storagePath = fileName;
-      
-      const { data } = supabase.storage.from('drawings').getPublicUrl(fileName);
-      publicUrl = data.publicUrl;
-      
-    } catch (e) {
-      console.error('Image decode error:', e);
-      return json({ error: 'Failed to process imageBase64' }, 400);
+    } catch (error) {
+      console.error('Drawing decode failed:', error);
+      return json({ error: error instanceof Error ? error.message : 'Failed to process imageBase64' }, 400, req);
     }
   }
 
+  const payload: Record<string, unknown> = {
+    session_id: sessionId,
+    task_id: taskId,
+    strokes_data: strokesData ?? [],
+  };
+  if (storagePath) payload.storage_path = storagePath;
+
   const { error: upsertError } = await supabase
     .from('drawing_reviews')
-    .upsert(
-      { 
-        session_id: sessionId, 
-        task_name: taskName, 
-        storage_path: storagePath || undefined,
-        strokes_data: strokesData || [] // Keep empty array if omitted to satisfy NOT NULL constraint
-      },
-      { onConflict: 'session_id,task_name' }
-    );
+    .upsert(payload, { onConflict: 'session_id,task_id' });
 
   if (upsertError) {
-    console.error('Drawing Upsert Error:', upsertError);
-    return json({ error: 'Failed to save drawing review' }, 500);
+    console.error('Drawing review upsert failed:', upsertError);
+    return json({ error: 'Failed to save drawing review' }, 500, req);
   }
-  
-  // Set needs_review = true in scoring_reports if we are saving a drawing
-  await supabase
-    .from('scoring_reports')
-    .update({ needs_review: true })
-    .eq('session_id', sessionId);
 
-  return json({ ok: true, url: publicUrl });
+  try {
+    await writeAuditEvent(supabase, {
+      eventType: 'drawing_saved',
+      sessionId,
+      actorType: 'patient',
+      metadata: { taskId, storagePath, strokeCount: strokesData?.length ?? 0 },
+    });
+  } catch (auditError) {
+    return json({ error: auditError instanceof Error ? auditError.message : 'Failed to write audit event' }, 500, req);
+  }
+
+  return json({ ok: true, storagePath }, 200, req);
 });
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+function hasPngSignature(bytes: Uint8Array): boolean {
+  return PNG_SIGNATURE.every((byte, index) => bytes[index] === byte);
 }

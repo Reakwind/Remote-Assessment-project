@@ -1,25 +1,24 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-// We won't import the complex React-based TS here due to module resolution issues.
-// Instead, we will execute the final SQL functions to mark it complete.
-// The actual complex auto-scoring can be handled either in the client, 
-// a dedicated microservice, or via a simplified server-side aggregation.
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
+import { writeAuditEvent } from '../_shared/audit.ts';
+import { corsResponse, json, methodNotAllowed } from '../_shared/http.ts';
+import { notifyClinicianSessionCompleted } from '../_shared/notifications.ts';
+import { ageFromBand, scoreSession } from '../_shared/scoring.ts';
+
+const DRAWING_TASKS = ['moca-visuospatial', 'moca-cube', 'moca-clock'];
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
-  }
+  if (req.method === 'OPTIONS') return corsResponse(req);
+  if (req.method !== 'POST') return methodNotAllowed(req);
 
-  let body: { sessionId: string; scoringReport?: any };
+  let body: { sessionId: string; linkToken: string };
   try {
     body = await req.json();
   } catch {
-    return json({ error: 'Invalid JSON' }, 400);
+    return json({ error: 'Invalid JSON' }, 400, req);
   }
 
-  const { sessionId } = body;
-  
-  if (!sessionId) {
-    return json({ error: 'Missing required field: sessionId' }, 400);
+  if (!body.sessionId || !body.linkToken) {
+    return json({ error: 'Missing required fields: sessionId, linkToken' }, 400, req);
   }
 
   const supabase = createClient(
@@ -27,47 +26,131 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   );
 
-  // Validate session is in_progress
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .select('id, status')
-    .eq('id', sessionId)
+    .select('id, clinician_id, status, age_band, education_years, location_place, location_city, started_at, created_at')
+    .eq('id', body.sessionId)
+    .eq('link_token', body.linkToken)
     .single();
 
-  if (sessionError || !session) {
-    return json({ error: 'Session not found' }, 404);
+  if (sessionError || !session) return json({ error: 'Session not found' }, 404, req);
+  if (session.status === 'completed' || session.status === 'awaiting_review') {
+    return json({ error: 'Session already completed' }, 409, req);
+  }
+  if (session.status !== 'in_progress') return json({ error: 'Session not in progress' }, 409, req);
+
+  const { data: taskResults, error: resultsError } = await supabase
+    .from('task_results')
+    .select('task_type, raw_data')
+    .eq('session_id', body.sessionId);
+  if (resultsError) return json({ error: 'Failed to load task results' }, 500, req);
+
+  const results = Object.fromEntries((taskResults ?? []).map(result => [result.task_type, result.raw_data]));
+  const { error: drawingReviewError } = await supabase
+    .from('drawing_reviews')
+    .upsert(
+      DRAWING_TASKS.map(taskId => ({ session_id: session.id, task_id: taskId, strokes_data: [] })),
+      { onConflict: 'session_id,task_id', ignoreDuplicates: true },
+    );
+
+  if (drawingReviewError) {
+    console.error('Drawing review placeholder upsert failed:', drawingReviewError);
+    return json({ error: 'Failed to prepare drawing reviews' }, 500, req);
   }
 
-  if (session.status === 'completed') {
-    return json({ error: 'Session already completed' }, 409);
-  }
-
-  // Mark session completed via RPC
-  const { error: markError } = await supabase.rpc('mark_session_completed', {
-    p_session_id: sessionId
+  const report = scoreSession(results, {
+    sessionId: session.id,
+    sessionDate: new Date(session.started_at ?? session.created_at),
+    educationYears: session.education_years,
+    patientAge: ageFromBand(session.age_band),
+    sessionLocation: { place: session.location_place, city: session.location_city },
   });
 
-  if (markError) {
-    console.error('Mark Session Error:', markError);
-    return json({ error: 'Failed to mark session as completed' }, 500);
+  const scoringReviewRows = report.domains
+    .flatMap(domain => domain.items)
+    .filter(item => item.needsReview && item.reviewReason !== 'drawing')
+    .map(item => ({
+      session_id: session.id,
+      item_id: item.taskId,
+      task_type: item.taskId,
+      max_score: item.max,
+      raw_data: item.rawData ?? null,
+    }));
+
+  if (scoringReviewRows.length > 0) {
+    const { error: scoringReviewError } = await supabase
+      .from('scoring_item_reviews')
+      .upsert(scoringReviewRows, { onConflict: 'session_id,item_id', ignoreDuplicates: true });
+
+    if (scoringReviewError) {
+      console.error('Scoring item review placeholder upsert failed:', scoringReviewError);
+      return json({ error: 'Failed to prepare scoring reviews' }, 500, req);
+    }
   }
 
-  // Trigger recalculation of the total score from subscores if any exist
-  const { error: recalcError } = await supabase.rpc('recalculate_total_score', {
-    p_session_id: sessionId
-  });
+  const { error: reportError } = await supabase
+    .from('scoring_reports')
+    .upsert({
+      session_id: session.id,
+      total_raw: report.totalRaw,
+      total_adjusted: report.totalAdjusted,
+      total_provisional: report.totalProvisional,
+      norm_percentile: report.normPercentile,
+      norm_sd: report.normSd,
+      pending_review_count: report.pendingReviewCount,
+      domains: report.domains,
+      completed_at: report.completedAt,
+    }, { onConflict: 'session_id' });
 
-  if (recalcError) {
-    console.error('Recalculate Score Error:', recalcError);
-    // Non-fatal, proceed
+  if (reportError) {
+    console.error('Scoring report upsert failed:', reportError);
+    return json({ error: 'Failed to save scoring report' }, 500, req);
   }
 
-  return json({ ok: true, totalScore: 0, needsReview: true });
+  const { error: statusError } = await supabase
+    .from('sessions')
+    .update({
+      status: report.totalProvisional ? 'awaiting_review' : 'completed',
+      completed_at: report.completedAt,
+    })
+    .eq('id', session.id);
+
+  if (statusError) return json({ error: 'Failed to complete session' }, 500, req);
+
+  const finalStatus = report.totalProvisional ? 'awaiting_review' : 'completed';
+
+  try {
+    await writeAuditEvent(supabase, {
+      eventType: 'session_completed',
+      sessionId: session.id,
+      actorType: 'patient',
+      metadata: {
+        totalRaw: report.totalRaw,
+        totalAdjusted: report.totalAdjusted,
+        pendingReviewCount: report.pendingReviewCount,
+        totalProvisional: report.totalProvisional,
+      },
+    });
+  } catch (auditError) {
+    return json({ error: auditError instanceof Error ? auditError.message : 'Failed to write audit event' }, 500, req);
+  }
+
+  try {
+    const notification = await notifyClinicianSessionCompleted(supabase, {
+      id: session.id,
+      clinician_id: session.clinician_id,
+      status: finalStatus,
+    });
+
+    await writeAuditEvent(supabase, {
+      eventType: `clinician_completion_email_${notification.status}`,
+      sessionId: session.id,
+      actorType: 'system',
+      metadata: { ...notification },
+    });
+  } catch (notificationError) {
+    console.error('Clinician completion email notification failed:', notificationError);
+  }
+
+  return json({ ok: true, scoringReport: report }, 200, req);
 });
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

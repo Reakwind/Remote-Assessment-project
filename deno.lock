@@ -1,0 +1,7 @@
+{
+  "version": "5",
+  "remote": {
+    "https://deno.land/std@0.198.0/encoding/base64.ts": "144ae6234c1fbe5b68666c711dc15b1e9ee2aef6d42b3b4345bf9a6c91d70d0d",
+    "https://esm.sh/@supabase/supabase-js@2.104.0": "67037e235b6fbec8e8eed1ca97714a9379c8cc60af4e8747dfe6cf4c43f661bb"
+  }
+}
