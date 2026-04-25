@@ -19,6 +19,10 @@ export interface SessionState {
   requiresAccessCode: boolean;
 }
 
+interface UseSessionOptions {
+  enabled?: boolean;
+}
+
 const AGE_BAND_MAP: Record<string, number> = {
   '60-64': 62,
   '65-69': 67,
@@ -27,7 +31,12 @@ const AGE_BAND_MAP: Record<string, number> = {
   '80+':   85,
 };
 
-export function useSession(tokenOverride?: string, accessCodeOverride?: string): SessionState {
+export function useSession(
+  tokenOverride?: string,
+  accessCodeOverride?: string,
+  options: UseSessionOptions = {},
+): SessionState {
+  const enabled = options.enabled ?? true;
   const [state, setState] = useState<SessionState>({
     status: 'loading',
     sessionId: null,
@@ -37,6 +46,8 @@ export function useSession(tokenOverride?: string, accessCodeOverride?: string):
   });
 
   useEffect(() => {
+    if (!enabled) return;
+
     // The app uses a hash router; a ?t= query param would be parsed by the
     // hash segment, not window.location.search. Accept token strictly via
     // the route param passed in as tokenOverride.
@@ -119,6 +130,7 @@ export function useSession(tokenOverride?: string, accessCodeOverride?: string):
             sessionDate:     new Date(data.sessionDate),
             educationYears:  data.educationYears || 12,
             patientAge:      AGE_BAND_MAP[data.ageBand] ?? 70,
+            mocaVersion:     data.mocaVersion,
             sessionLocation: { place: 'Home', city: 'Israel' },
           },
           requiresAccessCode: false,
@@ -133,7 +145,7 @@ export function useSession(tokenOverride?: string, accessCodeOverride?: string):
           requiresAccessCode: false,
         });
       });
-  }, [tokenOverride, accessCodeOverride]);
+  }, [tokenOverride, accessCodeOverride, enabled]);
 
   return state;
 }

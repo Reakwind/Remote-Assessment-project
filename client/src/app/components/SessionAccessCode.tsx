@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { getAssessmentResumePath, useAssessmentStore } from "../store/AssessmentContext";
 import { edgeFn, edgeHeaders } from "../../lib/supabase";
 import type { ScoringContext } from "../../types/scoring";
 
@@ -16,14 +16,27 @@ const AGE_BAND_MAP: Record<string, number> = {
 export function SessionAccessCode() {
   const navigate = useNavigate();
   const { token } = useParams();
-  const { startNewAssessment } = useAssessmentStore();
+  const { state, hasInProgressAssessment, startNewAssessment } = useAssessmentStore();
   const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const canResumeCurrentToken = Boolean(
+    token &&
+      hasInProgressAssessment &&
+      state.linkToken === token &&
+      state.id &&
+      state.scoringContext,
+  );
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (canResumeCurrentToken) {
+      navigate(getAssessmentResumePath(state.lastPath), { replace: true });
+      return;
+    }
 
     if (!/^\d{6}$/.test(accessCode.trim())) {
       setError("יש להזין קוד חד-פעמי בן 6 ספרות.");
@@ -59,6 +72,7 @@ export function SessionAccessCode() {
         sessionDate: new Date(data.sessionDate),
         educationYears: data.educationYears || 12,
         patientAge: AGE_BAND_MAP[data.ageBand] ?? 70,
+        mocaVersion: data.mocaVersion,
         sessionLocation: { place: "Home", city: "Israel" },
       };
 
@@ -83,36 +97,48 @@ export function SessionAccessCode() {
           </div>
           <h1 className="text-3xl font-extrabold text-black mb-3">הזנת קוד חד-פעמי</h1>
           <p className="text-lg text-gray-600">
-            הזינו את הקוד שקיבלתם ב-SMS כדי להתחיל את המבדק.
+            {canResumeCurrentToken
+              ? "המבדק כבר התחיל במכשיר הזה. אפשר להמשיך מהמקום שבו עצרתם."
+              : "הזינו את הקוד שקיבלתם ב-SMS כדי להתחיל את המבדק."}
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-5">
-          <input
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            value={accessCode}
-            onChange={(e) => setAccessCode(e.target.value.replace(/\D/g, ""))}
-            placeholder="123456"
-            className="w-full h-16 px-4 text-3xl tracking-[0.4em] text-center border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none transition-all"
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 font-bold text-center">
-              {error}
-            </div>
-          )}
-
+        {canResumeCurrentToken ? (
           <button
-            type="submit"
-            disabled={submitting}
-            className="w-full h-16 bg-black text-white text-xl font-bold rounded-xl hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            type="button"
+            onClick={() => navigate(getAssessmentResumePath(state.lastPath), { replace: true })}
+            className="w-full h-16 bg-black text-white text-xl font-bold rounded-xl hover:bg-gray-800 transition-colors"
           >
-            {submitting ? "מאמת קוד..." : "המשך למבדק"}
+            המשך למבדק
           </button>
-        </form>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-5">
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value.replace(/\D/g, ""))}
+              placeholder="123456"
+              className="w-full h-16 px-4 text-3xl tracking-[0.4em] text-center border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none transition-all"
+            />
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 font-bold text-center">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full h-16 bg-black text-white text-xl font-bold rounded-xl hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              {submitting ? "מאמת קוד..." : "המשך למבדק"}
+            </button>
+          </form>
+        )}
 
         <button
           type="button"

@@ -57,6 +57,43 @@ const DEFAULT_STATE: AssessmentState = {
 
 const STORAGE_KEY = 'moca_assessment_state';
 
+export function getAssessmentResumePath(path: string | null | undefined) {
+  return path?.startsWith('/patient') ? path : '/patient/welcome';
+}
+
+function normalizeStoredAssessmentState(value: unknown): AssessmentState {
+  if (!value || typeof value !== 'object') return DEFAULT_STATE;
+
+  const candidate = value as Partial<AssessmentState>;
+  const tasks = candidate.tasks && typeof candidate.tasks === 'object' ? candidate.tasks : {};
+  const lastPath = getAssessmentResumePath(candidate.lastPath);
+
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.linkToken !== 'string' ||
+    !candidate.scoringContext ||
+    typeof candidate.scoringContext !== 'object'
+  ) {
+    return {
+      ...DEFAULT_STATE,
+      tasks,
+      lastPath,
+      isComplete: Boolean(candidate.isComplete),
+    };
+  }
+
+  return {
+    ...DEFAULT_STATE,
+    ...candidate,
+    id: candidate.id,
+    linkToken: candidate.linkToken,
+    scoringContext: candidate.scoringContext,
+    lastPath,
+    isComplete: Boolean(candidate.isComplete),
+    tasks,
+  };
+}
+
 interface AssessmentContextType {
   state: AssessmentState;
   startNewAssessment: (sessionId: string, linkToken: string, scoringContext: ScoringContext) => void;
@@ -74,7 +111,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        return normalizeStoredAssessmentState(JSON.parse(saved));
       }
     } catch (e) {
       console.error('Failed to load assessment state from local storage', e);
@@ -206,7 +243,12 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const hasInProgressAssessment = state.id !== null && !state.isComplete;
+  const hasInProgressAssessment = Boolean(
+    state.id &&
+      state.linkToken &&
+      state.scoringContext &&
+      !state.isComplete,
+  );
 
   const contextValue = useMemo(
     () => ({

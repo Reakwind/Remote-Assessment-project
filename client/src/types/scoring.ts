@@ -33,5 +33,6 @@ export interface ScoringContext {
   sessionDate: Date;
   educationYears: number;
   patientAge: number;
+  mocaVersion?: string;
   sessionLocation?: { place: string; city: string };
 }

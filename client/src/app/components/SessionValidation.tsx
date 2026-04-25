@@ -2,16 +2,28 @@ import { useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { useSession } from "../../hooks/useSession";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { getAssessmentResumePath, useAssessmentStore } from "../store/AssessmentContext";
 
 export function SessionValidation() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const session = useSession(token);
-  const { startNewAssessment } = useAssessmentStore();
+  const { state, hasInProgressAssessment, startNewAssessment } = useAssessmentStore();
+  const canResumeCurrentToken = Boolean(
+    token &&
+      hasInProgressAssessment &&
+      state.linkToken === token &&
+      state.id &&
+      state.scoringContext,
+  );
+  const session = useSession(token, undefined, { enabled: !canResumeCurrentToken });
 
   useEffect(() => {
     if (!token) return;
+
+    if (canResumeCurrentToken) {
+      navigate(getAssessmentResumePath(state.lastPath), { replace: true });
+      return;
+    }
 
     if (session.status === 'code_required') {
       navigate(`/session/${token}/code`, { replace: true });
@@ -35,6 +47,8 @@ export function SessionValidation() {
     startNewAssessment,
     navigate,
     token,
+    canResumeCurrentToken,
+    state.lastPath,
   ]);
 
   const getErrorMessage = () => {
