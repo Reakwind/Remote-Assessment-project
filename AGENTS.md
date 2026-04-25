@@ -53,13 +53,18 @@ Generated local artifacts stay out of Git: `.env.local`, `.playwright-mcp/`, `cl
 
 ## Verification
 
-Before handing off backend/scoring changes, run:
+GitHub CI intentionally runs the stable baseline only: dependency install, lint, unit tests, scoring coverage thresholds, production build, and Deno type checks for Supabase Edge Functions.
+
+For backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes, full browser/Supabase E2E remains a required local pre-merge check. Start local Supabase and Edge Functions, then run:
 
 ```bash
-cd client && npm test && npm run e2e:browser && npm run build && npm run lint
+cd client && npm test && npm run build && npm run lint && npm run e2e:browser
+cd ..
 deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/get-stimuli/index.ts supabase/functions/submit-results/index.ts supabase/functions/submit-task/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts supabase/functions/export-pdf/index.ts supabase/functions/export-csv/index.ts
 node scripts/local-e2e.mjs --all-versions
 ```
+
+Record skipped local E2E checks and the reason in the PR body.
 
 For browser or UX changes, verify the affected flow in Chrome when practical.
 

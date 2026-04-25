@@ -2,6 +2,12 @@
 
 This checklist verifies the current Pilot MVP flow against local Supabase.
 
+## CI Scope
+
+GitHub CI is intentionally stable and does not start local Supabase or Playwright browser E2E. Required PR checks cover dependency install, lint, unit tests, scoring coverage thresholds, production build, and Deno type checks for Supabase Edge Functions.
+
+Use this checklist as the required local pre-merge verification for backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes. Record any skipped local E2E checks in the PR body.
+
 ## Prerequisites
 
 - Node/npm for the React client.
