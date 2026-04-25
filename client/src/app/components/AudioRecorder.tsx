@@ -3,7 +3,17 @@ import { Mic, Square, Play, Pause, RotateCcw, AlertTriangle } from "lucide-react
 import { clsx } from "clsx";
 import { AudioStore } from "../store/audioStore";
 import { useAssessmentStore } from "../store/AssessmentContext";
-import { edgeFn } from "../../lib/supabase";
+import { edgeFn, edgeHeaders } from "../../lib/supabase";
+
+const TASK_ID_TO_SCORING_ID: Record<string, string> = {
+  digitSpan: "moca-digit-span",
+  language: "moca-language",
+  serial7: "moca-serial-7s",
+  orientation: "moca-orientation-task",
+  delayedRecall: "moca-delayed-recall",
+  memory: "moca-memory-learning",
+  abstraction: "moca-abstraction",
+};
 
 interface AudioRecorderProps {
   taskId: string;
@@ -86,14 +96,21 @@ export function AudioRecorder({
             reader.readAsDataURL(audioBlob);
             reader.onloadend = async () => {
               const base64 = reader.result as string;
+              const contentType = audioBlob.type || "audio/webm";
               const res = await fetch(edgeFn('save-audio'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId: state.id, linkToken: state.linkToken, taskId, audioBase64: base64 })
+                headers: edgeHeaders(),
+                body: JSON.stringify({
+                  sessionId: state.id,
+                  linkToken: state.linkToken,
+                  taskType: TASK_ID_TO_SCORING_ID[taskId] ?? taskId,
+                  audioBase64: base64,
+                  contentType,
+                })
               });
               if (res.ok) {
                 const data = await res.json();
-                finalIdOrUrl = data.url;
+                finalIdOrUrl = data.url ?? data.storagePath ?? finalIdOrUrl;
               }
               finishStop(finalIdOrUrl, audioBlob);
             };

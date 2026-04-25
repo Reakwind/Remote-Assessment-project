@@ -1,4 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
+import { writeAuditEvent } from '../_shared/audit.ts';
 import { sendSms } from '../_shared/notifications.ts';
 
 const corsHeaders = {
@@ -20,6 +21,9 @@ interface CreateSessionBody {
   educationYears?: number;
   patientPhone?: string;
   assessmentType?: string;
+  mocaVersion?: string;
+  locationPlace?: string;
+  locationCity?: string;
 }
 
 Deno.serve(async (req) => {
@@ -37,7 +41,16 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { patientId, caseId: caseIdInput, ageBand, educationYears, patientPhone: patientPhoneInput } = body;
+  const {
+    patientId,
+    caseId: caseIdInput,
+    ageBand,
+    educationYears,
+    patientPhone: patientPhoneInput,
+    mocaVersion,
+    locationPlace,
+    locationCity,
+  } = body;
   const assessmentType = (body.assessmentType ?? 'moca').toLowerCase();
 
   if (!ageBand) {
@@ -63,6 +76,15 @@ Deno.serve(async (req) => {
   if (userError || !user) {
     return json({ error: 'Unauthorized clinician' }, 401);
   }
+
+  await supabase
+    .from('clinicians')
+    .upsert({
+      id: user.id,
+      email: user.email ?? `${user.id}@local.invalid`,
+      full_name: user.user_metadata?.full_name ?? user.email ?? 'Clinician',
+      clinic_name: user.user_metadata?.clinic_name ?? 'Remote Check',
+    }, { onConflict: 'id' });
 
   // Resolve patient: prefer patientId (modern flow), fall back to caseId/phone (legacy inline flow)
   let patientRecordId: string | null = null;
@@ -91,11 +113,9 @@ Deno.serve(async (req) => {
   if (!caseId) {
     return json({ error: 'Missing required field: caseId or patientId' }, 400);
   }
-  if (!patientPhone) {
-    return json({ error: 'Missing patient phone number' }, 400);
-  }
+  const shouldSendSms = Boolean(patientPhone);
 
-  const accessCode = generateAccessCode();
+  const accessCode = shouldSendSms ? generateAccessCode() : null;
 
   const { data: session, error } = await supabase
     .from('sessions')
@@ -109,8 +129,11 @@ Deno.serve(async (req) => {
       patient_id: patientRecordId,
       access_code: accessCode,
       assessment_type: assessmentType,
+      moca_version: mocaVersion ?? '8.3',
+      location_place: locationPlace ?? null,
+      location_city: locationCity ?? null,
     })
-    .select('id, link_token, access_code')
+    .select('id, link_token, access_code, moca_version')
     .single();
 
   if (error || !session) {
@@ -120,8 +143,12 @@ Deno.serve(async (req) => {
 
   const baseUrl = Deno.env.get('PUBLIC_URL') || 'https://app.remotecheck.com';
   const sessionUrl = `${baseUrl}/#/session/${session.link_token}`;
-  const smsMessage = `Remote Check: כדי להתחיל את המבדק, פתחו את הקישור ${sessionUrl}. קוד חד-פעמי: ${session.access_code ?? accessCode}`;
-  const smsResult = await sendSms({ to: patientPhone, message: smsMessage });
+  const smsResult = shouldSendSms
+    ? await sendSms({
+        to: patientPhone!,
+        message: `Remote Check: כדי להתחיל את המבדק, פתחו את הקישור ${sessionUrl}. קוד חד-פעמי: ${session.access_code ?? accessCode}`,
+      })
+    : { ok: false, error: 'No patient phone number supplied' };
 
   const { error: smsLogError } = await supabase
     .from('sessions')
@@ -135,6 +162,14 @@ Deno.serve(async (req) => {
     console.error('Failed to persist SMS status', smsLogError);
   }
 
+  await writeAuditEvent(supabase, {
+    eventType: 'session_created',
+    sessionId: session.id,
+    actorType: 'clinician',
+    actorUserId: user.id,
+    metadata: { assessmentType, mocaVersion: session.moca_version, smsSent: smsResult.ok },
+  });
+
   return json({
     sessionId: session.id,
     linkToken: session.link_token,
@@ -143,6 +178,7 @@ Deno.serve(async (req) => {
     smsSent: smsResult.ok,
     smsError: smsResult.error ?? null,
     assessmentType,
+    mocaVersion: session.moca_version,
     patientId: patientRecordId,
   });
 });

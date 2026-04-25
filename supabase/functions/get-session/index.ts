@@ -1,0 +1,82 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
+import { corsResponse, json, methodNotAllowed, requireClinician } from '../_shared/http.ts';
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return corsResponse(req);
+  if (req.method !== 'GET' && req.method !== 'POST') return methodNotAllowed(req);
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  );
+
+  const { user, response } = await requireClinician(req, supabase);
+  if (response) return response;
+
+  let sessionId = new URL(req.url).searchParams.get('sessionId');
+  if (!sessionId && req.method === 'POST') {
+    try {
+      const body = await req.json();
+      sessionId = body.sessionId;
+    } catch {
+      return json({ error: 'Invalid JSON' }, 400, req);
+    }
+  }
+  if (!sessionId) return json({ error: 'Missing sessionId' }, 400, req);
+
+  const { data: session, error } = await supabase
+    .from('sessions')
+    .select(`
+      *,
+      task_results (*),
+      scoring_reports (*),
+      drawing_reviews (*),
+      scoring_item_reviews (*)
+    `)
+    .eq('id', sessionId)
+    .eq('clinician_id', user.id)
+    .single();
+
+  if (error || !session) return json({ error: 'Session not found' }, 404, req);
+
+  const drawings = await Promise.all((session.drawing_reviews ?? []).map(async (review: any) => {
+    if (!review.storage_path) return { ...review, signedUrl: null };
+    const { data } = await supabase.storage
+      .from('drawings')
+      .createSignedUrl(review.storage_path, 60 * 15);
+    return { ...review, signedUrl: data?.signedUrl ?? null };
+  }));
+
+  const taskResults = await Promise.all((session.task_results ?? []).map(async (result: any) => {
+    const rawData = addAudioSignedUrl(result.raw_data, await signedAudioUrl(supabase, result.raw_data?.audioStoragePath));
+    return { ...result, raw_data: rawData };
+  }));
+
+  const scoringReviews = await Promise.all((session.scoring_item_reviews ?? []).map(async (review: any) => {
+    const rawData = addAudioSignedUrl(review.raw_data, await signedAudioUrl(supabase, review.raw_data?.audioStoragePath));
+    return { ...review, raw_data: rawData };
+  }));
+
+  return json({
+    session: {
+      ...session,
+      task_results: taskResults,
+      scoring_report: Array.isArray(session.scoring_reports) ? session.scoring_reports[0] ?? null : session.scoring_reports,
+      drawings,
+      scoring_reviews: scoringReviews,
+    },
+  }, 200, req);
+});
+
+async function signedAudioUrl(supabase: any, storagePath?: string | null): Promise<string | null> {
+  if (!storagePath) return null;
+  const { data } = await supabase.storage
+    .from('audio')
+    .createSignedUrl(storagePath, 60 * 15);
+  return data?.signedUrl ?? null;
+}
+
+function addAudioSignedUrl(rawData: any, signedUrl: string | null): any {
+  if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) return rawData;
+  return { ...rawData, audioSignedUrl: signedUrl };
+}

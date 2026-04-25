@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { useAssessmentStore } from "../store/AssessmentContext";
-import { edgeFn } from "../../lib/supabase";
+import { edgeFn, edgeHeaders } from "../../lib/supabase";
 import type { ScoringContext } from "../../types/scoring";
 
 const AGE_BAND_MAP: Record<string, number> = {
@@ -39,7 +39,7 @@ export function SessionAccessCode() {
     try {
       const res = await fetch(edgeFn("start-session"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: edgeHeaders(),
         body: JSON.stringify({ token, accessCode: accessCode.trim() }),
       });
 

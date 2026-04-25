@@ -1,3 +1,4 @@
+type SupabaseClient = any;
 const DEFAULT_SMS_GATEWAY = 'https://api.twilio.com/2010-04-01/Accounts';
 
 export interface SmsPayload {
@@ -5,10 +6,18 @@ export interface SmsPayload {
   message: string;
 }
 
-export interface EmailPayload {
-  to: string;
-  subject: string;
-  html: string;
+export interface ClinicianCompletionNotificationResult {
+  channel: 'email';
+  provider: 'resend';
+  status: 'sent' | 'skipped' | 'failed';
+  reason?: string;
+  recipientEmail?: string;
+}
+
+interface CompletedSession {
+  id: string;
+  clinician_id: string;
+  status: string;
 }
 
 export async function sendSms(payload: SmsPayload): Promise<{ ok: boolean; providerMessageId?: string; error?: string }> {
@@ -49,37 +58,73 @@ export async function sendSms(payload: SmsPayload): Promise<{ ok: boolean; provi
   }
 }
 
-export async function sendEmail(payload: EmailPayload): Promise<{ ok: boolean; providerMessageId?: string; error?: string }> {
-  const resendKey = Deno.env.get('RESEND_API_KEY');
-  const from = Deno.env.get('RESEND_FROM_EMAIL') || 'Remote Check <notifications@remote-check.app>';
+function dashboardUrl(sessionId: string): string | undefined {
+  const publicUrl = Deno.env.get('PUBLIC_URL')?.trim();
+  if (!publicUrl) return undefined;
+  return `${publicUrl.replace(/\/$/, '')}/dashboard/${sessionId}`;
+}
 
-  if (!resendKey) {
-    return { ok: false, error: 'Missing RESEND_API_KEY' };
+export async function notifyClinicianSessionCompleted(
+  supabase: SupabaseClient,
+  session: CompletedSession,
+): Promise<ClinicianCompletionNotificationResult> {
+  const apiKey = Deno.env.get('RESEND_API_KEY')?.trim();
+  if (!apiKey) {
+    return {
+      channel: 'email',
+      provider: 'resend',
+      status: 'skipped',
+      reason: 'RESEND_API_KEY not configured',
+    };
   }
 
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from,
-        to: [payload.to],
-        subject: payload.subject,
-        html: payload.html,
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      return { ok: false, error: `Resend error: ${text}` };
-    }
-
-    const data = (await response.json()) as { id?: string };
-    return { ok: true, providerMessageId: data.id };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Unknown email error' };
+  const { data, error } = await supabase.auth.admin.getUserById(session.clinician_id);
+  const recipientEmail = data?.user?.email;
+  if (error || !recipientEmail) {
+    return {
+      channel: 'email',
+      provider: 'resend',
+      status: 'skipped',
+      reason: 'clinician email unavailable',
+    };
   }
+
+  const reviewUrl = dashboardUrl(session.id);
+  const text = [
+    'A completed assessment is ready for clinician review.',
+    `Session: ${session.id}`,
+    `Status: ${session.status}`,
+    reviewUrl ? `Review: ${reviewUrl}` : undefined,
+  ].filter(Boolean).join('\n');
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: Deno.env.get('RESEND_FROM_EMAIL') ?? 'Remote Check <notifications@example.com>',
+      to: recipientEmail,
+      subject: 'Assessment ready for review',
+      text,
+    }),
+  });
+
+  if (!response.ok) {
+    return {
+      channel: 'email',
+      provider: 'resend',
+      status: 'failed',
+      reason: `Resend returned ${response.status}`,
+      recipientEmail,
+    };
+  }
+
+  return {
+    channel: 'email',
+    provider: 'resend',
+    status: 'sent',
+    recipientEmail,
+  };
 }

@@ -1,169 +1,83 @@
 # Remote Assessment Project
 
-Remote, web-based cognitive assessment platform (Hebrew MoCA focused) with:
+Remote Hebrew MoCA pilot MVP.
 
-- A main React + TypeScript frontend (`client/`)
-- A secondary frontend/reference implementation (`Skeleton Front End-2/`)
-- Supabase backend assets (`supabase/` migrations and Edge Functions)
+The active product direction is simple: a clinician creates a session link, a patient completes the assessment, raw task/drawing/audio evidence is persisted, deterministic rule scoring is applied where supported by the active test manual, and the clinician reviews/finalizes anything requiring judgment.
 
-## Repository Structure
+## Source Of Truth
 
-```text
-.
-├── client/                    # Main app (used by CI)
-├── Skeleton Front End-2/      # Secondary/reference frontend
-├── supabase/                  # DB migrations, config, edge functions
-├── docs/                      # Setup and planning docs
-├── SPEC.md                    # Product/design specification
-├── CONTEXT.md                 # Project context and goals
-└── MEMORY.md                  # Session/project memory notes
-```
+Read these first:
 
-## Prerequisites
+1. [README.md](README.md)
+2. [AGENTS.md](AGENTS.md)
+3. [JOURNEY.md](JOURNEY.md)
+4. [CONTEXT.md](CONTEXT.md)
+5. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
 
-- Node.js 20+ and npm
-- GitHub account + git installed
-- (Optional, backend work) Supabase CLI and a Supabase project
+`JOURNEY.md` is the bird's-eye patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
 
-## Quick Start (Local Development)
+## Required GitHub Workflow
 
-Run these from the repo root:
+- `main` is the integration branch.
+- Do not work directly on `main`.
+- Start every task from latest `origin/main`.
+- Use a feature branch, preferably `codex/<short-scope>`.
+- Keep commits focused and open a PR into `main`.
+- Run relevant checks before pushing or opening a PR.
+- Merge only after explicit user approval.
 
-```bash
-npm install --prefix "client" --legacy-peer-deps
-npm install --prefix "Skeleton Front End-2"
-```
+## MVP Scope
 
-Start apps on fixed ports:
+- Clinician login, session creation, dashboard list/detail, drawing/manual review, finalization.
+- Patient session start by link/code, Hebrew MoCA flow, autosave, completion.
+- Supabase persists sessions, task results, drawings, audio evidence, scoring reports, and audit events.
+- Server-side scoring is authoritative.
+- Drawings and ambiguous/manual items go to clinician review.
+- Clinician gets an email when a test is completed.
+- Patient SMS uses Twilio first, behind a provider abstraction.
 
-```bash
-# Main app
-npm run dev --prefix "client" -- --host 0.0.0.0 --port 4173
+## Guardrails
 
-# Secondary app (optional)
-npm run dev --prefix "Skeleton Front End-2" -- --host 0.0.0.0 --port 4174
-```
+- Build the asynchronous clinician-review workflow.
+- Keep caregiver/support contact usage offline for MVP.
+- Store raw drawing/audio/task evidence for clinician review.
+- Use deterministic scoring only where the active manual supports it.
+- Use external speech-to-text only as transcript evidence.
+- Send completion notifications when a test is done.
+- Keep licensed MoCA assets outside the repository.
 
-## Testing and Quality Checks
+## Stack
 
-Main CI checks run against `client/`.
+- Frontend: React, TypeScript, Vite, Tailwind/Radix UI.
+- Backend: Supabase Postgres/Auth/Storage/Edge Functions on Deno.
+- Local verification: Supabase CLI plus `scripts/local-e2e.mjs`.
 
-```bash
-# Lint
-npm run lint --prefix "client"
+## Repo Map
 
-# Unit tests
-npm run test --prefix "client"
+- `client/` - active frontend.
+- `supabase/` - active migrations and Edge Functions.
+- `scripts/` - local automation and E2E verification.
+- `JOURNEY.md` - patient/clinician browser + backend journey playbook.
+- `docs/LOCAL_E2E_VERIFICATION.md` - local end-to-end test instructions.
+- `docs/plans/` - background implementation plans, not product authority.
+- `CONTEXT.md` and `MEMORY.md` - project context/history.
 
-# E2E tests (if needed locally)
-npm --prefix "client" exec playwright install --with-deps
-npm --prefix "client" exec playwright test
-```
-
-## Backend (Supabase) Setup
-
-For full backend setup, follow:
-
-- `docs/SUPABASE_SETUP.md`
-- `supabase/` (current Edge Functions and migrations)
-
-Avoid using `Skeleton Front End-2/BACKEND_README.md` as the source of truth for current backend setup; it is retained as historical handoff context.
-
-Common first step for frontend integration:
+## Development
 
 ```bash
-cp client/.env.example client/.env.local
+cd client
+npm install
+npm run dev
+npm test
+npm run e2e:browser
+npm run build
+npm run lint
 ```
 
-Then fill `client/.env.local` with your Supabase URL and anon key.
-
-## Basic GitHub Workflow (Beginner Friendly)
-
-Use this flow for every change:
+Backend/local E2E:
 
 ```bash
-# 1) Make sure main is up to date
-git checkout main
-git pull origin main
-
-# 2) Create a feature branch
-git checkout -b feature/short-description
-
-# 3) Make changes, then commit
-git add .
-git commit -m "Describe your change clearly"
-
-# 4) Push branch to GitHub
-git push -u origin feature/short-description
+supabase start
+supabase functions serve create-session start-session submit-results submit-task save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review --env-file /dev/null
+node scripts/local-e2e.mjs --all-versions
 ```
-
-Then open a Pull Request (PR) from your branch into `main` in GitHub.
-
-## Working with Cursor Coding Agents + GitHub
-
-You can treat Cursor agents as a "pair programmer" that works on your branch and opens/updates PRs.
-
-### Suggested Flow
-
-1. **Start from clean `main`**
-   - Pull latest changes before giving the agent a task.
-2. **Use one branch per task**
-   - Example: `feature/fix-naming-task-validation`
-3. **Give a concrete prompt**
-   - Include goal, scope, and acceptance criteria.
-   - Example: "Update naming task validation, add tests, and keep existing UI behavior."
-4. **Ask the agent to run checks**
-   - Lint and tests before commit.
-5. **Review the diff yourself**
-   - Check changed files and test coverage.
-6. **Push + PR**
-   - Agent (or you) pushes branch and opens a PR.
-7. **Use GitHub CI as a safety net**
-   - Merge only after checks pass and you are comfortable with the code.
-
-### Cursor + GitHub Integration Checklist
-
-Use this when working from GitHub issues:
-
-1. Pick an issue in GitHub and write a short implementation plan in your prompt.
-2. Ask Cursor agent to create a branch, implement, test, commit, and open/update PR.
-3. In GitHub PR, review:
-   - Files changed
-   - CI checks
-   - Test coverage for behavior changes
-4. Add review comments (or request follow-up changes in Cursor).
-5. Re-run CI after updates, then merge.
-
-### Prompt Template for Cursor Agents
-
-Copy/paste and customize:
-
-```text
-Task: [what you want changed]
-Scope: Edit only [paths/files].
-Requirements:
-- Keep existing behavior unless stated.
-- Add or update tests for changed behavior.
-- Run lint and tests.
-Deliverables:
-- Commit changes with a clear message.
-- Push branch and open/update PR into main.
-```
-
-### Best Practices
-
-- Keep tasks small (one PR per logical change).
-- Ask for tests whenever behavior changes.
-- Never merge without reading the PR diff.
-- Use agent-generated code as a draft you approve.
-
-## Useful Docs
-
-- `SPEC.md`
-- `CONTEXT.md`
-- `MEMORY.md`
-- `docs/SUPABASE_SETUP.md`
-
----
-
-If you are new to this repository, start by running the main app in `client/` and completing one small PR (for example, improving copy, docs, or a minor UI fix) to learn the flow end-to-end.

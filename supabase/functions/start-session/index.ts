@@ -1,4 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
+import { writeAuditEvent } from '../_shared/audit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
   // Look up session by token
   const { data: session, error } = await supabase
     .from('sessions')
-    .select('id, status, used, age_band, education_years, created_at, access_code')
+    .select('id, status, link_used_at, age_band, education_years, created_at, access_code, moca_version')
     .eq('link_token', token)
     .single();
 
@@ -46,7 +47,7 @@ Deno.serve(async (req) => {
   }
 
   // Enforce single-use
-  if (session.used) {
+  if (session.link_used_at) {
     return json({ error: 'Link already used' }, 410);
   }
 
@@ -63,6 +64,7 @@ Deno.serve(async (req) => {
       sessionId: session.id,
       ageBand: session.age_band,
       educationYears: session.education_years,
+      mocaVersion: session.moca_version,
       sessionDate: new Date().toISOString(),
       requiresAccessCode: true,
     });
@@ -75,12 +77,23 @@ Deno.serve(async (req) => {
   if (session.status === 'pending') {
     const { error: updateError } = await supabase
       .from('sessions')
-      .update({ started_at: new Date().toISOString(), status: 'in_progress' })
+      .update({
+        started_at: new Date().toISOString(),
+        link_used_at: new Date().toISOString(),
+        status: 'in_progress',
+      })
       .eq('id', session.id);
 
     if (updateError) {
       return json({ error: 'Failed to start session' }, 500);
     }
+
+    await writeAuditEvent(supabase, {
+      eventType: 'session_started',
+      sessionId: session.id,
+      actorType: 'patient',
+      metadata: { mocaVersion: session.moca_version },
+    });
   }
 
   return json({
@@ -88,6 +101,7 @@ Deno.serve(async (req) => {
     sessionId:      session.id,
     ageBand:        session.age_band,
     educationYears: session.education_years,
+    mocaVersion:    session.moca_version,
     sessionDate:    new Date().toISOString(),
   });
 });
