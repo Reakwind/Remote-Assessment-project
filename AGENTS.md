@@ -16,18 +16,21 @@ Canonical files:
 
 ## Required GitHub Workflow
 
-Every agent must use branch-based version control.
+Every agent must use GitHub branch-based version control for all repo changes. This is mandatory for current and future AI agents and human collaborators.
 
 - Start by checking `git status --short --branch`, `git branch --show-current`, and `git remote -v`.
-- Do not work directly on `main`.
+- Do not work directly on `main`; if the repo is on `main`, create a feature branch before editing files.
 - Start new work from latest `origin/main`.
 - Use a feature branch, preferably `codex/<short-scope>`.
 - Keep unrelated dirty work intact.
 - Do not reset, delete, or rewrite user work unless the user explicitly requests it.
-- Make focused commits after verification passes.
-- Push the branch and open a PR into `main`.
-- Do not merge to `main` unless the user explicitly asks for the merge.
-- List verification performed and skipped checks in the PR or handoff.
+- Make focused commits after relevant verification passes.
+- Push the branch and open a GitHub PR into `main`.
+- Review the diff before asking to merge; call out risks, skipped checks, and any open questions.
+- Merge to `main` only after explicit user approval for that specific merge.
+- Prefer squash merge for feature branches unless the user requests a different merge strategy.
+- Delete merged/superseded branches only after confirming they are merged or explicitly no longer needed.
+- List verification performed and skipped checks in the PR and final handoff.
 
 Generated local artifacts stay out of Git: `.env.local`, `.playwright-mcp/`, `client/test-results/`, `client/playwright-report/`, `node_modules/`, and `dist/`.
 

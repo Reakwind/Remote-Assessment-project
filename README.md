@@ -19,12 +19,14 @@ Read these first:
 ## Required GitHub Workflow
 
 - `main` is the integration branch.
-- Do not work directly on `main`.
+- Do not commit or push directly to `main`.
 - Start every task from latest `origin/main`.
 - Use a feature branch, preferably `codex/<short-scope>`.
-- Keep commits focused and open a PR into `main`.
+- Keep commits focused and open a GitHub PR into `main`.
 - Run relevant checks before pushing or opening a PR.
-- Merge only after explicit user approval.
+- Review the diff and document risks, skipped checks, and open questions.
+- Merge to `main` only after explicit user approval for that specific merge.
+- Delete merged or superseded branches only after confirming they are no longer needed.
 
 ## MVP Scope
 
