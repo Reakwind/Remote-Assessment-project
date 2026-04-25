@@ -21,6 +21,7 @@ function storedAssessment(overrides: Record<string, unknown> = {}) {
   return {
     id: 'session-1',
     linkToken: 'token-1',
+    startToken: '12345678',
     scoringContext: {
       sessionId: 'session-1',
       sessionDate: new Date('2026-04-25T12:00:00Z').toISOString(),
@@ -62,6 +63,23 @@ describe('patient resume state', () => {
         { path: '/patient/clock', element: <div>Clock task resumed</div> },
       ],
       '/session/token-1',
+    );
+
+    await screen.findByText('Clock task resumed');
+    expect(router.state.location.pathname).toBe('/patient/clock');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('reopens a matching in-progress test number from local resume state without consuming it again', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storedAssessment()));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const router = renderWithProvider(
+      [
+        { path: '/session/:token', element: <SessionValidation /> },
+        { path: '/patient/clock', element: <div>Clock task resumed</div> },
+      ],
+      '/session/12345678',
     );
 
     await screen.findByText('Clock task resumed');

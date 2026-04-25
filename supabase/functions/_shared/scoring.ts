@@ -22,7 +22,7 @@ export interface ScoringContext {
   educationYears: number;
   patientAge: number;
   mocaVersion?: string;
-  sessionLocation?: { place: string; city: string };
+  sessionLocation?: { place?: string | null; city?: string | null };
 }
 
 export interface ScoringReport {
@@ -56,6 +56,10 @@ function normalizeHebrew(text: string): string {
 function item(taskId: string, score: number, max: number): ItemScore {
   if (!Number.isFinite(score)) throw new Error(`Invalid score for ${taskId}`);
   return { taskId, score, max, needsReview: false };
+}
+
+function reviewItem(taskId: string, max: number, rawData?: unknown): ItemScore {
+  return { taskId, score: 0, max, needsReview: true, reviewReason: 'rule_score_unavailable', rawData };
 }
 
 function assertObject(value: unknown): Record<string, any> {
@@ -105,14 +109,15 @@ function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext, max: n
     case 'moca-orientation-task':
       return safeScore(taskId, rawData, max, data => {
         const d = assertObject(data);
-        const loc = ctx.sessionLocation ?? { place: '', city: '' };
+        const expectedPlace = ctx.sessionLocation?.place?.trim();
+        const expectedCity = ctx.sessionLocation?.city?.trim();
         return [
           item('orientation.date', matches(d.date, String(ctx.sessionDate.getDate())) ? 1 : 0, 1),
           item('orientation.month', matches(d.month, HE_MONTHS[ctx.sessionDate.getMonth()]) ? 1 : 0, 1),
           item('orientation.year', matches(d.year, String(ctx.sessionDate.getFullYear())) ? 1 : 0, 1),
           item('orientation.day', matches(d.day, HE_DAYS[ctx.sessionDate.getDay()]) ? 1 : 0, 1),
-          item('orientation.place', matches(d.place, loc.place) ? 1 : 0, 1),
-          item('orientation.city', matches(d.city, loc.city) ? 1 : 0, 1),
+          expectedPlace ? item('orientation.place', matches(d.place, expectedPlace) ? 1 : 0, 1) : reviewItem('orientation.place', 1, d.place),
+          expectedCity ? item('orientation.city', matches(d.city, expectedCity) ? 1 : 0, 1) : reviewItem('orientation.city', 1, d.city),
         ];
       });
     case 'moca-digit-span':

@@ -15,6 +15,7 @@ export interface SessionState {
   status: SessionStatus;
   sessionId: string | null;
   linkToken: string | null;
+  startToken: string | null;
   scoringContext: ScoringContext | null;
   requiresAccessCode: boolean;
 }
@@ -41,6 +42,7 @@ export function useSession(
     status: 'loading',
     sessionId: null,
     linkToken: null,
+    startToken: null,
     scoringContext: null,
     requiresAccessCode: false,
   });
@@ -60,6 +62,7 @@ export function useSession(
             status: 'invalid',
             sessionId: null,
             linkToken: null,
+            startToken: null,
             scoringContext: null,
             requiresAccessCode: false,
           }),
@@ -79,6 +82,7 @@ export function useSession(
             status: 'already_used',
             sessionId: null,
             linkToken: null,
+            startToken: null,
             scoringContext: null,
             requiresAccessCode: false,
           });
@@ -90,6 +94,7 @@ export function useSession(
               status: 'invalid_code',
               sessionId: null,
               linkToken: null,
+              startToken: null,
               scoringContext: null,
               requiresAccessCode: true,
             });
@@ -101,6 +106,7 @@ export function useSession(
                 status: 'invalid',
                 sessionId: null,
                 linkToken: null,
+                startToken: null,
                 scoringContext: null,
                 requiresAccessCode: false,
               }),
@@ -114,7 +120,8 @@ export function useSession(
           setState({
             status: 'code_required',
             sessionId: data.sessionId,
-            linkToken: token,
+            linkToken: data.linkToken ?? token,
+            startToken: token,
             scoringContext: null,
             requiresAccessCode: true,
           });
@@ -124,14 +131,14 @@ export function useSession(
         setState({
           status: 'ready',
           sessionId: data.sessionId,
-          linkToken: token,
+          linkToken: data.linkToken ?? token,
+          startToken: token,
           scoringContext: {
             sessionId:       data.sessionId,
             sessionDate:     new Date(data.sessionDate),
             educationYears:  data.educationYears || 12,
             patientAge:      AGE_BAND_MAP[data.ageBand] ?? 70,
             mocaVersion:     data.mocaVersion,
-            sessionLocation: { place: 'Home', city: 'Israel' },
           },
           requiresAccessCode: false,
         });
@@ -141,6 +148,7 @@ export function useSession(
           status: 'error',
           sessionId: null,
           linkToken: null,
+          startToken: null,
           scoringContext: null,
           requiresAccessCode: false,
         });

@@ -1,4 +1,4 @@
-import { createHashRouter } from "react-router";
+import { createHashRouter, Navigate } from "react-router";
 import { AssessmentLayout } from "./components/AssessmentLayout";
 import { TrailMakingTask } from "./components/TrailMakingTask";
 import { CubeTask } from "./components/CubeTask";
@@ -23,7 +23,6 @@ import { SessionValidation } from "./components/SessionValidation";
 import { SessionAccessCode } from "./components/SessionAccessCode";
 import { ClinicianAuthPage } from "./components/auth/ClinicianAuthPage";
 import { ClinicianProtectedRoute } from "./components/auth/ClinicianProtectedRoute";
-import { ClinicianTwoFactorPage } from "./components/auth/ClinicianTwoFactorPage";
 
 export const router = createHashRouter([
   {
@@ -82,6 +81,6 @@ export const router = createHashRouter([
   },
   {
     path: "/clinician/2fa",
-    element: <ClinicianTwoFactorPage />,
+    element: <Navigate to="/dashboard" replace />,
   },
 ]);

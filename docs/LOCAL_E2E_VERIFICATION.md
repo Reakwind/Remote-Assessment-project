@@ -47,8 +47,8 @@ Open the Vite URL in Chrome, then:
 
 1. Go to `/dashboard`.
 2. Create a local clinician account with the dashboard login form.
-3. Create a session using a case ID, age band, education years, place, and city.
-4. Copy the generated `link_token` or open `/#/session/{token}` from the created session.
+3. Create a session using a case ID, age band, education years, and MoCA version.
+4. Copy the generated test number and enter it on the patient home page.
 5. Confirm the patient assessment header displays the selected MoCA version.
 6. Refresh the patient browser during an in-progress session and confirm same-device resume returns to saved progress.
 7. Complete the patient flow enough to confirm task auto-save calls succeed.
@@ -59,7 +59,7 @@ Open the Vite URL in Chrome, then:
 
 ## Verification Commands
 
-The scripted local E2E flow validates the three local licensed Hebrew MoCA PDF pairs by file path and hash, then exercises the backend clinician-to-patient-to-review flow with generated local fixture answers. It also confirms the backend keeps start tokens single-use and that the patient stimulus manifest returns version-scoped private Storage keys for the selected MoCA version. The script does not copy or extract licensed MoCA stimuli into the repository.
+The scripted local E2E flow validates the three local licensed Hebrew MoCA PDF pairs by file path and hash, then exercises the backend clinician-to-patient-to-review flow with generated local fixture answers. It also confirms the backend keeps patient test numbers single-use and that the patient stimulus manifest returns version-scoped private Storage keys for the selected MoCA version. The script does not copy or extract licensed MoCA stimuli into the repository.
 
 From the repo root, with Supabase and Edge Functions running:
 
@@ -109,7 +109,7 @@ Useful browser checks:
 1. Open `http://localhost:5173/#/dashboard`.
 2. Create or sign in as a clinician.
 3. Create a session and choose a MoCA version.
-4. Open the generated `/#/session/{token}` route.
+4. Enter the generated test number on the patient home page.
 5. Confirm the patient header shows the selected version.
 6. Refresh during a patient task and confirm same-device resume.
 7. Finish and confirm the patient sees only completion.

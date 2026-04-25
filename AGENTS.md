@@ -38,13 +38,14 @@ Generated local artifacts stay out of Git: `.env.local`, `.playwright-mcp/`, `cl
 ## Product Guardrails
 
 - Build the asynchronous clinician-review flow.
+- Use clinician email/password auth for MVP; keep MFA, SSO, and device policy in future security hardening work.
 - Keep caregiver/support contact usage offline for MVP.
 - Store raw drawing/audio/task evidence for clinician review.
 - Use deterministic scoring only where the active test manual supports it.
 - Route drawings and ambiguous/manual items to clinician review.
 - Use external speech-to-text as transcript evidence only.
 - Notify clinicians when a patient completes a test.
-- Use Twilio as the MVP SMS default behind a provider abstraction.
+- Use clinician-shared test numbers for MVP patient start; keep SMS delivery out of the active MVP flow.
 - Keep licensed MoCA stimuli outside the repository.
 - Load licensed stimuli from private Storage through versioned manifests and signed URLs.
 

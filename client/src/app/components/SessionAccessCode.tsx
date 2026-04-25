@@ -24,7 +24,7 @@ export function SessionAccessCode() {
   const canResumeCurrentToken = Boolean(
     token &&
       hasInProgressAssessment &&
-      state.linkToken === token &&
+      (state.linkToken === token || state.startToken === token) &&
       state.id &&
       state.scoringContext,
   );
@@ -38,13 +38,13 @@ export function SessionAccessCode() {
       return;
     }
 
-    if (!/^\d{6}$/.test(accessCode.trim())) {
-      setError("יש להזין קוד חד-פעמי בן 6 ספרות.");
+    if (!/^\d{8}$/.test(accessCode.trim())) {
+      setError("יש להזין מספר מבחן בן 8 ספרות.");
       return;
     }
 
     if (!token) {
-      setError("קישור המבחן אינו תקין.");
+      setError("מספר המבחן אינו תקין.");
       return;
     }
 
@@ -73,10 +73,9 @@ export function SessionAccessCode() {
         educationYears: data.educationYears || 12,
         patientAge: AGE_BAND_MAP[data.ageBand] ?? 70,
         mocaVersion: data.mocaVersion,
-        sessionLocation: { place: "Home", city: "Israel" },
       };
 
-      startNewAssessment(data.sessionId, token, scoringContext);
+      startNewAssessment(data.sessionId, data.linkToken ?? token, scoringContext, token);
       navigate("/patient/welcome");
     } catch {
       setError("אירעה שגיאה בתקשורת עם השרת. נסו שוב.");
@@ -95,11 +94,11 @@ export function SessionAccessCode() {
           <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-black text-white flex items-center justify-center">
             <LockKeyhole className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-extrabold text-black mb-3">הזנת קוד חד-פעמי</h1>
+          <h1 className="text-3xl font-extrabold text-black mb-3">הזנת מספר מבחן</h1>
           <p className="text-lg text-gray-600">
             {canResumeCurrentToken
               ? "המבדק כבר התחיל במכשיר הזה. אפשר להמשיך מהמקום שבו עצרתם."
-              : "הזינו את הקוד שקיבלתם ב-SMS כדי להתחיל את המבדק."}
+              : "הזינו את מספר המבחן שקיבלתם מהקלינאי כדי להתחיל את המבדק."}
           </p>
         </div>
 

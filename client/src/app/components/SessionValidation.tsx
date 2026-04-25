@@ -11,7 +11,7 @@ export function SessionValidation() {
   const canResumeCurrentToken = Boolean(
     token &&
       hasInProgressAssessment &&
-      state.linkToken === token &&
+      (state.linkToken === token || state.startToken === token) &&
       state.id &&
       state.scoringContext,
   );
@@ -36,13 +36,14 @@ export function SessionValidation() {
       session.linkToken &&
       session.scoringContext
     ) {
-      startNewAssessment(session.sessionId, session.linkToken, session.scoringContext);
+      startNewAssessment(session.sessionId, session.linkToken, session.scoringContext, session.startToken);
       navigate('/patient/welcome', { replace: true });
     }
   }, [
     session.status,
     session.sessionId,
     session.linkToken,
+    session.startToken,
     session.scoringContext,
     startNewAssessment,
     navigate,
@@ -52,7 +53,7 @@ export function SessionValidation() {
   ]);
 
   const getErrorMessage = () => {
-    if (session.status === 'already_used') return "הקישור כבר שומש. אנא פנה למטפל לקישור חדש.";
+    if (session.status === 'already_used') return "מספר המבחן כבר שומש. אנא פנה לקלינאי למספר חדש.";
     if (session.status === 'invalid') return "קוד המבחן אינו תקין. הקוד שהזנת אינו קיים במערכת.";
     if (session.status === 'error') return "אירעה שגיאה בתקשורת עם השרת. אנא נסה שוב מאוחר יותר.";
     return null;

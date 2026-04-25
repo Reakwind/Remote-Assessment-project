@@ -27,6 +27,7 @@ const TASK_STATE_TO_SCORING_ID: Record<string, string> = {
 export interface AssessmentState {
   id: string | null;
   linkToken: string | null;
+  startToken: string | null;
   scoringContext: ScoringContext | null;
   lastPath: string;
   isComplete: boolean;
@@ -49,6 +50,7 @@ export interface AssessmentState {
 const DEFAULT_STATE: AssessmentState = {
   id: null,
   linkToken: null,
+  startToken: null,
   scoringContext: null,
   lastPath: '/patient/trail-making',
   isComplete: false,
@@ -87,6 +89,7 @@ function normalizeStoredAssessmentState(value: unknown): AssessmentState {
     ...candidate,
     id: candidate.id,
     linkToken: candidate.linkToken,
+    startToken: typeof candidate.startToken === 'string' ? candidate.startToken : candidate.linkToken,
     scoringContext: candidate.scoringContext,
     lastPath,
     isComplete: Boolean(candidate.isComplete),
@@ -96,7 +99,7 @@ function normalizeStoredAssessmentState(value: unknown): AssessmentState {
 
 interface AssessmentContextType {
   state: AssessmentState;
-  startNewAssessment: (sessionId: string, linkToken: string, scoringContext: ScoringContext) => void;
+  startNewAssessment: (sessionId: string, linkToken: string, scoringContext: ScoringContext, startToken?: string | null) => void;
   resumeAssessment: () => void;
   updateTaskData: (taskName: keyof AssessmentState['tasks'], data: any, imageBase64?: string) => void;
   setLastPath: (path: string) => void;
@@ -124,11 +127,12 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const startNewAssessment = useCallback((sessionId: string, linkToken: string, scoringContext: ScoringContext) => {
+  const startNewAssessment = useCallback((sessionId: string, linkToken: string, scoringContext: ScoringContext, startToken?: string | null) => {
     const newState: AssessmentState = {
       ...DEFAULT_STATE,
       id: sessionId,
       linkToken,
+      startToken: startToken ?? linkToken,
       scoringContext,
     };
     setState(newState);

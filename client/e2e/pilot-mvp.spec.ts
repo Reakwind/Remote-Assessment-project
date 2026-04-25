@@ -26,7 +26,7 @@ test('pilot MVP browser flow: patient completes and clinician review APIs finali
   const runId = Date.now();
   const clinician = await createClinician(request, `browser-e2e-${runId}@example.test`);
   const created = await createSession(request, clinician.accessToken, `BROWSER-E2E-${runId}`);
-  const started = await startPatientSession(request, created.linkToken);
+  const started = await startPatientSession(request, created.testNumber);
 
   await runPatientClickThrough(page, created.linkToken, started);
 
@@ -86,24 +86,23 @@ async function createSession(request: APIRequestContext, accessToken: string, ca
       mocaVersion: '8.3',
       ageBand: '70-79',
       educationYears: 12,
-      locationPlace: 'בית',
-      locationCity: 'תל אביב',
     },
   });
   expect(response.ok()).toBeTruthy();
   const body = await response.json();
   expect(body.sessionId).toBeTruthy();
   expect(body.linkToken).toBeTruthy();
-  return body as { sessionId: string; linkToken: string };
+  expect(body.testNumber).toMatch(/^\d{8}$/);
+  return body as { sessionId: string; linkToken: string; testNumber: string };
 }
 
-async function startPatientSession(request: APIRequestContext, linkToken: string) {
+async function startPatientSession(request: APIRequestContext, testNumber: string) {
   const response = await request.post(`${SUPABASE_URL}/functions/v1/start-session`, {
     headers: anonHeaders(),
-    data: { token: linkToken },
+    data: { token: testNumber },
   });
   expect(response.ok()).toBeTruthy();
-  return response.json() as Promise<{ sessionId: string; ageBand: string; educationYears: number; sessionDate: string }>;
+  return response.json() as Promise<{ sessionId: string; linkToken: string; ageBand: string; educationYears: number; sessionDate: string }>;
 }
 
 async function runPatientClickThrough(
@@ -120,7 +119,6 @@ async function runPatientClickThrough(
         sessionDate: startedSession.sessionDate,
         educationYears: startedSession.educationYears ?? 12,
         patientAge: 75,
-        sessionLocation: { place: 'בית', city: 'תל אביב' },
       },
       lastPath: '/patient/trail-making',
       isComplete: false,

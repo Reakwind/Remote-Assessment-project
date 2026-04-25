@@ -8,6 +8,10 @@ function item(taskId: string, score: number, max: number): ItemScore {
   return { taskId, score, max, needsReview: false };
 }
 
+function reviewItem(taskId: string, max: number, rawData?: unknown): ItemScore {
+  return { taskId, score: 0, max, needsReview: true, reviewReason: 'rule_score_unavailable', rawData };
+}
+
 function matches(userInput: string, expected: string): boolean {
   return normalizeHebrew(userInput) === normalizeHebrew(expected);
 }
@@ -15,15 +19,17 @@ function matches(userInput: string, expected: string): boolean {
 export function scoreOrientation(
   data: { date: string; month: string; year: string; day: string; place: string; city: string },
   sessionDate: Date,
-  location: { place: string; city: string }
+  location?: { place?: string | null; city?: string | null }
 ): ItemScore[] {
+  const expectedPlace = location?.place?.trim();
+  const expectedCity = location?.city?.trim();
   return [
     item('orientation.date',  matches(data.date,  String(sessionDate.getDate()))                 ? 1 : 0, 1),
     item('orientation.month', matches(data.month, HE_MONTHS[sessionDate.getMonth()])             ? 1 : 0, 1),
     item('orientation.year',  matches(data.year,  String(sessionDate.getFullYear()))             ? 1 : 0, 1),
     item('orientation.day',   matches(data.day,   HE_DAYS[sessionDate.getDay()])                 ? 1 : 0, 1),
-    item('orientation.place', matches(data.place, location.place)                               ? 1 : 0, 1),
-    item('orientation.city',  matches(data.city,  location.city)                                ? 1 : 0, 1),
+    expectedPlace ? item('orientation.place', matches(data.place, expectedPlace) ? 1 : 0, 1) : reviewItem('orientation.place', 1, data.place),
+    expectedCity ? item('orientation.city', matches(data.city, expectedCity) ? 1 : 0, 1) : reviewItem('orientation.city', 1, data.city),
   ];
 }
 

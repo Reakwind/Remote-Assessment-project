@@ -76,7 +76,9 @@ Deno.serve(async (req) => {
       educationYears: session.education_years,
       patientAge: ageFromBand(session.age_band),
       mocaVersion: session.moca_version,
-      sessionLocation: { place: session.location_place, city: session.location_city },
+      sessionLocation: session.location_place || session.location_city
+        ? { place: session.location_place, city: session.location_city }
+        : undefined,
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Failed to score session' }, 400, req);

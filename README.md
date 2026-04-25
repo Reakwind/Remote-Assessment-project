@@ -32,17 +32,19 @@ Read these first:
 ## MVP Scope
 
 - Clinician login, session creation, dashboard list/detail, drawing/manual review, finalization.
+- Clinician auth uses email/password for MVP.
 - Patient session start by link/code, Hebrew MoCA flow, autosave, completion.
 - Supabase persists sessions, task results, drawings, audio evidence, scoring reports, and audit events.
 - Server-side scoring is authoritative.
 - Drawings and ambiguous/manual items go to clinician review.
 - Clinician gets an email when a test is completed.
-- Patient SMS uses Twilio first, behind a provider abstraction.
+- Clinician copies the generated test number and sends it to the patient outside the app.
 - Licensed stimuli load from private Storage through versioned manifests and signed URLs.
 
 ## Guardrails
 
 - Build the asynchronous clinician-review workflow.
+- Use clinician email/password auth for MVP; treat MFA, SSO, and device policy as future security hardening.
 - Keep caregiver/support contact usage offline for MVP.
 - Store raw drawing/audio/task evidence for clinician review.
 - Use deterministic scoring only where the active manual supports it.

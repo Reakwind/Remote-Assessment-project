@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { X, Stethoscope, CheckCircle2, Copy, AlertTriangle } from "lucide-react";
+import { X, Stethoscope, CheckCircle2, Copy } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 export interface PatientSummary {
@@ -37,12 +37,9 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
-    sessionUrl: string;
-    accessCode: string;
-    smsSent: boolean;
-    smsError: string | null;
+    testNumber: string;
   } | null>(null);
-  const [copied, setCopied] = useState<"link" | "code" | null>(null);
+  const [copied, setCopied] = useState<"testNumber" | null>(null);
 
   if (!open) return null;
 
@@ -85,10 +82,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
       }
 
       setResult({
-        sessionUrl: payload.sessionUrl,
-        accessCode: payload.accessCode,
-        smsSent: Boolean(payload.smsSent),
-        smsError: payload.smsError ?? null,
+        testNumber: payload.testNumber ?? payload.accessCode,
       });
       onOrdered?.();
     } catch (err) {
@@ -98,7 +92,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
     }
   };
 
-  const copy = async (text: string, kind: "link" | "code") => {
+  const copy = async (text: string, kind: "testNumber") => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(kind);
@@ -179,7 +173,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600">
-              ההזמנה תישלח כ-SMS למספר <span className="font-mono">{patient.phone}</span> יחד עם קוד חד-פעמי.
+              ייווצר מספר מבחן. העתיקו אותו ושלחו למטופל בכל ערוץ שמתאים לכם.
             </div>
 
             {error && (
@@ -201,7 +195,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
                 disabled={submitting}
                 className="flex-1 h-14 rounded-xl bg-black text-white font-bold hover:bg-gray-800 disabled:opacity-60"
               >
-                {submitting ? "שולח..." : "שלח הזמנת מבחן"}
+                {submitting ? "יוצר..." : "צור מספר מבחן"}
               </button>
             </div>
           </form>
@@ -216,50 +210,21 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
 
             <div className="space-y-3">
               <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-xs font-bold text-gray-500 uppercase mb-1">קוד חד-פעמי</div>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-3xl tabular-nums tracking-[0.4em]">{result.accessCode}</span>
+                <div className="text-xs font-bold text-gray-500 uppercase mb-1">מספר מבחן</div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-mono text-4xl tabular-nums tracking-[0.25em]">{result.testNumber}</span>
                   <button
                     type="button"
-                    onClick={() => copy(result.accessCode, "code")}
+                    onClick={() => copy(result.testNumber, "testNumber")}
                     className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold text-sm"
                   >
                     <Copy className="w-4 h-4" />
-                    {copied === "code" ? "הועתק" : "העתק"}
+                    {copied === "testNumber" ? "הועתק" : "העתק"}
                   </button>
                 </div>
-              </div>
-
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-xs font-bold text-gray-500 uppercase mb-1">קישור המבחן</div>
-                <div className="flex items-center gap-3">
-                  <span className="flex-1 font-mono text-sm break-all text-gray-700">{result.sessionUrl}</span>
-                  <button
-                    type="button"
-                    onClick={() => copy(result.sessionUrl, "link")}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold text-sm"
-                  >
-                    <Copy className="w-4 h-4" />
-                    {copied === "link" ? "הועתק" : "העתק"}
-                  </button>
-                </div>
-              </div>
-
-              <div
-                className={`border rounded-xl p-3 text-sm font-bold ${
-                  result.smsSent
-                    ? "bg-blue-50 border-blue-200 text-blue-800"
-                    : "bg-amber-50 border-amber-200 text-amber-800"
-                }`}
-              >
-                {result.smsSent ? (
-                  <>SMS נשלח ל-{patient.phone}. אם המטופל לא קיבל, אפשר להעתיק את הקישור והקוד ידנית.</>
-                ) : (
-                  <span className="inline-flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4" />
-                    SMS לא נשלח{result.smsError ? ` (${result.smsError})` : ""}. יש להעביר את הקישור והקוד ידנית.
-                  </span>
-                )}
+                <p className="text-sm text-gray-600 mt-3">
+                  המטופל נכנס לדף הבית, מזין את מספר המבחן ומתחיל את המבדק.
+                </p>
               </div>
             </div>
 

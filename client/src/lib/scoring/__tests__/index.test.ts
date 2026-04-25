@@ -185,6 +185,21 @@ describe('scoreSession', () => {
     expect(orientationFailure?.reviewReason).toBe('rule_score_unavailable');
   });
 
+  it('routes orientation place and city to clinician review when no session location exists', () => {
+    const report = scoreSession(FULL_RESULTS, { ...CTX, sessionLocation: undefined });
+    const items = report.domains.flatMap((d) => d.items);
+
+    expect(items.find((i) => i.taskId === 'orientation.date')?.needsReview).toBe(false);
+    expect(items.find((i) => i.taskId === 'orientation.place')).toEqual(expect.objectContaining({
+      needsReview: true,
+      reviewReason: 'rule_score_unavailable',
+    }));
+    expect(items.find((i) => i.taskId === 'orientation.city')).toEqual(expect.objectContaining({
+      needsReview: true,
+      reviewReason: 'rule_score_unavailable',
+    }));
+  });
+
   it('computes norm metrics when config has no manual-review tasks', () => {
     const cfg: MocaScoringConfig = {
       ...getMocaVersionConfig('8.3'),

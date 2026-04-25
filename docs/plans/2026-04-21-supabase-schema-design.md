@@ -31,8 +31,8 @@ create table sessions (
   case_id          text not null,
   age_band         text not null check (age_band in ('60-69','70-79','80+')),
   education_years  int  not null check (education_years >= 0),
-  location_place   text not null,
-  location_city    text not null,
+  location_place   text, -- legacy optional field, not part of MVP session creation
+  location_city    text, -- legacy optional field, not part of MVP session creation
   link_token       uuid unique not null default gen_random_uuid(),
   link_used_at     timestamptz,
   status           text not null default 'pending'
@@ -129,7 +129,7 @@ Access: signed URLs generated server-side only, never exposed directly.
 - `POST { token }`
 - Rejects if `link_used_at` not null (single-use enforcement)
 - Sets `link_used_at = now()`, `status = 'in_progress'`
-- Returns `{ sessionId, ageBand, educationYears, locationPlace, locationCity, sessionDate }`
+- Returns `{ sessionId, ageBand, educationYears, sessionDate }`
 
 ### submit-results
 - `POST { sessionId, taskType, rawData }`
@@ -148,9 +148,9 @@ Access: signed URLs generated server-side only, never exposed directly.
 ## Session Link Flow
 
 ```
-Clinician creates session → DB row inserted → link_token generated
-Clinician sends /assess?t={link_token} to patient (WhatsApp/SMS/email)
-Patient opens link → start-session validates token → single-use flag set
+Clinician creates session → DB row inserted → test number generated
+Clinician copies test number and sends it to patient outside the app
+Patient enters test number → start-session validates it → single-use flag set
 Patient completes battery → submit-results called per task
 Patient finishes → complete-session → clinician notified
 Clinician logs in → reviews drawings → scoring_report finalized

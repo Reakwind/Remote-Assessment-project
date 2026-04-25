@@ -49,6 +49,24 @@ Deno.test('scoreSession routes malformed naming answers to review', () => {
   assertEquals(namingItem?.reviewReason, 'rule_score_unavailable');
 });
 
+Deno.test('scoreSession sends orientation place and city to review when session location is absent', () => {
+  const report = scoreSession({
+    'moca-orientation-task': {
+      date: '21',
+      month: 'אפריל',
+      year: '2026',
+      day: 'שלישי',
+      place: 'בית',
+      city: 'תל אביב',
+    },
+  }, { ...CTX, sessionLocation: undefined });
+
+  const items = report.domains.flatMap((domain) => domain.items);
+  assertEquals(items.find((item) => item.taskId === 'orientation.date')?.needsReview, false);
+  assertEquals(items.find((item) => item.taskId === 'orientation.place')?.needsReview, true);
+  assertEquals(items.find((item) => item.taskId === 'orientation.city')?.needsReview, true);
+});
+
 Deno.test('scoreSession rejects unsupported MoCA versions', () => {
   let threw = false;
   try {

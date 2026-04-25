@@ -7,6 +7,7 @@ Use this as the compact journey authority. Keep detailed UI, database, and imple
 ## MVP Guardrails
 
 - Use case ID as the only patient identifier in app data.
+- Use clinician email/password auth for MVP.
 - Clinician creates the session; patient only uses the generated link/code.
 - Clinician review happens after patient completion through dashboard review.
 - Keep caregivers as offline support contacts outside the app journey.
@@ -30,7 +31,7 @@ Use this as the compact journey authority. Keep detailed UI, database, and imple
 | Status | Meaning | Entered by | Next |
 |---|---|---|---|
 | `pending` | Clinician created session; patient has not started. | `create-session` | `in_progress` |
-| `in_progress` | Patient opened valid one-time token and started. | `start-session` | `awaiting_review` or `completed` |
+| `in_progress` | Patient entered a valid one-time test number and started. | `start-session` | `awaiting_review` or `completed` |
 | `awaiting_review` | Server scoring is provisional because drawings/manual items need clinician review. | `complete-session` | `completed` |
 | `completed` | All review items are scored and final totals/norms can be shown to clinician. | `complete-session` or review update functions | Terminal for MVP |
 
@@ -40,9 +41,9 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 
 | Step | Browser behavior | Backend/data behavior | Current vs target |
 |---|---|---|---|
-| Login | Clinician signs into `/dashboard`. | Supabase Auth identifies clinician. | Current target. |
-| Create session | Clinician enters case ID, MoCA version, age band, education years, place, city. | `create-session` creates `sessions` row with `pending` status, `moca_version`, and `link_token`; writes `session_created` audit event. | Current target. |
-| Share link/code | Clinician copies/generated patient URL or sends it through clinic workflow. | SMS delivery uses the Twilio provider path behind a provider switch and records `patient_session_sms` outcomes. | Current. |
+| Login | Clinician signs up or signs in with email/password and reaches `/dashboard`. | Supabase Auth validates credentials; clinician-only Edge Functions require the clinician JWT. | Current target. |
+| Create session | Clinician enters case ID, MoCA version, age band, and education years. | `create-session` creates `sessions` row with `pending` status, `moca_version`, and `link_token`; writes `session_created` audit event. | Current target. |
+| Share test number | Clinician copies the generated test number and sends it to the patient outside the app. | `create-session` stores the patient-facing test number in `sessions.access_code`. | Current target. |
 | Wait for completion | Clinician waits for a completion notification, then opens the dashboard when ready. | `complete-session` attempts clinician completion email, records a `notification_events` outcome, and audits `clinician_completion_email_*`. | Current. Email-first completion ping. |
 | Review session | Clinician opens dashboard detail for completed/awaiting review session and sees stored patient evidence. | `get-session` returns task results, scoring report, drawing reviews, scoring item reviews, signed drawing/audio URLs. | Current. |
 | Score manual items | Clinician scores drawings and any rule-unavailable items from the stored evidence view. | `update-drawing-review` and `update-scoring-review` persist clinician score/notes, recalculate report, write audit events. | Current. |
@@ -52,8 +53,8 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 
 | Step | Browser behavior | Backend/data behavior | Current vs target |
 |---|---|---|---|
-| Open link | Patient opens `/#/session/{token}`. | Browser uses stored same-device session state or calls `start-session` for a new token. | Current. |
-| Start once | Valid unused token starts session; reopening the same token on the same device resumes saved progress. | `start-session` atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410 unless local same-device resume state matches. | Current. |
+| Enter test number | Patient enters the clinician-provided test number on the home page. | Browser uses stored same-device session state or calls `start-session` with the test number. | Current target. |
+| Start once | Valid unused test number starts session; reopening the same test number on the same device resumes saved progress. | `start-session` resolves `sessions.access_code`, atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410 unless local same-device resume state matches. | Current target. |
 | Complete tasks | Patient progresses through Hebrew MoCA task flow with selected MoCA version visible in the assessment header. Advancing without captured evidence records a skipped/requires-review payload. | Each task result is submitted with canonical `moca-*` task IDs and active client payload shapes, and the session keeps MoCA version context. | Current. |
 | Load stimuli | Patient tasks request the versioned stimulus manifest for the active session and prefer short-lived signed URLs from private Storage. | `get-stimuli` returns version-scoped asset keys and signed URLs for uploaded licensed assets. Missing assets produce an explicit development placeholder state. | Current architecture. Licensed assets remain external. |
 | Draw/audio evidence | Drawing tasks save current strokes/PNG; audio tasks can save audio evidence. | Private Storage paths and stroke data are stored; clinician receives signed URLs only. | Current. External STT transcript evidence is future. |
@@ -65,7 +66,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 | Function | Caller | Purpose |
 |---|---|---|
 | `create-session` | Clinician | Create pending session and patient link token. |
-| `start-session` | Patient | Validate one-time token and return scoring context. |
+| `start-session` | Patient | Validate one-time test number and return scoring context plus canonical session token. |
 | `get-stimuli` | Patient | Return the active MoCA version's private stimulus manifest with short-lived signed URLs. |
 | `submit-results` / `submit-task` | Patient | Idempotently persist task result payloads. |
 | `save-drawing` | Patient | Store drawing strokes and optional PNG in private storage/review row. |
@@ -90,7 +91,8 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 
 | Area | Current implementation | Target MVP | Known gap |
 |---|---|---|---|
-| Session creation | Case ID, MoCA version, age band, education, location, generated link token. | Same, with MoCA version visible in clinician and patient workflow and preserved for reporting. | Current target. |
+| Clinician auth | Email/password Supabase Auth gates the dashboard; old `/clinician/2fa` links redirect out of the removed MFA screen. | Clinician email/password login with backend JWT checks. | MFA, SSO, device policy, and other security hardening are future milestones. |
+| Session creation | Case ID, MoCA version, age band, education, generated link token. | Same, with MoCA version visible in clinician and patient workflow and preserved for reporting. | Current target. |
 | Patient start | One-time token moves session to `in_progress`; same-device resume uses stored in-progress state and matching token links reopen saved progress. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
 | Stimulus delivery | `get-stimuli` returns versioned private Storage paths and signed URLs when licensed assets are uploaded. Patient UI uses explicit development placeholders when assets are missing. | Licensed MoCA assets are uploaded to private Storage by version and task before clinical use, then validated with `scripts/verify-stimuli.mjs`. | Production asset validation should be part of release readiness. |
 | Task persistence | Per-task submit, skipped-task review payloads, drawings, audio evidence. | Reliable autosave for every task; refresh preserves saved progress in normal use. | Full offline retry queue remains future hardening. |
@@ -98,7 +100,7 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 | Rule scoring | Server-side scoring selects an explicit `8.1`, `8.2`, or `8.3` MoCA config and preserves version in the scoring report. | Version-aware deterministic scoring by active test manual. | Some tasks still require more structured payloads and licensed manual validation before clinical use. |
 | Completion notification | Email outcome via Resend when configured; sent/skipped/failed outcome is stored in `notification_events` and audited. | Email-first clinician ping when test is done, with retry-ready failure records. | Dedicated retry worker and production sender monitoring are future hardening. |
 | Dashboard review | Real session list/detail, review updates, finalized PDF export, and completed-session CSV export. | Efficient clinician review, finalization, then export. | Export templates can be refined for clinical formatting. |
-| SMS | Generated link exists; Twilio-first patient SMS runs through a provider switch and stores sent/skipped/failed notification outcomes. | Twilio-first patient SMS behind provider abstraction. | Delivery webhook handling and local gateway evaluation are future hardening. |
+| Patient start code | Generated test number exists; clinician copies it and sends it outside the app. | Patient enters the test number on the home page and starts once. | SMS/link delivery can be reconsidered after MVP. |
 | STT | Audio evidence storage exists. | External STT creates transcript evidence only. | Vendor/job model and clinician transcript editing are future. |
 
 ## Parking Lot
@@ -106,10 +108,11 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 - Clinic-branded PDF templates and richer CSV/report export fields.
 - Full offline-first browser queue and retry reconciliation.
 - External speech-to-text job model, transcript review/editing, and privacy review.
-- Twilio provider abstraction, message templates, delivery status, and retry handling.
+- Optional future SMS/link delivery provider abstraction, message templates, delivery status, and retry handling.
 - Production release checklist for licensed stimulus validation.
 - Arabic/Russian/English future batteries.
 - Report comparison across prior sessions.
+- Clinician MFA, SSO, session policy, and device/session hardening.
 
 ## Decision Log
 
@@ -126,7 +129,9 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 - 2026-04-25: Patient start consumes links atomically; drawing saves send current strokes with PNG evidence; naming scoring accepts the active client answers object.
 - 2026-04-25: Completion emails write `notification_events` records for sent, skipped, and failed outcomes so notification delivery is observable and retry-ready.
 - 2026-04-25: Same-device patient resume now works when reopening the original token link, filters stale local state, and shows the active MoCA version in the patient header.
-- 2026-04-25: Patient SMS session-link delivery uses the Twilio provider path behind `SMS_PROVIDER` and records `patient_session_sms` notification outcomes.
+- 2026-04-25: Patient SMS delivery is removed from active MVP scope; clinicians share the generated test number outside the app.
 - 2026-04-25: Scoring now uses explicit per-version MoCA config for `8.1`, `8.2`, and `8.3`; licensed stimuli remain outside the repo.
 - 2026-04-25: Patient stimulus delivery uses a versioned private Storage manifest and short-lived signed URLs; missing licensed assets show development placeholders.
 - 2026-04-25: Licensed stimulus readiness is verified through `scripts/verify-stimuli.mjs` and `docs/STIMULI_ASSET_RUNBOOK.md`.
+- 2026-04-25: Clinician MFA is deferred from the MVP; email/password auth is the active clinician login model.
+- 2026-04-25: Session place/city are legacy optional fields and are no longer part of MVP session creation.

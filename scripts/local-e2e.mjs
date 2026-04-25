@@ -90,19 +90,32 @@ async function runVersion(version) {
       mocaVersion: version,
       ageBand: '70-79',
       educationYears: 12,
-      locationPlace: `MoCA Hebrew ${version} local fixture`,
-      locationCity: 'Tel Aviv',
     }),
   });
-  assert(created.status === 200 && created.body?.sessionId && created.body?.linkToken && created.body?.mocaVersion === version, `[${version}] create session`, created);
+  assert(
+    created.status === 200 &&
+      created.body?.sessionId &&
+      created.body?.linkToken &&
+      /^\d{8}$/.test(created.body?.testNumber ?? '') &&
+      created.body?.mocaVersion === version,
+    `[${version}] create session`,
+    created,
+  );
 
-  const { sessionId, linkToken } = created.body;
+  const { sessionId, linkToken, testNumber } = created.body;
   const started = await request('/functions/v1/start-session', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ token: linkToken }),
+    body: JSON.stringify({ token: testNumber }),
   });
-  assert(started.status === 200 && started.body?.sessionId === sessionId && started.body?.mocaVersion === version, `[${version}] start patient session`, started);
+  assert(
+    started.status === 200 &&
+      started.body?.sessionId === sessionId &&
+      started.body?.linkToken === linkToken &&
+      started.body?.mocaVersion === version,
+    `[${version}] start patient session by test number`,
+    started,
+  );
 
   const stimuli = await request('/functions/v1/get-stimuli', {
     method: 'POST',
@@ -114,9 +127,9 @@ async function runVersion(version) {
   const reusedStart = await request('/functions/v1/start-session', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ token: linkToken }),
+    body: JSON.stringify({ token: testNumber }),
   });
-  assert(reusedStart.status === 410, `[${version}] one-time token rejects second start`, reusedStart);
+  assert(reusedStart.status === 410, `[${version}] one-time test number rejects second start`, reusedStart);
 
   await submitDrawing(headers, sessionId, linkToken, 'moca-visuospatial');
   await submitDrawing(headers, sessionId, linkToken, 'moca-cube');
@@ -250,16 +263,6 @@ async function runVersion(version) {
       ['sent', 'skipped', 'failed'].includes(event.status)
     ),
     `[${version}] completion email notification event recorded`,
-    notificationEvents.body,
-  );
-  assert(
-    (notificationEvents.body || []).some(event =>
-      event.notification_type === 'patient_session_sms' &&
-      event.channel === 'sms' &&
-      event.provider === 'twilio' &&
-      ['sent', 'skipped', 'failed'].includes(event.status)
-    ),
-    `[${version}] patient SMS notification event recorded`,
     notificationEvents.body,
   );
 

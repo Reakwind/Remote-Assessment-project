@@ -45,10 +45,7 @@ export function ClinicianAuthPage() {
         return;
       }
       const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
-      // Always route through /clinician/2fa after password auth — the
-      // page will enroll the user if they have no TOTP factor yet, or
-      // verify if they already do. The protected route gates on AAL2.
-      navigate("/clinician/2fa", { state: { from } });
+      navigate(from, { replace: true });
       return;
     }
 

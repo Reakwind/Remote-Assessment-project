@@ -31,12 +31,10 @@ function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext, config
   }
   if ((config.noScoreTasks as string[]).includes(taskId)) return [];
 
-  const loc = ctx.sessionLocation ?? { place: '', city: '' };
-
   switch (taskId) {
     case 'moca-orientation-task':
       return safeScore(taskId, rawData, d =>
-        scoreOrientation(d as Parameters<typeof scoreOrientation>[0], sessionDate, loc)
+        scoreOrientation(d as Parameters<typeof scoreOrientation>[0], sessionDate, ctx.sessionLocation)
       );
     case 'moca-digit-span':
       return safeScore(taskId, rawData, d =>

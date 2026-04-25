@@ -12,6 +12,10 @@ interface StartSessionBody {
   accessCode?: string;
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -27,50 +31,36 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { token, accessCode } = body;
-  if (!token) return json({ error: 'Missing token' }, 400);
+  const token = body.token?.trim();
+  const accessCode = body.accessCode?.trim();
+  if (!token) return json({ error: 'Missing test number' }, 400);
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   );
 
-  // Look up session by token
+  const tokenColumn = isUuid(token) ? 'link_token' : 'access_code';
   const { data: session, error } = await supabase
     .from('sessions')
-    .select('id, status, link_used_at, age_band, education_years, created_at, access_code, moca_version')
-    .eq('link_token', token)
+    .select('id, link_token, status, link_used_at, age_band, education_years, created_at, access_code, moca_version')
+    .eq(tokenColumn, token)
     .single();
 
   if (error || !session) {
-    return json({ error: 'Invalid link' }, 404);
+    return json({ error: 'Invalid test number' }, 404);
   }
 
   // Enforce single-use
   if (session.link_used_at) {
-    return json({ error: 'Link already used' }, 410);
+    return json({ error: 'Test number already used' }, 410);
   }
 
   if (session.status !== 'pending' && session.status !== 'in_progress') {
     return json({ error: 'Session not available' }, 409);
   }
 
-  const normalizedCode = accessCode?.trim();
-  const hasConfiguredCode = Boolean(session.access_code);
-
-  if (!normalizedCode && hasConfiguredCode) {
-    return json({
-      status: 'code_required',
-      sessionId: session.id,
-      ageBand: session.age_band,
-      educationYears: session.education_years,
-      mocaVersion: session.moca_version,
-      sessionDate: new Date().toISOString(),
-      requiresAccessCode: true,
-    });
-  }
-
-  if (hasConfiguredCode && normalizedCode !== session.access_code) {
+  if (tokenColumn === 'link_token' && session.access_code && accessCode && accessCode !== session.access_code) {
     return json({ error: 'Invalid access code' }, 401);
   }
 
@@ -92,7 +82,7 @@ Deno.serve(async (req) => {
       return json({ error: 'Failed to start session' }, 500);
     }
     if (!startedSession) {
-      return json({ error: 'Link already used' }, 410);
+      return json({ error: 'Test number already used' }, 410);
     }
 
     await writeAuditEvent(supabase, {
@@ -106,6 +96,7 @@ Deno.serve(async (req) => {
   return json({
     status:         'ready',
     sessionId:      session.id,
+    linkToken:      session.link_token,
     ageBand:        session.age_band,
     educationYears: session.education_years,
     mocaVersion:    session.moca_version,

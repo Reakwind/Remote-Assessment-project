@@ -93,6 +93,7 @@ describe('useSession', () => {
       json: async () => ({
         status: 'ready',
         sessionId: 'sess-ready',
+        linkToken: 'link-token',
         sessionDate: '2026-04-01T00:00:00.000Z',
         educationYears: undefined,
         ageBand: '65-69',
@@ -101,7 +102,8 @@ describe('useSession', () => {
 
     const state = await renderAndWaitForStatus('session-token', undefined, 'ready');
 
-    expect(state.linkToken).toBe('session-token');
+    expect(state.linkToken).toBe('link-token');
+    expect(state.startToken).toBe('session-token');
     expect(state.scoringContext?.sessionId).toBe('sess-ready');
     expect(state.scoringContext?.educationYears).toBe(12);
     expect(state.scoringContext?.patientAge).toBe(67);

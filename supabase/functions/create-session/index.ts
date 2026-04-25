@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { writeAuditEvent } from '../_shared/audit.ts';
 import { getMocaVersionConfig } from '../_shared/moca-config.ts';
-import { recordNotificationOutcome, sendSms } from '../_shared/notifications.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,8 +10,24 @@ const corsHeaders = {
 
 const SUPPORTED_ASSESSMENTS = new Set(['moca']);
 
-function generateAccessCode(): string {
-  return Array.from(crypto.getRandomValues(new Uint8Array(6)), (byte) => (byte % 10).toString()).join('');
+function generateTestNumber(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => (byte % 10).toString()).join('');
+}
+
+function generateCaseId(): string {
+  const date = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+  const suffix = crypto.randomUUID().slice(0, 8).toUpperCase();
+  return `CASE-${date}-${suffix}`;
+}
+
+function sessionBaseUrl(req: Request): string {
+  const configured = Deno.env.get('PUBLIC_URL')?.trim();
+  if (configured) return configured.replace(/\/$/, '');
+
+  const origin = req.headers.get('Origin')?.trim();
+  if (origin) return origin.replace(/\/$/, '');
+
+  return 'https://app.remotecheck.com';
 }
 
 interface CreateSessionBody {
@@ -20,11 +35,8 @@ interface CreateSessionBody {
   caseId?: string;
   ageBand: string;
   educationYears?: number;
-  patientPhone?: string;
   assessmentType?: string;
   mocaVersion?: string;
-  locationPlace?: string;
-  locationCity?: string;
 }
 
 Deno.serve(async (req) => {
@@ -47,10 +59,7 @@ Deno.serve(async (req) => {
     caseId: caseIdInput,
     ageBand,
     educationYears,
-    patientPhone: patientPhoneInput,
     mocaVersion,
-    locationPlace,
-    locationCity,
   } = body;
   const assessmentType = (body.assessmentType ?? 'moca').toLowerCase();
 
@@ -95,13 +104,12 @@ Deno.serve(async (req) => {
 
   // Resolve patient: prefer patientId (modern flow), fall back to caseId/phone (legacy inline flow)
   let patientRecordId: string | null = null;
-  let patientPhone: string | null = patientPhoneInput?.trim() || null;
   let caseId = caseIdInput?.trim() || '';
 
   if (patientId) {
     const { data: patient, error: patientError } = await supabase
       .from('patients')
-      .select('id, clinician_id, full_name, phone')
+      .select('id, clinician_id')
       .eq('id', patientId)
       .eq('clinician_id', user.id)
       .maybeSingle();
@@ -111,18 +119,22 @@ Deno.serve(async (req) => {
     }
 
     patientRecordId = patient.id;
-    patientPhone = patient.phone;
     if (!caseId) {
-      caseId = `${patient.full_name.slice(0, 24)} · ${new Date().toISOString().slice(0, 10)}`;
+      caseId = generateCaseId();
     }
   }
 
   if (!caseId) {
     return json({ error: 'Missing required field: caseId or patientId' }, 400);
   }
-  const shouldSendSms = Boolean(patientPhone);
 
-  const accessCode = shouldSendSms ? generateAccessCode() : null;
+  let accessCode: string;
+  try {
+    accessCode = await generateUniqueTestNumber(supabase);
+  } catch (error) {
+    console.error('Test number generation failed:', error);
+    return json({ error: 'Failed to generate test number' }, 500);
+  }
 
   const { data: session, error } = await supabase
     .from('sessions')
@@ -131,14 +143,11 @@ Deno.serve(async (req) => {
       clinician_id: user.id,
       age_band: ageBand,
       status: 'pending',
-      education_years: educationYears ?? null,
-      patient_phone: patientPhone,
+      education_years: educationYears ?? 12,
       patient_id: patientRecordId,
       access_code: accessCode,
       assessment_type: assessmentType,
       moca_version: resolvedMocaVersion,
-      location_place: locationPlace ?? null,
-      location_city: locationCity ?? null,
     })
     .select('id, link_token, access_code, moca_version')
     .single();
@@ -148,49 +157,15 @@ Deno.serve(async (req) => {
     return json({ error: 'Failed to create session' }, 500);
   }
 
-  const baseUrl = Deno.env.get('PUBLIC_URL') || 'https://app.remotecheck.com';
-  const sessionUrl = `${baseUrl}/#/session/${session.link_token}`;
-  const smsResult = shouldSendSms
-    ? await sendSms({
-        to: patientPhone!,
-        message: `Remote Check: כדי להתחיל את המבדק, פתחו את הקישור ${sessionUrl}. קוד חד-פעמי: ${session.access_code ?? accessCode}`,
-      })
-    : {
-        channel: 'sms' as const,
-        provider: 'twilio' as const,
-        status: 'skipped' as const,
-        reason: 'No patient phone number supplied',
-      };
-  const smsSent = smsResult.status === 'sent';
-
-  const { error: smsLogError } = await supabase
-    .from('sessions')
-    .update({
-      sms_sent_at: smsSent ? new Date().toISOString() : null,
-      sms_delivery_error: smsResult.reason ?? null,
-    })
-    .eq('id', session.id);
-
-  if (smsLogError) {
-    console.error('Failed to persist SMS status', smsLogError);
-  }
-
-  try {
-    await recordNotificationOutcome(supabase, {
-      sessionId: session.id,
-      notificationType: 'patient_session_sms',
-      result: smsResult,
-    });
-  } catch (notificationError) {
-    console.error('Failed to persist SMS notification outcome', notificationError);
-  }
+  const baseUrl = sessionBaseUrl(req);
+  const sessionUrl = `${baseUrl}/#/session/${session.access_code ?? accessCode}`;
 
   await writeAuditEvent(supabase, {
     eventType: 'session_created',
     sessionId: session.id,
     actorType: 'clinician',
     actorUserId: user.id,
-    metadata: { assessmentType, mocaVersion: session.moca_version, smsSent },
+    metadata: { assessmentType, mocaVersion: session.moca_version, testNumberGenerated: true },
   });
 
   return json({
@@ -198,13 +173,29 @@ Deno.serve(async (req) => {
     linkToken: session.link_token,
     sessionUrl,
     accessCode: session.access_code ?? accessCode,
-    smsSent,
-    smsError: smsResult.reason ?? null,
+    testNumber: session.access_code ?? accessCode,
     assessmentType,
     mocaVersion: session.moca_version,
     patientId: patientRecordId,
   });
 });
+
+async function generateUniqueTestNumber(supabase: any): Promise<string> {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const code = generateTestNumber();
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('access_code', code)
+      .in('status', ['pending', 'in_progress'])
+      .maybeSingle();
+
+    if (error) throw new Error('Failed to generate test number');
+    if (!data) return code;
+  }
+
+  throw new Error('Failed to generate unique test number');
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

@@ -10,8 +10,9 @@ export function LandingHub() {
 
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (token.trim()) {
-      navigate(`/session/${token.trim()}`);
+    const testNumber = token.replace(/\D/g, "");
+    if (testNumber) {
+      navigate(`/session/${testNumber}`);
     }
   };
 
@@ -46,7 +47,7 @@ export function LandingHub() {
             כניסת מטופל
           </h2>
           <p className="text-2xl text-gray-600 mb-10">
-            הזן את קוד המבחן שקיבלת מהקלינאי
+            הזן את מספר המבחן שקיבלת מהקלינאי
           </p>
 
           <form onSubmit={handleTokenSubmit} className="max-w-md mx-auto">
@@ -54,8 +55,10 @@ export function LandingHub() {
               <input
                 type="text"
                 value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="הזן קוד מבחן..."
+                onChange={(e) => setToken(e.target.value.replace(/\D/g, ""))}
+                placeholder="הזן מספר מבחן..."
+                inputMode="numeric"
+                maxLength={8}
                 className="w-full h-20 text-center text-3xl font-bold border-2 border-gray-300 rounded-2xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none transition-all placeholder:text-gray-400 placeholder:font-normal"
                 autoFocus
               />
