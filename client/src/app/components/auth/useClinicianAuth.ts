@@ -60,6 +60,10 @@ const DEFAULT_AUTH_STATE: ClinicianAuthState = {
   mfaRequired: false,
 };
 
+const MFA_LIST_TIMEOUT_MS = 5_000;
+const MFA_UNENROLL_TIMEOUT_MS = 5_000;
+const MFA_ENROLL_TIMEOUT_MS = 15_000;
+
 export function normalizeTotpQrCode(qrCode: string | undefined): string | undefined {
   if (!qrCode) return undefined;
 
@@ -82,10 +86,28 @@ export function normalizeTotpQrCode(qrCode: string | undefined): string | undefi
 
 function clinicianMfaError(error: string | undefined): string {
   if (!error) return "רישום 2FA נכשל.";
+  if (error.includes("timed out")) {
+    return "יצירת קוד ה-QR נמשכה זמן רב מדי. רעננו את הדף או נסו שוב.";
+  }
   if (error.includes("mfa_totp_enroll_not_enabled") || error.toLowerCase().includes("totp enroll")) {
     return "אימות באמצעות אפליקציה אינו מופעל בסביבת Supabase. יש להפעיל auth.mfa.totp.enroll_enabled ו-auth.mfa.totp.verify_enabled.";
   }
+  if (error.toLowerCase().includes("unverified factor")) {
+    return "קיים רישום אימות קודם שלא הושלם. נסו שוב כדי לנקות אותו ולייצר קוד QR חדש.";
+  }
   return error;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, timeoutMs);
+
+    promise
+      .then(resolve, reject)
+      .finally(() => window.clearTimeout(timer));
+  });
 }
 
 export function useClinicianAuth() {
@@ -226,19 +248,31 @@ export function useClinicianAuth() {
       // "only one unverified factor allowed" 422 on retry. listFactors()
       // exposes verified factors under .totp and every factor (incl.
       // unverified) under .all.
-      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const { data: factorsData } = await withTimeout(
+        supabase.auth.mfa.listFactors(),
+        MFA_LIST_TIMEOUT_MS,
+        "MFA factor lookup",
+      ).catch(() => ({ data: null }));
       const stale =
         factorsData?.all?.filter(
           (f) => f.factor_type === "totp" && f.status !== "verified",
         ) ?? [];
       for (const f of stale) {
-        await supabase.auth.mfa.unenroll({ factorId: f.id });
+        await withTimeout(
+          supabase.auth.mfa.unenroll({ factorId: f.id }),
+          MFA_UNENROLL_TIMEOUT_MS,
+          "MFA stale factor cleanup",
+        ).catch(() => null);
       }
 
-      const { data, error } = await supabase.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: `Remote Check · ${new Date().toISOString().slice(0, 10)}`,
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.mfa.enroll({
+          factorType: "totp",
+          friendlyName: `Remote Check · ${new Date().toISOString().slice(0, 10)}`,
+        }),
+        MFA_ENROLL_TIMEOUT_MS,
+        "MFA enrollment",
+      );
       if (error || !data) {
         return { ok: false, error: clinicianMfaError(error?.message) };
       }

@@ -22,6 +22,7 @@ export function ClinicianTwoFactorPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
+  const [enrollmentAttempt, setEnrollmentAttempt] = useState(0);
 
   const mode: "verify" | "enroll" | "unknown" = useMemo(() => {
     if (loading) return "unknown";
@@ -63,7 +64,7 @@ export function ClinicianTwoFactorPage() {
     return () => {
       cancelled = true;
     };
-  }, [mode, enrollment, enrolling, enrollTotp]);
+  }, [mode, enrollment, enrolling, enrollmentAttempt, enrollTotp]);
 
   if (loading || mode === "unknown") {
     return (
@@ -131,6 +132,18 @@ export function ClinicianTwoFactorPage() {
                 <Loader2 className="w-8 h-8 animate-spin" />
                 <span>מייצר קוד QR...</span>
               </div>
+            )}
+            {!enrolling && !enrollment && error && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setEnrollmentAttempt((attempt) => attempt + 1);
+                }}
+                className="w-full h-12 rounded-xl border-2 border-gray-300 font-bold text-gray-800 hover:border-black hover:bg-gray-50 transition-all"
+              >
+                נסו לייצר קוד QR חדש
+              </button>
             )}
             {enrollment && (
               <div className="flex flex-col items-center">
