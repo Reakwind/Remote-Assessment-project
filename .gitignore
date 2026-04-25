@@ -2,3 +2,7 @@
 node_modules/
 dist/
 .env
+.env.local
+.playwright-mcp/
+client/test-results/
+client/playwright-report/

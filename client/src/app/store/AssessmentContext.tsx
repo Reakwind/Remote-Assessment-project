@@ -2,7 +2,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import type { ScoringContext } from '../../types/scoring';
-import { edgeFn } from '../../lib/supabase';
+import { edgeFn, edgeHeaders } from '../../lib/supabase';
 import { scoreSession } from '../../lib/scoring';
 
 // Maps the in-memory task state keys to the moca-prefixed taskIds that the
@@ -115,13 +115,13 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
 
       // Sync with backend
       if (prev.id) {
-        const taskType = `moca-${taskName}`;
+        const taskType = TASK_STATE_TO_SCORING_ID[taskName] ?? `moca-${taskName}`;
         
         if (imageBase64 && ['trailMaking', 'cube', 'clock'].includes(taskName)) {
           // Drawing task: save image first
           fetch(edgeFn('save-drawing'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: edgeHeaders(),
             body: JSON.stringify({
               sessionId: prev.id,
               linkToken: prev.linkToken,
@@ -133,7 +133,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
             .then(({ storagePath }) => {
               fetch(edgeFn('submit-task'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: edgeHeaders(),
                 body: JSON.stringify({ 
                   sessionId: prev.id, 
                   linkToken: prev.linkToken,
@@ -147,7 +147,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
           // Normal task
           fetch(edgeFn('submit-task'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: edgeHeaders(),
             body: JSON.stringify({ 
               sessionId: prev.id, 
               linkToken: prev.linkToken,
@@ -192,7 +192,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
 
         fetch(edgeFn('complete-session'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: edgeHeaders(),
           body: JSON.stringify({
             sessionId: prev.id,
             linkToken: prev.linkToken,

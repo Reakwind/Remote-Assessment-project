@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { edgeFn } from '../lib/supabase';
+import { edgeFn, edgeHeaders } from '../lib/supabase';
 import type { ScoringContext } from '../types/scoring';
 
 export type SessionStatus =
@@ -59,7 +59,7 @@ export function useSession(tokenOverride?: string, accessCodeOverride?: string):
 
     fetch(edgeFn('start-session'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: edgeHeaders(),
       body: JSON.stringify({ token, accessCode: accessCodeOverride }),
     })
       .then(async (res) => {

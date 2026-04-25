@@ -1,0 +1,2 @@
+-- Local development seed file.
+-- Intentionally empty; required because supabase/config.toml enables db.seed.

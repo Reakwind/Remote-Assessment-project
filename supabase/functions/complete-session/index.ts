@@ -1,78 +1,29 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendEmail } from '../_shared/notifications.ts';
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
+import { writeAuditEvent } from '../_shared/audit.ts';
+import { corsResponse, json, methodNotAllowed } from '../_shared/http.ts';
+import { notifyClinicianSessionCompleted } from '../_shared/notifications.ts';
+import { ageFromBand, scoreSession } from '../_shared/scoring.ts';
+
+const DRAWING_TASKS = ['moca-visuospatial', 'moca-cube', 'moca-clock'];
+const TASK_ID_TO_TASK_NAME: Record<string, string> = {
+  'moca-visuospatial': 'trailMaking',
+  'moca-cube': 'cube',
+  'moca-clock': 'clock',
 };
-
-// Client-side scoring (see client/src/lib/scoring) produces a ScoringReport
-// whose `domains` array maps 1:1 to the scoring_reports.subscores jsonb
-// columns. Translate domain ids to subscore keys here so legacy rows stay
-// consistent.
-const DOMAIN_TO_SUBSCORE: Record<string, string> = {
-  visuospatial: 'visuospatial',
-  naming: 'naming',
-  attention: 'attention',
-  language: 'language',
-  abstraction: 'abstraction',
-  memory: 'delayedRecall',
-  orientation: 'orientation',
-};
-
-interface DomainInput {
-  domain?: string;
-  raw?: number;
-}
-
-interface ScoringReportInput {
-  totalRaw?: number;
-  totalAdjusted?: number;
-  totalProvisional?: boolean;
-  pendingReviewCount?: number;
-  normPercentile?: number | null;
-  domains?: DomainInput[];
-}
-
-function buildSubscores(report: ScoringReportInput | undefined): Record<string, number> | null {
-  if (!report || !Array.isArray(report.domains)) return null;
-  const subscores: Record<string, number> = {
-    visuospatial: 0,
-    naming: 0,
-    attention: 0,
-    language: 0,
-    abstraction: 0,
-    delayedRecall: 0,
-    orientation: 0,
-  };
-  for (const d of report.domains) {
-    if (!d?.domain || typeof d.raw !== 'number') continue;
-    const key = DOMAIN_TO_SUBSCORE[d.domain];
-    if (!key) continue;
-    subscores[key] = d.raw;
-  }
-  return subscores;
-}
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-  if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
-  }
+  if (req.method === 'OPTIONS') return corsResponse(req);
+  if (req.method !== 'POST') return methodNotAllowed(req);
 
-  let body: { sessionId: string; linkToken: string; scoringReport?: ScoringReportInput };
+  let body: { sessionId: string; linkToken: string };
   try {
     body = await req.json();
   } catch {
-    return json({ error: 'Invalid JSON' }, 400);
+    return json({ error: 'Invalid JSON' }, 400, req);
   }
 
-  const { sessionId, linkToken, scoringReport } = body;
-  
-  if (!sessionId || !linkToken) {
-    return json({ error: 'Missing required fields: sessionId, linkToken' }, 400);
+  if (!body.sessionId || !body.linkToken) {
+    return json({ error: 'Missing required fields: sessionId, linkToken' }, 400, req);
   }
 
   const supabase = createClient(
@@ -80,145 +31,139 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   );
 
-  // Validate session is in_progress
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .select('id, status, link_token, case_id, clinician_id, patient_id, assessment_type')
-    .eq('id', sessionId)
+    .select('id, clinician_id, status, age_band, education_years, location_place, location_city, started_at, created_at')
+    .eq('id', body.sessionId)
+    .eq('link_token', body.linkToken)
     .single();
 
-  if (sessionError || !session) {
-    return json({ error: 'Session not found' }, 404);
+  if (sessionError || !session) return json({ error: 'Session not found' }, 404, req);
+  if (session.status === 'completed' || session.status === 'awaiting_review') {
+    return json({ error: 'Session already completed' }, 409, req);
   }
-  if (session.link_token !== linkToken) {
-    return json({ error: 'Unauthorized' }, 401);
+  if (session.status !== 'in_progress') return json({ error: 'Session not in progress' }, 409, req);
+
+  const { data: taskResults, error: resultsError } = await supabase
+    .from('task_results')
+    .select('task_type, raw_data')
+    .eq('session_id', body.sessionId);
+  if (resultsError) return json({ error: 'Failed to load task results' }, 500, req);
+
+  const results = Object.fromEntries((taskResults ?? []).map(result => [result.task_type, result.raw_data]));
+  const { error: drawingReviewError } = await supabase
+    .from('drawing_reviews')
+    .upsert(
+      DRAWING_TASKS.map(taskId => ({
+        session_id: session.id,
+        task_name: TASK_ID_TO_TASK_NAME[taskId],
+        task_id: taskId,
+        strokes_data: [],
+      })),
+      { onConflict: 'session_id,task_id', ignoreDuplicates: true },
+    );
+
+  if (drawingReviewError) {
+    console.error('Drawing review placeholder upsert failed:', drawingReviewError);
+    return json({ error: 'Failed to prepare drawing reviews' }, 500, req);
   }
 
-  if (session.status === 'completed') {
-    return json({ error: 'Session already completed' }, 409);
-  }
-
-  // Mark session completed via RPC
-  const { error: markError } = await supabase.rpc('mark_session_completed', {
-    p_session_id: sessionId
+  const report = scoreSession(results, {
+    sessionId: session.id,
+    sessionDate: new Date(session.started_at ?? session.created_at),
+    educationYears: session.education_years,
+    patientAge: ageFromBand(session.age_band),
+    sessionLocation: { place: session.location_place, city: session.location_city },
   });
 
-  if (markError) {
-    console.error('Mark Session Error:', markError);
-    return json({ error: 'Failed to mark session as completed' }, 500);
-  }
+  const scoringReviewRows = report.domains
+    .flatMap(domain => domain.items)
+    .filter(item => item.needsReview && item.reviewReason !== 'drawing')
+    .map(item => ({
+      session_id: session.id,
+      item_id: item.taskId,
+      task_type: item.taskId,
+      max_score: item.max,
+      raw_data: item.rawData ?? null,
+    }));
 
-  // Persist the client-computed scoring report into scoring_reports.
-  // A row already exists thanks to the trigger_create_scoring_report trigger
-  // that fires when the session is inserted, so we UPDATE rather than insert.
-  const subscores = buildSubscores(scoringReport);
-  if (scoringReport && subscores) {
-    const totalScore =
-      typeof scoringReport.totalAdjusted === 'number'
-        ? Math.max(0, Math.min(30, Math.round(scoringReport.totalAdjusted)))
-        : typeof scoringReport.totalRaw === 'number'
-        ? Math.max(0, Math.min(30, Math.round(scoringReport.totalRaw)))
-        : null;
-    const needsReview =
-      typeof scoringReport.totalProvisional === 'boolean'
-        ? scoringReport.totalProvisional
-        : (scoringReport.pendingReviewCount ?? 0) > 0;
-    const percentile =
-      typeof scoringReport.normPercentile === 'number'
-        ? Math.max(0, Math.min(100, Math.round(scoringReport.normPercentile)))
-        : null;
+  if (scoringReviewRows.length > 0) {
+    const { error: scoringReviewError } = await supabase
+      .from('scoring_item_reviews')
+      .upsert(scoringReviewRows, { onConflict: 'session_id,item_id', ignoreDuplicates: true });
 
-    const { error: reportError } = await supabase
-      .from('scoring_reports')
-      .update({
-        total_score: totalScore,
-        subscores,
-        needs_review: needsReview,
-        percentile,
-        computed_at: new Date().toISOString(),
-      })
-      .eq('session_id', sessionId);
-
-    if (reportError) {
-      console.error('Scoring report persistence error:', reportError);
-    }
-  } else {
-    // Fallback: ask the DB to sum whatever subscores already exist.
-    const { error: recalcError } = await supabase.rpc('recalculate_total_score', {
-      p_session_id: sessionId,
-    });
-    if (recalcError) {
-      console.error('Recalculate Score Error:', recalcError);
+    if (scoringReviewError) {
+      console.error('Scoring item review placeholder upsert failed:', scoringReviewError);
+      return json({ error: 'Failed to prepare scoring reviews' }, 500, req);
     }
   }
 
-  // Notify clinician by email if profile + auth email are available
-  try {
-    if (session.clinician_id) {
-      const { data: clinicianProfile } = await supabase
-        .from('clinicians')
-        .select('email, full_name')
-        .eq('id', session.clinician_id)
-        .maybeSingle();
-
-      let clinicianEmail = clinicianProfile?.email ?? null;
-      if (!clinicianEmail) {
-        const { data: userResult } = await supabase.auth.admin.getUserById(session.clinician_id);
-        clinicianEmail = userResult?.user?.email ?? null;
-      }
-
-      let patientName: string | null = null;
-      if (session.patient_id) {
-        const { data: patient } = await supabase
-          .from('patients')
-          .select('full_name')
-          .eq('id', session.patient_id)
-          .maybeSingle();
-        patientName = patient?.full_name ?? null;
-      }
-
-      const dashboardBase = Deno.env.get('PUBLIC_URL') || 'https://app.remotecheck.com';
-      const dashboardUrl = `${dashboardBase}/#/dashboard/session/${sessionId}`;
-      const assessmentLabel = (session.assessment_type ?? 'moca').toUpperCase();
-      const patientLine = patientName
-        ? `<p>המטופל <strong>${patientName}</strong> השלים את המבדק (${assessmentLabel}).</p>`
-        : `<p>המבדק (${assessmentLabel}) עבור מזהה תיק <strong>${session.case_id ?? sessionId}</strong> הושלם.</p>`;
-
-      if (clinicianEmail) {
-        await sendEmail({
-          to: clinicianEmail,
-          subject: 'Remote Check: מבחן הושלם',
-          html: `
-            <div dir="rtl" style="font-family: Heebo, Arial, sans-serif; color: #111;">
-              <p>שלום${clinicianProfile?.full_name ? ` ${clinicianProfile.full_name}` : ''},</p>
-              ${patientLine}
-              <p><a href="${dashboardUrl}" style="color:#1d4ed8;font-weight:bold;">פתחו את התוצאות בלוח הבקרה</a></p>
-              <p style="color:#666;font-size:12px;">הקישור זמין רק לקלינאים מחוברים.</p>
-            </div>
-          `,
-        });
-      }
-    }
-  } catch (notificationError) {
-    console.error('Clinician completion email failed:', notificationError);
-  }
-
-  const { data: finalReport } = await supabase
+  const { error: reportError } = await supabase
     .from('scoring_reports')
-    .select('total_score, needs_review')
-    .eq('session_id', sessionId)
-    .maybeSingle();
+    .upsert({
+      session_id: session.id,
+      total_score: Math.round(report.totalAdjusted),
+      needs_review: report.totalProvisional,
+      percentile: report.normPercentile,
+      total_raw: report.totalRaw,
+      total_adjusted: report.totalAdjusted,
+      total_provisional: report.totalProvisional,
+      norm_percentile: report.normPercentile,
+      norm_sd: report.normSd,
+      pending_review_count: report.pendingReviewCount,
+      domains: report.domains,
+      completed_at: report.completedAt,
+    }, { onConflict: 'session_id' });
 
-  return json({
-    ok: true,
-    totalScore: finalReport?.total_score ?? 0,
-    needsReview: finalReport?.needs_review ?? true,
-  });
+  if (reportError) {
+    console.error('Scoring report upsert failed:', reportError);
+    return json({ error: 'Failed to save scoring report' }, 500, req);
+  }
+
+  const { error: statusError } = await supabase
+    .from('sessions')
+    .update({
+      status: report.totalProvisional ? 'awaiting_review' : 'completed',
+      completed_at: report.completedAt,
+    })
+    .eq('id', session.id);
+
+  if (statusError) return json({ error: 'Failed to complete session' }, 500, req);
+
+  const finalStatus = report.totalProvisional ? 'awaiting_review' : 'completed';
+
+  try {
+    await writeAuditEvent(supabase, {
+      eventType: 'session_completed',
+      sessionId: session.id,
+      actorType: 'patient',
+      metadata: {
+        totalRaw: report.totalRaw,
+        totalAdjusted: report.totalAdjusted,
+        pendingReviewCount: report.pendingReviewCount,
+        totalProvisional: report.totalProvisional,
+      },
+    });
+  } catch (auditError) {
+    return json({ error: auditError instanceof Error ? auditError.message : 'Failed to write audit event' }, 500, req);
+  }
+
+  try {
+    const notification = await notifyClinicianSessionCompleted(supabase, {
+      id: session.id,
+      clinician_id: session.clinician_id,
+      status: finalStatus,
+    });
+
+    await writeAuditEvent(supabase, {
+      eventType: `clinician_completion_email_${notification.status}`,
+      sessionId: session.id,
+      actorType: 'system',
+      metadata: { ...notification },
+    });
+  } catch (notificationError) {
+    console.error('Clinician completion email notification failed:', notificationError);
+  }
+
+  return json({ ok: true, scoringReport: report }, 200, req);
 });
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
