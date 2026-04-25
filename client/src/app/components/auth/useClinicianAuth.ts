@@ -60,6 +60,34 @@ const DEFAULT_AUTH_STATE: ClinicianAuthState = {
   mfaRequired: false,
 };
 
+export function normalizeTotpQrCode(qrCode: string | undefined): string | undefined {
+  if (!qrCode) return undefined;
+
+  const commaIndex = qrCode.indexOf(",");
+  if (qrCode.startsWith("data:image/svg+xml") && commaIndex >= 0) {
+    const prefix = qrCode.slice(0, commaIndex);
+    const payload = qrCode.slice(commaIndex + 1);
+    if (payload.trimStart().startsWith("<svg")) {
+      return `${prefix},${encodeURIComponent(payload)}`;
+    }
+    return qrCode;
+  }
+
+  if (qrCode.trimStart().startsWith("<svg")) {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(qrCode)}`;
+  }
+
+  return qrCode;
+}
+
+function clinicianMfaError(error: string | undefined): string {
+  if (!error) return "רישום 2FA נכשל.";
+  if (error.includes("mfa_totp_enroll_not_enabled") || error.toLowerCase().includes("totp enroll")) {
+    return "אימות באמצעות אפליקציה אינו מופעל בסביבת Supabase. יש להפעיל auth.mfa.totp.enroll_enabled ו-auth.mfa.totp.verify_enabled.";
+  }
+  return error;
+}
+
 export function useClinicianAuth() {
   const [state, setState] = useState<ClinicianAuthState>(DEFAULT_AUTH_STATE);
 
@@ -212,17 +240,17 @@ export function useClinicianAuth() {
         friendlyName: `Remote Check · ${new Date().toISOString().slice(0, 10)}`,
       });
       if (error || !data) {
-        return { ok: false, error: error?.message ?? "רישום 2FA נכשל." };
+        return { ok: false, error: clinicianMfaError(error?.message) };
       }
       return {
         ok: true,
         factorId: data.id,
-        qrCode: data.totp.qr_code,
+        qrCode: normalizeTotpQrCode(data.totp.qr_code),
         secret: data.totp.secret,
         uri: data.totp.uri,
       };
     } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : "רישום 2FA נכשל." };
+      return { ok: false, error: clinicianMfaError(err instanceof Error ? err.message : undefined) };
     }
   }, []);
 

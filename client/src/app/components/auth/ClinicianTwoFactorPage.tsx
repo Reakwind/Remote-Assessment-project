@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Navigate, useLocation, useNavigate } from "react-router";
 import { KeyRound, Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
 import { useClinicianAuth } from "./useClinicianAuth";
 
@@ -74,8 +74,7 @@ export function ClinicianTwoFactorPage() {
   }
 
   if (!signedIn) {
-    navigate("/clinician/auth", { replace: true });
-    return null;
+    return <Navigate to="/clinician/auth" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
