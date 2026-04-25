@@ -48,6 +48,44 @@ describe('scoreSession', () => {
     expect(report.totalRaw).toBe(25);
   });
 
+  it('scores naming answers persisted by the active client payload shape', () => {
+    const report = scoreSession(
+      {
+        ...FULL_RESULTS,
+        'moca-naming': {
+          answers: {
+            lion: 'אריה',
+            rhino: 'קרנף',
+            camel: 'גמל',
+          },
+        },
+      },
+      CTX,
+    );
+
+    const naming = report.domains.find((d) => d.domain === 'naming');
+    expect(naming?.raw).toBe(3);
+    expect(naming?.items.every((item) => item.needsReview === false)).toBe(true);
+  });
+
+  it('routes malformed naming payloads to clinician review', () => {
+    const missingAnswers = scoreSession({ ...FULL_RESULTS, 'moca-naming': {} }, CTX);
+    const nullPayload = scoreSession({ ...FULL_RESULTS, 'moca-naming': null }, CTX);
+    const arrayAnswers = scoreSession({ ...FULL_RESULTS, 'moca-naming': { answers: [] } }, CTX);
+    const nonStringAnswer = scoreSession(
+      { ...FULL_RESULTS, 'moca-naming': { answers: { lion: 'אריה', rhino: null, camel: 'גמל' } } },
+      CTX,
+    );
+
+    for (const report of [missingAnswers, nullPayload, arrayAnswers, nonStringAnswer]) {
+      const naming = report.domains.find((d) => d.domain === 'naming');
+      expect(naming?.items).toContainEqual(expect.objectContaining({
+        taskId: 'moca-naming',
+        needsReview: true,
+      }));
+    }
+  });
+
   it('applies education correction +1 for <= 12 years', () => {
     const ctx = { ...CTX, educationYears: 12 };
     const report = scoreSession(FULL_RESULTS, ctx);

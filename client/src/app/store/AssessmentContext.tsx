@@ -127,6 +127,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
               linkToken: prev.linkToken,
               taskId: taskType,
               imageBase64,
+              strokesData: data?.strokes,
             }),
           })
             .then(res => res.ok ? res.json() : Promise.reject())

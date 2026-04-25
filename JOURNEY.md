@@ -53,9 +53,9 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 | Step | Browser behavior | Backend/data behavior | Current vs target |
 |---|---|---|---|
 | Open link | Patient opens `/#/session/{token}`. | Browser uses stored same-device session state or calls `start-session` for a new token. | Current. |
-| Start once | Valid unused token starts session; same-device resume returns patient to saved progress. | `start-session` sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410. | Current. |
-| Complete tasks | Patient progresses through Hebrew MoCA task flow with selected MoCA version visible in the assessment header. Advancing without captured evidence records a skipped/requires-review payload. | Each task result is submitted with canonical `moca-*` task IDs and the session keeps MoCA version context. | Current target for traceability. |
-| Draw/audio evidence | Drawing tasks save strokes/PNG; audio tasks can save audio evidence. | Private Storage paths are stored; clinician receives signed URLs only. | Current. External STT transcript evidence is future. |
+| Start once | Valid unused token starts session; same-device resume returns patient to saved progress. | `start-session` atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410. | Current. |
+| Complete tasks | Patient progresses through Hebrew MoCA task flow with selected MoCA version visible in the assessment header. Advancing without captured evidence records a skipped/requires-review payload. | Each task result is submitted with canonical `moca-*` task IDs and active client payload shapes, and the session keeps MoCA version context. | Current target for traceability. |
+| Draw/audio evidence | Drawing tasks save current strokes/PNG; audio tasks can save audio evidence. | Private Storage paths and stroke data are stored; clinician receives signed URLs only. | Current. External STT transcript evidence is future. |
 | Autosave | Per-task submit/save should survive refresh enough for MVP testing. | `submit-results`, `save-drawing`, and `save-audio` persist evidence during `in_progress`. | Current target. Full offline-first retry queue is future hardening. |
 | Finish | Patient sees a completion screen only; returning home clears completed local resume state. | `complete-session` runs server scoring, creates review rows, sets status, writes audit, triggers clinician email outcome. | Current. |
 
@@ -120,3 +120,4 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 - 2026-04-25: Patient navigation records explicit skipped-task payloads for tasks advanced without captured evidence, so clinician review sees all visited tasks.
 - 2026-04-25: PDF export is available only after clinician finalization; CSV export uses modern report fields for completed sessions.
 - 2026-04-25: Clinician dashboard detail review uses backend `get-session` evidence, signed URLs, and review update functions instead of local patient-browser assessment state.
+- 2026-04-25: Patient start consumes links atomically; drawing saves send current strokes with PNG evidence; naming scoring accepts the active client answers object.

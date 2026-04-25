@@ -75,17 +75,24 @@ Deno.serve(async (req) => {
   }
 
   if (session.status === 'pending') {
-    const { error: updateError } = await supabase
+    const { data: startedSession, error: updateError } = await supabase
       .from('sessions')
       .update({
         started_at: new Date().toISOString(),
         link_used_at: new Date().toISOString(),
         status: 'in_progress',
       })
-      .eq('id', session.id);
+      .eq('id', session.id)
+      .eq('status', 'pending')
+      .is('link_used_at', null)
+      .select('id')
+      .maybeSingle();
 
     if (updateError) {
       return json({ error: 'Failed to start session' }, 500);
+    }
+    if (!startedSession) {
+      return json({ error: 'Link already used' }, 410);
     }
 
     await writeAuditEvent(supabase, {

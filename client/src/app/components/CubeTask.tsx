@@ -15,8 +15,8 @@ export function CubeTask() {
     updateTaskData('cube', { strokes });
   };
 
-  const handleSave = (dataUrl: string) => {
-    updateTaskData('cube', { strokes: savedData.strokes }, dataUrl);
+  const handleSave = (dataUrl: string, strokes: any[][]) => {
+    updateTaskData('cube', { strokes }, dataUrl);
   };
 
   return (

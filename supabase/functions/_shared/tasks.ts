@@ -58,7 +58,9 @@ export function validateTaskPayload(taskType: string, rawData: unknown): string 
 
   switch (taskType) {
     case 'moca-naming':
-      return Array.isArray(rawData) && rawData.length === 3 ? null : 'Naming rawData must be an array of 3 answers';
+      if (Array.isArray(rawData) && rawData.length === 3) return null;
+      if (hasThreeNamingAnswers(rawData)) return null;
+      return 'Naming rawData must be an array of 3 answers or an answers object';
     case 'moca-memory-learning':
       return isObject(rawData) ? null : 'Memory rawData must be an object';
     case 'moca-digit-span':
@@ -95,4 +97,10 @@ function isObject(value: unknown): boolean {
 
 function isSkippedPayload(value: unknown): boolean {
   return isObject(value) && (value as { skipped?: unknown }).skipped === true;
+}
+
+function hasThreeNamingAnswers(value: unknown): boolean {
+  if (!isObject(value) || !isObject((value as { answers?: unknown }).answers)) return false;
+  const answers = (value as { answers: Record<string, unknown> }).answers;
+  return ['lion', 'rhino', 'camel'].every((key) => typeof answers[key] === 'string');
 }

@@ -93,6 +93,18 @@ function matches(userInput: unknown, expected: string): boolean {
   return normalizeHebrew(userInput) === normalizeHebrew(expected);
 }
 
+function namingAnswers(rawData: unknown): unknown[] {
+  if (Array.isArray(rawData)) return rawData;
+  const data = assertObject(rawData);
+  const answers = data.answers;
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) throw new Error('Invalid naming');
+  return ['lion', 'rhino', 'camel'].map((key) => {
+    const answer = (answers as Record<string, unknown>)[key];
+    if (typeof answer !== 'string') throw new Error('Invalid naming');
+    return answer;
+  });
+}
+
 function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext, max: number): ItemScore[] {
   if (CONFIG.drawingTasks.includes(taskId)) {
     return [{ taskId, score: 0, max, needsReview: true, reviewReason: 'drawing' }];
@@ -155,9 +167,9 @@ function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext, max: n
       });
     case 'moca-naming':
       return safeScore(taskId, rawData, max, data => {
-        if (!Array.isArray(data)) throw new Error('Invalid naming');
+        const answers = namingAnswers(data);
         return CONFIG.correctAnimalNames.map((correct, i) => {
-          const answer = data[i];
+          const answer = answers[i];
           return item(`naming.item${i + 1}`, typeof answer === 'string' && normalizeHebrew(answer) === normalizeHebrew(correct) ? 1 : 0, 1);
         });
       });

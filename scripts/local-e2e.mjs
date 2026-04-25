@@ -115,7 +115,13 @@ async function runVersion(version) {
   await submitDrawing(headers, sessionId, linkToken, 'moca-cube');
   await submitDrawing(headers, sessionId, linkToken, 'moca-clock');
 
-  await submitResult(headers, sessionId, linkToken, 'moca-naming', ['אריה', 'קרנף', 'גמל']);
+  await submitResult(headers, sessionId, linkToken, 'moca-naming', {
+    answers: {
+      lion: 'אריה',
+      rhino: 'קרנף',
+      camel: 'גמל',
+    },
+  });
   await submitResult(headers, sessionId, linkToken, 'moca-memory-learning', { localFixture: true });
   await submitResult(headers, sessionId, linkToken, 'moca-vigilance', { score: 1 });
   await submitResult(headers, sessionId, linkToken, 'moca-serial-7s', [

@@ -16,9 +16,9 @@ export function ClockTask() {
     updateTaskData('clock', { strokes });
   };
 
-  const handleSave = (dataUrl: string) => {
+  const handleSave = (dataUrl: string, strokes: any[][]) => {
     // Sync base64 image
-    updateTaskData('clock', { strokes: savedData.strokes }, dataUrl);
+    updateTaskData('clock', { strokes }, dataUrl);
   };
 
   return (

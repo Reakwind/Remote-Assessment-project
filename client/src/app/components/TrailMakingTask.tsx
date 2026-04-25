@@ -15,8 +15,8 @@ export function TrailMakingTask() {
     updateTaskData('trailMaking', { strokes });
   };
 
-  const handleSave = (dataUrl: string) => {
-    updateTaskData('trailMaking', { strokes: savedData.strokes }, dataUrl);
+  const handleSave = (dataUrl: string, strokes: any[][]) => {
+    updateTaskData('trailMaking', { strokes }, dataUrl);
   };
 
   return (

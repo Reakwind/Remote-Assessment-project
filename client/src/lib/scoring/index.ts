@@ -9,6 +9,18 @@ import { lookupNorm, computePercentile } from './norms';
 import config from '../../data/scoring-config.json' with { type: 'json' };
 import normsData from '../../data/lifshitz-norms.json' with { type: 'json' };
 
+function namingAnswers(rawData: unknown): (string | null)[] {
+  if (Array.isArray(rawData)) return rawData as (string | null)[];
+  if (!rawData || typeof rawData !== 'object') throw new Error('Invalid naming');
+  const answers = (rawData as { answers?: unknown }).answers;
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) throw new Error('Invalid naming');
+  return ['lion', 'rhino', 'camel'].map((key) => {
+    const answer = (answers as Record<string, unknown>)[key];
+    if (typeof answer !== 'string') throw new Error('Invalid naming');
+    return answer;
+  });
+}
+
 function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext): ItemScore[] {
   // Assessment context is persisted in localStorage; on resume, sessionDate can
   // come back as an ISO string. Coerce it so orientation scoring stays correct.
@@ -52,7 +64,7 @@ function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext): ItemS
       );
     case 'moca-naming':
       return safeScore(taskId, rawData, d =>
-        scoreNaming(d as Parameters<typeof scoreNaming>[0], config.correctAnimalNames)
+        scoreNaming(namingAnswers(d), config.correctAnimalNames)
       );
     default:
       return [];
