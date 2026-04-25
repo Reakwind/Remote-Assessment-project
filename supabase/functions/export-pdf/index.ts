@@ -1,5 +1,10 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.1';
+import {
+  formatScore,
+  getFinalizedExportBlockReason,
+  normalizeExportReport,
+} from '../_shared/export-report.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +46,17 @@ Deno.serve(async (req) => {
   if (!session) return new Response('Session not found', { status: 404, headers: corsHeaders });
 
   const report = Array.isArray(session.scoring_reports) ? session.scoring_reports[0] : session.scoring_reports;
+  const blockReason = getFinalizedExportBlockReason(session, report);
+  if (blockReason) {
+    return new Response(JSON.stringify({ error: blockReason }), {
+      status: blockReason === 'Session not found' || blockReason === 'Scoring report not found' ? 404 : 409,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const normalizedReport = normalizeExportReport(report);
+  const mocaVersion = session.moca_version ?? session.assessment_type ?? 'moca';
+  const reportDate = session.completed_at ?? report?.finalized_at ?? report?.completed_at ?? session.created_at;
 
   const doc = new jsPDF();
   doc.setFontSize(22);
@@ -48,16 +64,16 @@ Deno.serve(async (req) => {
   
   doc.setFontSize(14);
   doc.text(`Case ID: ${session.case_id}`, 20, 40);
-  doc.text(`Age Band: ${session.age_band}`, 20, 50);
-  doc.text(`Date: ${new Date(session.created_at).toLocaleDateString()}`, 20, 60);
+  doc.text(`MoCA Version: ${mocaVersion}`, 20, 50);
+  doc.text(`Age Band: ${session.age_band}`, 20, 60);
+  doc.text(`Education Years: ${session.education_years ?? 'N/A'}`, 20, 70);
+  doc.text(`Date: ${new Date(reportDate).toLocaleDateString()}`, 20, 80);
 
-  doc.text(`Total Score: ${report?.total_score ?? 'Pending'}/30`, 20, 80);
-  doc.text(`Percentile: ${report?.percentile ?? 'N/A'}%`, 20, 90);
-  
-  if (report?.needs_review) {
-    doc.setTextColor(200, 0, 0);
-    doc.text('WARNING: PROVISIONAL SCORE (NEEDS MANUAL REVIEW)', 20, 110);
-  }
+  doc.text(`Total Raw: ${formatScore(normalizedReport?.totalRaw)}/30`, 20, 100);
+  doc.text(`Total Adjusted: ${formatScore(normalizedReport?.totalAdjusted)}/30`, 20, 110);
+  doc.text(`Norm Percentile: ${normalizedReport?.normPercentile ?? 'N/A'}%`, 20, 120);
+  doc.text(`Norm SD: ${normalizedReport?.normSd ?? 'N/A'}`, 20, 130);
+  doc.text('Review Status: Finalized by clinician', 20, 150);
 
   const pdfOutput = doc.output('arraybuffer');
 
@@ -65,7 +81,12 @@ Deno.serve(async (req) => {
     headers: {
       ...corsHeaders,
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="report_${session.case_id}.pdf"`,
+      'Content-Disposition': `attachment; filename="report_${sanitizeFilename(session.case_id)}.pdf"`,
     },
   });
 });
+
+function sanitizeFilename(value: unknown): string {
+  const cleaned = String(value ?? 'session').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+  return cleaned || 'session';
+}

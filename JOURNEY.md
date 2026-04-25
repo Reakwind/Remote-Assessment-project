@@ -46,7 +46,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 | Wait for completion | Clinician waits for a completion notification, then opens the dashboard when ready. | `complete-session` attempts clinician completion email and audits `clinician_completion_email_*`. | Current. Email-first completion ping. |
 | Review session | Clinician opens dashboard detail for completed/awaiting review session. | `get-session` returns task results, scoring report, drawing reviews, scoring item reviews, signed drawing/audio URLs. | Current. |
 | Score manual items | Clinician scores drawings and any rule-unavailable items. | `update-drawing-review` and `update-scoring-review` persist clinician score/notes, recalculate report, write audit events. | Current. |
-| Finalize | Once pending review count reaches 0, session becomes `completed`. | Final report totals and norm lookup become final. | Current. PDF/CSV export is next milestone. |
+| Finalize | Once pending review count reaches 0, session becomes `completed`. | Final report totals and norm lookup become final; PDF/CSV export is available after finalization. | Current. |
 
 ## Patient Journey
 
@@ -94,13 +94,13 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 | Drawing review | Manual drawing review rows and signed URLs. | Clinician rubric scoring from stored evidence. | Rubric UX can be improved. |
 | Rule scoring | Server-side scoring for supported structured tasks. | Version-aware deterministic scoring by active test manual. | Some tasks still require more structured payloads/version-specific rules. |
 | Completion notification | Email outcome via Resend when configured; skipped outcome audited locally. | Email-first clinician ping when test is done. | Production sender/config and retry policy need hardening. |
-| Dashboard review | Real session list/detail and review updates. | Efficient clinician review, finalization, then export. | PDF/CSV export is next milestone. |
+| Dashboard review | Real session list/detail, review updates, finalized PDF export, and completed-session CSV export. | Efficient clinician review, finalization, then export. | Export templates can be refined for clinical formatting. |
 | SMS | Generated link exists; Twilio is direction. | Twilio-first patient SMS behind provider abstraction. | Provider interface and message lifecycle not fully built. |
 | STT | Audio evidence storage exists. | External STT creates transcript evidence only. | Vendor/job model and clinician transcript editing are future. |
 
 ## Parking Lot
 
-- PDF/CSV export after clinician finalization.
+- Clinic-branded PDF templates and richer CSV/report export fields.
 - Full offline-first browser queue and retry reconciliation.
 - External speech-to-text job model, transcript review/editing, and privacy review.
 - Twilio provider abstraction, message templates, delivery status, and retry handling.
@@ -118,3 +118,4 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 - 2026-04-25: Same-device patient resume uses locally stored in-progress session state while backend start tokens stay single-use.
 - 2026-04-25: Patient assessment header shows selected MoCA version and completed sessions clear local resume state after returning home.
 - 2026-04-25: Patient navigation records explicit skipped-task payloads for tasks advanced without captured evidence, so clinician review sees all visited tasks.
+- 2026-04-25: PDF export is available only after clinician finalization; CSV export uses modern report fields for completed sessions.

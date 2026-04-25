@@ -68,6 +68,7 @@ async function runVersion(version) {
   const headers = anonHeaders();
 
   console.log(`\n[${version}] Starting clinician-to-final-report flow`);
+  const caseId = `E2E-${version}-${now}`;
 
   const signup = await request('/auth/v1/signup', {
     method: 'POST',
@@ -85,7 +86,7 @@ async function runVersion(version) {
     method: 'POST',
     headers: clinicianHeaders,
     body: JSON.stringify({
-      caseId: `E2E-${version}-${now}`,
+      caseId,
       mocaVersion: version,
       ageBand: '70-79',
       educationYears: 12,
@@ -184,6 +185,26 @@ async function runVersion(version) {
   assert(finalDetail.session.scoring_report?.pending_review_count === 0, `[${version}] pending review count is 0`, finalDetail.session.scoring_report);
   assert(finalDetail.session.scoring_report?.total_provisional === false, `[${version}] report is finalized`, finalDetail.session.scoring_report);
   assert(finalDetail.session.status === 'completed', `[${version}] session status completed`, finalDetail.session);
+
+  const pdfExport = await request('/functions/v1/export-pdf', {
+    method: 'POST',
+    headers: clinicianHeaders,
+    body: JSON.stringify({ sessionId }),
+  });
+  assert(pdfExport.status === 200 && String(pdfExport.body).startsWith('%PDF'), `[${version}] finalized PDF export`, pdfExport);
+
+  const csvExport = await request('/functions/v1/export-csv', {
+    method: 'POST',
+    headers: clinicianHeaders,
+  });
+  assert(
+    csvExport.status === 200 &&
+      typeof csvExport.body === 'string' &&
+      csvExport.body.includes('Total Adjusted') &&
+      csvExport.body.includes(caseId),
+    `[${version}] completed-session CSV export`,
+    csvExport,
+  );
 
   const audits = await request(`/rest/v1/audit_events?select=event_type&session_id=eq.${sessionId}`, {
     method: 'GET',

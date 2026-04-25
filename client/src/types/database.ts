@@ -32,6 +32,15 @@ export interface TaskResult {
 export interface DBScoringReport {
   id: string;
   session_id: string;
+  total_raw: number | null;
+  total_adjusted: number | null;
+  total_provisional: boolean;
+  norm_percentile: number | null;
+  norm_sd: number | null;
+  pending_review_count: number;
+  domains: any;
+  finalized_at: string | null;
+  finalized_by: string | null;
   total_score: number | null;
   percentile: number | null;
   needs_review: boolean;

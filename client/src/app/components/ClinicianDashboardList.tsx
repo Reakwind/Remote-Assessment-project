@@ -20,6 +20,14 @@ interface PatientRow {
   status: "new" | "in_progress" | "review" | "completed";
 }
 
+interface ScoringSummary {
+  total_score: number | null;
+  total_adjusted: number | null;
+  needs_review: boolean;
+  total_provisional: boolean | null;
+  pending_review_count: number | null;
+}
+
 interface PatientWithSessions {
   id: string;
   full_name: string;
@@ -31,14 +39,23 @@ interface PatientWithSessions {
         id: string;
         status: "pending" | "in_progress" | "completed" | "awaiting_review";
         created_at: string;
-        scoring_reports: { total_score: number | null; needs_review: boolean }[] | null;
+        scoring_reports: ScoringSummary[] | null;
       }[]
     | null;
 }
 
+function reportScore(report: ScoringSummary | null | undefined): number | null {
+  return report?.total_adjusted ?? report?.total_score ?? null;
+}
+
+function reportNeedsReview(report: ScoringSummary | null | undefined): boolean {
+  if (!report) return false;
+  return report.total_provisional ?? report.needs_review ?? false;
+}
+
 function deriveStatus(sessions: PatientWithSessions["sessions"]): PatientRow["status"] {
   if (!sessions || sessions.length === 0) return "new";
-  if (sessions.some((s) => s.scoring_reports?.some((r) => r.needs_review))) return "review";
+  if (sessions.some((s) => s.status === "awaiting_review" || s.scoring_reports?.some(reportNeedsReview))) return "review";
   if (sessions.some((s) => s.status === "in_progress")) return "in_progress";
   if (sessions.every((s) => s.status === "completed")) return "completed";
   return "new";
@@ -78,7 +95,7 @@ export function ClinicianDashboardList() {
     const { data, error } = await supabase
       .from("patients")
       .select(
-        "id, full_name, phone, date_of_birth, created_at, sessions(id, status, created_at, scoring_reports(total_score, needs_review))",
+        "id, full_name, phone, date_of_birth, created_at, sessions(id, status, created_at, scoring_reports(total_adjusted, total_provisional, pending_review_count, total_score, needs_review))",
       )
       .eq("clinician_id", session.user.id)
       .order("created_at", { ascending: false });
@@ -97,10 +114,10 @@ export function ClinicianDashboardList() {
       const latestScore =
         sessions
           .flatMap((s) => s.scoring_reports ?? [])
-          .filter((r) => r?.total_score != null)
-          .map((r) => r!.total_score!)
+          .map(reportScore)
+          .filter((score): score is number => score != null)
           .sort((a, b) => b - a)[0] ?? null;
-      const needsReview = sessions.some((s) => s.scoring_reports?.some((r) => r.needs_review));
+      const needsReview = sessions.some((s) => s.status === "awaiting_review" || s.scoring_reports?.some(reportNeedsReview));
       return {
         id: p.id,
         full_name: p.full_name,

@@ -1,4 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
+import { escapeCsvField, formatScore, normalizeExportReport } from '../_shared/export-report.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,36 +33,58 @@ Deno.serve(async (req) => {
     .select(`
       case_id,
       age_band,
+      assessment_type,
+      moca_version,
+      status,
       created_at,
-      scoring_reports ( total_score, percentile, needs_review )
+      completed_at,
+      scoring_reports (
+        total_raw,
+        total_adjusted,
+        total_provisional,
+        norm_percentile,
+        norm_sd,
+        pending_review_count,
+        total_score,
+        percentile,
+        needs_review
+      )
     `)
     .eq('clinician_id', user.id)
     .eq('status', 'completed');
 
   if (dbError) return new Response('Database error', { status: 500, headers: corsHeaders });
 
-  const escapeCsvField = (field: any) => {
-    if (field === null || field === undefined) return '';
-    let str = String(field);
-    if (/^[=+\-@]/.test(str)) {
-      str = "'" + str;
-    }
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      str = '"' + str.replace(/"/g, '""') + '"';
-    }
-    return str;
-  };
-
-  const header = ['Case ID', 'Age Band', 'Date', 'Total Score', 'Percentile', 'Needs Review'].join(',');
+  const header = [
+    'Case ID',
+    'MoCA Version',
+    'Age Band',
+    'Created Date',
+    'Completed Date',
+    'Status',
+    'Total Raw',
+    'Total Adjusted',
+    'Norm Percentile',
+    'Norm SD',
+    'Pending Review Count',
+    'Finalized',
+  ].join(',');
   const rows = (sessions || []).map(s => {
     const report = Array.isArray(s.scoring_reports) ? s.scoring_reports[0] : s.scoring_reports;
+    const normalized = normalizeExportReport(report);
     return [
       s.case_id,
+      s.moca_version ?? s.assessment_type ?? 'moca',
       s.age_band,
       new Date(s.created_at).toISOString().split('T')[0],
-      report?.total_score ?? 'N/A',
-      report?.percentile ?? 'N/A',
-      report?.needs_review ? 'Yes' : 'No'
+      s.completed_at ? new Date(s.completed_at).toISOString().split('T')[0] : '',
+      s.status,
+      formatScore(normalized?.totalRaw),
+      formatScore(normalized?.totalAdjusted),
+      normalized?.normPercentile ?? 'N/A',
+      normalized?.normSd ?? 'N/A',
+      normalized?.pendingReviewCount ?? 'N/A',
+      normalized?.isFinal ? 'Yes' : 'No',
     ].map(escapeCsvField).join(',');
   });
 

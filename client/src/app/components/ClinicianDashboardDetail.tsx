@@ -40,6 +40,20 @@ const SUBSCORE_CAPS: Record<string, number> = {
   orientation: 6,
 };
 
+function getReportTotal(report: DBScoringReport | null): number | null {
+  return report?.total_adjusted ?? report?.total_score ?? null;
+}
+
+function getReportNeedsReview(report: DBScoringReport | null): boolean {
+  if (!report) return false;
+  return report.total_provisional ?? report.needs_review ?? false;
+}
+
+function getPendingReviewCount(report: DBScoringReport | null): number {
+  if (!report) return 0;
+  return report.pending_review_count ?? (getReportNeedsReview(report) ? 1 : 0);
+}
+
 export function ClinicianDashboardDetail() {
   const { sessionId } = useParams();
   const [sessionRecord, setSessionRecord] = useState<SessionWithPatient | null>(null);
@@ -66,7 +80,9 @@ export function ClinicianDashboardDetail() {
 
       const { data: reportData } = await supabase
         .from("scoring_reports")
-        .select("id, session_id, total_score, percentile, needs_review, subscores, auto_score_errors, computed_at")
+        .select(
+          "id, session_id, total_raw, total_adjusted, total_provisional, norm_percentile, norm_sd, pending_review_count, domains, finalized_at, finalized_by, total_score, percentile, needs_review, subscores, auto_score_errors, computed_at",
+        )
         .eq("session_id", sessionId)
         .maybeSingle();
 
@@ -273,7 +289,7 @@ export function ClinicianDashboardDetail() {
       };
     };
 
-    const total = reportRecord?.total_score ?? null;
+    const total = getReportTotal(reportRecord);
     const totalPill = pill(total, 30);
 
     return [
@@ -334,6 +350,11 @@ export function ClinicianDashboardDetail() {
 
   const handlePdfExport = async () => {
     if (!sessionId) return;
+    if (sessionRecord?.status !== "completed" || getReportNeedsReview(reportRecord) || getPendingReviewCount(reportRecord) > 0) {
+      alert("ניתן לייצא PDF לאחר השלמת הסקירה הקלינית.");
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       alert("יש להתחבר כקלינאי כדי לייצא דוח.");
@@ -350,7 +371,14 @@ export function ClinicianDashboardDetail() {
     });
 
     if (!res.ok) {
-      alert("ייצוא PDF נכשל.");
+      let message = "ייצוא PDF נכשל.";
+      try {
+        const payload = await res.json();
+        if (payload?.error) message = payload.error;
+      } catch {
+        // Keep the localized fallback for non-JSON errors.
+      }
+      alert(message);
       return;
     }
 
@@ -397,6 +425,9 @@ export function ClinicianDashboardDetail() {
 
   const breadcrumbTo = patient ? `/dashboard/patient/${patient.id}` : "/dashboard";
   const breadcrumbLabel = patient ? `מטופלים / ${patient.full_name} / מבחן` : "מטופלים / מבחן";
+  const reportNeedsReview = getReportNeedsReview(reportRecord);
+  const canExportPdf =
+    sessionRecord?.status === "completed" && !reportNeedsReview && getPendingReviewCount(reportRecord) === 0;
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
@@ -434,7 +465,7 @@ export function ClinicianDashboardDetail() {
               <span
                 className={clsx(
                   "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold",
-                  reportRecord?.needs_review
+                  reportNeedsReview
                     ? "bg-amber-100 text-amber-800"
                     : sessionRecord?.status === "completed"
                     ? "bg-green-100 text-green-800"
@@ -442,7 +473,7 @@ export function ClinicianDashboardDetail() {
                 )}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                {reportRecord?.needs_review
+                {reportNeedsReview
                   ? "בבדיקה"
                   : sessionRecord?.status === "completed"
                   ? "הושלם"
@@ -457,7 +488,11 @@ export function ClinicianDashboardDetail() {
         <div className="flex gap-4">
           <button
             onClick={handlePdfExport}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-white border-2 border-gray-200 hover:border-black transition-colors text-black"
+            disabled={!canExportPdf}
+            className={clsx(
+              "flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-white border-2 border-gray-200 transition-colors text-black",
+              canExportPdf ? "hover:border-black" : "opacity-50 cursor-not-allowed",
+            )}
           >
             <FileDown className="w-5 h-5" />
             <span>PDF</span>

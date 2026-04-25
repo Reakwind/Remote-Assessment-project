@@ -26,6 +26,13 @@ interface PatientRecord {
   created_at: string;
 }
 
+interface ScoringSummary {
+  total_score: number | null;
+  total_adjusted: number | null;
+  needs_review: boolean;
+  total_provisional: boolean | null;
+}
+
 interface PatientSession {
   id: string;
   case_id: string;
@@ -34,7 +41,7 @@ interface PatientSession {
   created_at: string;
   completed_at: string | null;
   access_code: string | null;
-  scoring_reports: { total_score: number | null; needs_review: boolean }[] | null;
+  scoring_reports: ScoringSummary[] | null;
 }
 
 const STATUS_LABELS: Record<PatientSession["status"], string> = {
@@ -58,6 +65,10 @@ function formatDate(iso: string | null): string {
   } catch {
     return "-";
   }
+}
+
+function reportScore(report: ScoringSummary | null | undefined): number | null {
+  return report?.total_adjusted ?? report?.total_score ?? null;
 }
 
 export function PatientProfilePage() {
@@ -90,7 +101,7 @@ export function PatientProfilePage() {
     const { data: sessionsData } = await supabase
       .from("sessions")
       .select(
-        "id, case_id, status, assessment_type, created_at, completed_at, access_code, scoring_reports(total_score, needs_review)",
+        "id, case_id, status, assessment_type, created_at, completed_at, access_code, scoring_reports(total_adjusted, total_provisional, total_score, needs_review)",
       )
       .eq("patient_id", patientId)
       .order("created_at", { ascending: false });
@@ -126,7 +137,8 @@ export function PatientProfilePage() {
   const completedCount = sessions.filter((s) => s.status === "completed").length;
   const latestScore = sessions
     .flatMap((s) => s.scoring_reports ?? [])
-    .find((r) => r?.total_score != null)?.total_score;
+    .map(reportScore)
+    .find((score) => score != null);
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
@@ -235,7 +247,7 @@ export function PatientProfilePage() {
             </thead>
             <tbody>
               {sessions.map((s) => {
-                const score = s.scoring_reports?.[0]?.total_score;
+                const score = reportScore(s.scoring_reports?.[0]);
                 return (
                   <tr
                     key={s.id}
