@@ -24,8 +24,12 @@ export function SimpleTask({
   // Safe cast since tasks is an indexable object in the store
   const savedData = (state.tasks as any)[taskId] || { audioId: null };
 
-  const handleRecordingComplete = (audioId: string) => {
-    updateTaskData(taskId as any, { audioId });
+  const handleRecordingComplete = (audio: {
+    audioId: string;
+    audioStoragePath?: string;
+    audioContentType?: string;
+  }) => {
+    updateTaskData(taskId as any, audio);
   };
 
   return (

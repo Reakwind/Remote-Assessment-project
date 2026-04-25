@@ -18,7 +18,11 @@ const TASK_ID_TO_SCORING_ID: Record<string, string> = {
 interface AudioRecorderProps {
   taskId: string;
   initialAudioId?: string;
-  onRecordingComplete: (audioId: string) => void;
+  onRecordingComplete: (audio: {
+    audioId: string;
+    audioStoragePath?: string;
+    audioContentType?: string;
+  }) => void;
 }
 
 export function AudioRecorder({
@@ -89,7 +93,11 @@ export function AudioRecorder({
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
         
-        let finalIdOrUrl = `audio_${taskId}_${Date.now()}`;
+        let finalAudio = {
+          audioId: `audio_${taskId}_${Date.now()}`,
+          audioStoragePath: undefined as string | undefined,
+          audioContentType: undefined as string | undefined,
+        };
         try {
           if (state.id && state.linkToken) {
             const reader = new FileReader();
@@ -110,24 +118,32 @@ export function AudioRecorder({
               });
               if (res.ok) {
                 const data = await res.json();
-                finalIdOrUrl = data.url ?? data.storagePath ?? finalIdOrUrl;
+                finalAudio = {
+                  audioId: data.url ?? data.storagePath ?? finalAudio.audioId,
+                  audioStoragePath: data.audioStoragePath ?? data.storagePath,
+                  audioContentType: data.audioContentType ?? data.contentType ?? contentType,
+                };
               }
-              finishStop(finalIdOrUrl, audioBlob);
+              finishStop(finalAudio, audioBlob);
             };
             return;
           }
         } catch (e) {
           console.error("Audio upload failed", e);
         }
-        finishStop(finalIdOrUrl, audioBlob);
+        finishStop(finalAudio, audioBlob);
       };
 
-      const finishStop = async (idOrUrl: string, blob: Blob) => {
+      const finishStop = async (
+        audio: { audioId: string; audioStoragePath?: string; audioContentType?: string },
+        blob: Blob,
+      ) => {
+        const idOrUrl = audio.audioId;
         if (!idOrUrl.startsWith("http")) await AudioStore.saveAudio(idOrUrl, blob);
         const url = idOrUrl.startsWith("http") ? idOrUrl : URL.createObjectURL(blob);
         setAudioUrl(url);
         setAudioId(idOrUrl);
-        onRecordingComplete(idOrUrl);
+        onRecordingComplete(audio);
         stream.getTracks().forEach(track => track.stop());
       };
       

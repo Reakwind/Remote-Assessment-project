@@ -52,6 +52,12 @@ const BASE_DOMAINS: MocaDomainConfig[] = [
   { id: 'orientation', label: 'Orientation', tasks: [{ taskId: 'moca-orientation-task', max: 6 }] },
 ];
 
+const CORRECT_ANIMAL_NAMES_BY_VERSION: Record<MocaVersion, string[]> = {
+  '8.1': ['אריה', 'קרנף', 'גמל'],
+  '8.2': ['נחש', 'פיל', 'תנין'],
+  '8.3': ['סוס', 'נמר', 'ברווז'],
+};
+
 function versionConfig(version: MocaVersion): MocaScoringConfig {
   return {
     version,
@@ -59,7 +65,7 @@ function versionConfig(version: MocaVersion): MocaScoringConfig {
     drawingTasks: ['moca-visuospatial', 'moca-cube', 'moca-clock'],
     noScoreTasks: ['moca-memory-learning'],
     targetWords: ['פנים', 'קטיפה', 'כנסייה', 'חרצית', 'אדום'],
-    correctAnimalNames: ['אריה', 'קרנף', 'גמל'],
+    correctAnimalNames: CORRECT_ANIMAL_NAMES_BY_VERSION[version],
     fluencyThreshold: 11,
     educationCorrectionThreshold: 12,
     stimuliPolicy: 'external-licensed-assets',

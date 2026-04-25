@@ -74,6 +74,15 @@ From the repo root, with Supabase and Edge Functions running:
 node scripts/local-e2e.mjs --all-versions
 ```
 
+To extract and upload visual stimuli from the local licensed PDFs into private local Storage:
+
+```bash
+SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SECRET_KEY="<local Secret value>" node scripts/upload-stimuli-from-pdfs.mjs --all-versions --upload
+SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SECRET_KEY="<local Secret value>" node scripts/verify-stimuli.mjs --all-versions --visual-only
+```
+
+The memory word-list audio is not extracted by this visual-stimulus script and must be uploaded separately as MP3 for full clinical readiness.
+
 To verify uploaded private stimulus assets before clinical testing:
 
 ```bash

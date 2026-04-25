@@ -10,7 +10,7 @@ const DEFAULT_URL = 'http://127.0.0.1:54321';
 const options = parseArgs(process.argv.slice(2));
 const config = readManifestConfig();
 const versions = options.allVersions ? config.versions : [options.version || '8.3'];
-const manifests = Object.fromEntries(versions.map((version) => [version, buildManifest(config, version)]));
+const manifests = Object.fromEntries(versions.map((version) => [version, buildManifest(config, version, options)]));
 
 if (options.printManifest) {
   console.log(JSON.stringify(manifests, null, 2));
@@ -47,15 +47,17 @@ if (missingRequired.length > 0) {
 
 console.log('\nStimulus asset verification passed.');
 
-function buildManifest(manifestConfig, version) {
+function buildManifest(manifestConfig, version, options) {
   if (!manifestConfig.versions.includes(version)) {
     fail(`Unsupported MoCA version "${version}". Use one of: ${manifestConfig.versions.join(', ')}`);
   }
 
-  return manifestConfig.assets.map((asset) => ({
-    ...asset,
-    storagePath: `${version}/${asset.taskType}/${asset.assetId}.${extensionFor(asset.contentType)}`,
-  }));
+  return manifestConfig.assets
+    .filter((asset) => !options.visualOnly || asset.kind === 'image')
+    .map((asset) => ({
+      ...asset,
+      storagePath: `${version}/${asset.taskType}/${asset.assetId}.${extensionFor(asset.contentType)}`,
+    }));
 }
 
 async function verifyAsset(supabaseUrl, key, asset) {
@@ -133,14 +135,15 @@ function normalizeUrl(url) {
 }
 
 function parseArgs(args) {
-  const parsed = { allVersions: false, version: null, json: false, printManifest: false };
+  const parsed = { allVersions: false, version: null, json: false, printManifest: false, visualOnly: false };
   for (let i = 0; i < args.length; i += 1) {
     if (args[i] === '--all-versions') parsed.allVersions = true;
     else if (args[i] === '--version') parsed.version = args[++i];
     else if (args[i] === '--json') parsed.json = true;
     else if (args[i] === '--print-manifest') parsed.printManifest = true;
+    else if (args[i] === '--visual-only') parsed.visualOnly = true;
     else if (args[i] === '--help') {
-      console.log('Usage: node scripts/verify-stimuli.mjs [--version 8.1|8.2|8.3] [--all-versions] [--json] [--print-manifest]');
+      console.log('Usage: node scripts/verify-stimuli.mjs [--version 8.1|8.2|8.3] [--all-versions] [--visual-only] [--json] [--print-manifest]');
       process.exit(0);
     } else {
       fail(`Unknown argument: ${args[i]}`);

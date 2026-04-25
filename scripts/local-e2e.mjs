@@ -30,6 +30,12 @@ const DRAWING_MAX = {
   'moca-clock': 3,
 };
 
+const NAMING_ANSWERS_BY_VERSION = {
+  '8.1': { 'item-1': 'אריה', 'item-2': 'קרנף', 'item-3': 'גמל' },
+  '8.2': { 'item-1': 'נחש', 'item-2': 'פיל', 'item-3': 'תנין' },
+  '8.3': { 'item-1': 'סוס', 'item-2': 'נמר', 'item-3': 'ברווז' },
+};
+
 const TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lLl9TwAAAABJRU5ErkJggg==';
 const FAKE_AUDIO = `data:audio/webm;base64,${Buffer.from('local-e2e-audio').toString('base64')}`;
 
@@ -143,11 +149,7 @@ async function runVersion(version) {
   await submitDrawing(headers, sessionId, linkToken, 'moca-clock');
 
   await submitResult(headers, sessionId, linkToken, 'moca-naming', {
-    answers: {
-      lion: 'אריה',
-      rhino: 'קרנף',
-      camel: 'גמל',
-    },
+    answers: NAMING_ANSWERS_BY_VERSION[version],
   });
   await submitResult(headers, sessionId, linkToken, 'moca-memory-learning', { localFixture: true });
   await submitResult(headers, sessionId, linkToken, 'moca-vigilance', { score: 1 });

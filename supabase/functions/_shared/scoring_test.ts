@@ -24,12 +24,26 @@ Deno.test('scoreSession scores active naming answers object', () => {
   const report = scoreSession({
     'moca-naming': {
       answers: {
-        lion: 'אריה',
-        rhino: 'קרנף',
-        camel: 'גמל',
+        'item-1': 'סוס',
+        'item-2': 'נמר',
+        'item-3': 'ברווז',
       },
     },
   }, CTX);
+
+  assertEquals(report.domains.find((domain) => domain.domain === 'naming')?.raw, 3);
+});
+
+Deno.test('scoreSession scores version-specific naming answers', () => {
+  const report = scoreSession({
+    'moca-naming': {
+      answers: {
+        'item-1': 'נחש',
+        'item-2': 'פיל',
+        'item-3': 'תנין',
+      },
+    },
+  }, { ...CTX, mocaVersion: '8.2' });
 
   assertEquals(report.domains.find((domain) => domain.domain === 'naming')?.raw, 3);
 });

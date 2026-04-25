@@ -19,7 +19,7 @@ const FULL_RESULTS: Record<string, unknown> = {
   'moca-language': { rep1: true, rep2: true, fluencyCount: 12 },
   'moca-abstraction': { pair1: true, pair2: true },
   'moca-delayed-recall': { recalled: ['פנים', 'קטיפה', 'כנסייה', 'חרצית', 'אדום'] },
-  'moca-naming': ['אריה', 'קרנף', 'גמל'],
+  'moca-naming': ['סוס', 'נמר', 'ברווז'],
   'moca-cube': null,
   'moca-clock': null,
   'moca-visuospatial': null,
@@ -71,9 +71,9 @@ describe('scoreSession', () => {
         ...FULL_RESULTS,
         'moca-naming': {
           answers: {
-            lion: 'אריה',
-            rhino: 'קרנף',
-            camel: 'גמל',
+            'item-1': 'סוס',
+            'item-2': 'נמר',
+            'item-3': 'ברווז',
           },
         },
       },
@@ -83,6 +83,25 @@ describe('scoreSession', () => {
     const naming = report.domains.find((d) => d.domain === 'naming');
     expect(naming?.raw).toBe(3);
     expect(naming?.items.every((item) => item.needsReview === false)).toBe(true);
+  });
+
+  it('scores naming answers against the selected MoCA version', () => {
+    const report = scoreSession(
+      {
+        ...FULL_RESULTS,
+        'moca-naming': {
+          answers: {
+            'item-1': 'נחש',
+            'item-2': 'פיל',
+            'item-3': 'תנין',
+          },
+        },
+      },
+      { ...CTX, mocaVersion: '8.2' },
+    );
+
+    const naming = report.domains.find((d) => d.domain === 'naming');
+    expect(naming?.raw).toBe(3);
   });
 
   it('routes malformed naming payloads to clinician review', () => {

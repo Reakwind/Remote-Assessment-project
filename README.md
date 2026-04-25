@@ -104,5 +104,7 @@ Licensed stimulus readiness:
 
 ```bash
 node scripts/verify-stimuli.mjs --all-versions --print-manifest
+SUPABASE_URL=<project-url> SUPABASE_SERVICE_ROLE_KEY=<service-role-key> node scripts/upload-stimuli-from-pdfs.mjs --all-versions --upload
+SUPABASE_URL=<project-url> SUPABASE_SERVICE_ROLE_KEY=<service-role-key> node scripts/verify-stimuli.mjs --all-versions --visual-only
 SUPABASE_URL=<project-url> SUPABASE_SERVICE_ROLE_KEY=<service-role-key> node scripts/verify-stimuli.mjs --all-versions
 ```

@@ -89,8 +89,12 @@ function namingAnswers(rawData: unknown): unknown[] {
   const data = assertObject(rawData);
   const answers = data.answers;
   if (!answers || typeof answers !== 'object' || Array.isArray(answers)) throw new Error('Invalid naming');
-  return ['lion', 'rhino', 'camel'].map((key) => {
-    const answer = (answers as Record<string, unknown>)[key];
+  const answerRecord = answers as Record<string, unknown>;
+  const keys = ['item-1', 'item-2', 'item-3'].every((key) => typeof answerRecord[key] === 'string')
+    ? ['item-1', 'item-2', 'item-3']
+    : ['lion', 'rhino', 'camel'];
+  return keys.map((key) => {
+    const answer = answerRecord[key];
     if (typeof answer !== 'string') throw new Error('Invalid naming');
     return answer;
   });

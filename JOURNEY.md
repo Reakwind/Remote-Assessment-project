@@ -139,3 +139,5 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 - 2026-04-25: Current `main` after the clinician email/password and test-number flow is the Pilot MVP baseline; future changes proceed feature by feature from current `origin/main` through reviewed PRs.
 - 2026-04-25: Active case creation collects clinical background fields for interpretation. Sessions snapshot calculated age, education, language, gender, and dominant hand from the case profile when the test is created.
 - 2026-04-25: Patient starts require the generated 8-digit test number; internal link tokens are used only after start for patient save/complete calls.
+- 2026-04-25: Naming items are version-specific for MoCA 8.1, 8.2, and 8.3. Licensed visual stimuli are extracted from local licensed PDFs into private Storage with `scripts/upload-stimuli-from-pdfs.mjs`; extracted assets stay out of Git.
+- 2026-04-25: Audio recordings persist with explicit storage paths in task evidence. Clinician review receives signed audio URLs, including evidence-only audio rows for no-score tasks.

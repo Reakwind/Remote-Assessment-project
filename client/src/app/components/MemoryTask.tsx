@@ -11,8 +11,12 @@ export function MemoryTask() {
   const savedData = state.tasks.memory || { audioId: null };
   const wordListAudio = getAsset("moca-memory-learning", "word-list-audio");
 
-  const handleRecordingComplete = (audioId: string) => {
-    updateTaskData('memory', { audioId });
+  const handleRecordingComplete = (audio: {
+    audioId: string;
+    audioStoragePath?: string;
+    audioContentType?: string;
+  }) => {
+    updateTaskData('memory', audio);
   };
   
   return (

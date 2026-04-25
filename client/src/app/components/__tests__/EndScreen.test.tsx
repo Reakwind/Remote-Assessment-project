@@ -30,7 +30,7 @@ function storedAssessment() {
     lastPath: '/patient/end',
     isComplete: false,
     tasks: {
-      naming: { answers: { lion: 'אריה', rhino: 'קרנף', camel: 'גמל' } },
+      naming: { answers: { 'item-1': 'סוס', 'item-2': 'נמר', 'item-3': 'ברווז' } },
     },
   };
 }

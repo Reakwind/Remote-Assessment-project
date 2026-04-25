@@ -65,12 +65,12 @@ Deno.serve(async (req) => {
   }));
 
   const taskResults = await Promise.all((session.task_results ?? []).map(async (result: any) => {
-    const rawData = addAudioSignedUrl(result.raw_data, await signedAudioUrl(supabase, result.raw_data?.audioStoragePath));
+    const rawData = addAudioSignedUrl(result.raw_data, await signedAudioUrl(supabase, audioStoragePathFromRaw(result.raw_data)));
     return { ...result, raw_data: rawData };
   }));
 
   const scoringReviews = await Promise.all((session.scoring_item_reviews ?? []).map(async (review: any) => {
-    const rawData = addAudioSignedUrl(review.raw_data, await signedAudioUrl(supabase, review.raw_data?.audioStoragePath));
+    const rawData = addAudioSignedUrl(review.raw_data, await signedAudioUrl(supabase, audioStoragePathFromRaw(review.raw_data)));
     return { ...review, raw_data: rawData };
   }));
 
@@ -96,4 +96,11 @@ async function signedAudioUrl(supabase: any, storagePath?: string | null): Promi
 function addAudioSignedUrl(rawData: any, signedUrl: string | null): any {
   if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) return rawData;
   return { ...rawData, audioSignedUrl: signedUrl };
+}
+
+function audioStoragePathFromRaw(rawData: any): string | null {
+  if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) return null;
+  if (typeof rawData.audioStoragePath === 'string') return rawData.audioStoragePath;
+  if (typeof rawData.audioId === 'string' && rawData.audioId.includes('/')) return rawData.audioId;
+  return null;
 }

@@ -35,6 +35,17 @@ export SUPABASE_SECRET_KEY="<local Secret value from supabase status>"
 node scripts/verify-stimuli.mjs --all-versions
 ```
 
+To extract the visual stimuli from the licensed local PDFs and upload them to the private local bucket:
+
+```bash
+export SUPABASE_URL=http://127.0.0.1:54321
+export SUPABASE_SECRET_KEY="<local Secret value from supabase status>"
+node scripts/upload-stimuli-from-pdfs.mjs --all-versions --upload
+node scripts/verify-stimuli.mjs --all-versions --visual-only
+```
+
+The extraction script writes temporary PNGs under `/tmp/moca-stimuli` and does not commit licensed content to Git. The memory word-list audio still needs to be prepared and uploaded separately as MP3 before full clinical readiness verification passes.
+
 To print the expected manifest without contacting Supabase:
 
 ```bash
@@ -56,8 +67,9 @@ The script exits non-zero when any required asset is missing.
 ## Upload Checklist
 
 1. Prepare licensed assets outside this repository.
-2. Convert visual stimuli to PNG and memory prompt audio to MP3.
-3. Upload each object to the private `stimuli` bucket using the exact versioned path.
-4. Run `node scripts/verify-stimuli.mjs --all-versions`.
-5. Run local E2E with `node scripts/local-e2e.mjs --all-versions`.
-6. Record verification in the PR or release note before clinical testing.
+2. Convert visual stimuli to PNG with `scripts/upload-stimuli-from-pdfs.mjs` or an equivalent licensed-asset process.
+3. Prepare memory prompt audio as MP3.
+4. Upload each object to the private `stimuli` bucket using the exact versioned path.
+5. Run `node scripts/verify-stimuli.mjs --all-versions`.
+6. Run local E2E with `node scripts/local-e2e.mjs --all-versions`.
+7. Record verification in the PR or release note before clinical testing.

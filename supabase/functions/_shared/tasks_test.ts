@@ -5,6 +5,10 @@ function assertEquals(actual: unknown, expected: unknown) {
 }
 
 Deno.test('validateTaskPayload accepts persisted naming answers object from client', () => {
+  assertEquals(validateTaskPayload('moca-naming', { answers: { 'item-1': 'סוס', 'item-2': 'נמר', 'item-3': 'ברווז' } }), null);
+});
+
+Deno.test('validateTaskPayload accepts legacy naming answers object', () => {
   assertEquals(validateTaskPayload('moca-naming', { answers: { lion: 'אריה', rhino: 'קרנף', camel: 'גמל' } }), null);
 });
 

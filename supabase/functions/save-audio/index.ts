@@ -84,7 +84,13 @@ Deno.serve(async (req) => {
       metadata: { taskType, storagePath, contentType, byteLength: audioBytes.length },
     });
 
-    return json({ ok: true, storagePath, contentType }, 200, req);
+    return json({
+      ok: true,
+      storagePath,
+      audioStoragePath: storagePath,
+      contentType,
+      audioContentType: contentType,
+    }, 200, req);
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Failed to write audit event' }, 500, req);
   }

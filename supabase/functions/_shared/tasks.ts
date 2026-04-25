@@ -102,5 +102,8 @@ function isSkippedPayload(value: unknown): boolean {
 function hasThreeNamingAnswers(value: unknown): boolean {
   if (!isObject(value) || !isObject((value as { answers?: unknown }).answers)) return false;
   const answers = (value as { answers: Record<string, unknown> }).answers;
-  return ['lion', 'rhino', 'camel'].every((key) => typeof answers[key] === 'string');
+  return (
+    ['item-1', 'item-2', 'item-3'].every((key) => typeof answers[key] === 'string') ||
+    ['lion', 'rhino', 'camel'].every((key) => typeof answers[key] === 'string')
+  );
 }

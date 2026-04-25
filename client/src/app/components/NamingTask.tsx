@@ -4,24 +4,46 @@ import { ListenButton } from "./ListenButton";
 import { clsx } from "clsx";
 import { useAssessmentStore } from "../store/AssessmentContext";
 import { DevStimulusNotice, useStimuliManifest } from "./StimuliManifestProvider";
+import { DEFAULT_MOCA_VERSION, type MocaVersion } from "../../lib/scoring/moca-config";
 
-const ANIMALS = [
-  { id: "lion", assetId: "item-1", name: "אריה", options: ["נמר", "אריה", "כלב", "חתול"], image: "https://images.unsplash.com/photo-1776144743260-8c22afcde559?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaW9uJTIwbGluZSUyMGFydCUyMGlsbHVzdHJhdGlvbnxlbnwxfHx8fDE3NzY3NTM4NTR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
-  { id: "rhino", assetId: "item-2", name: "קרנף", options: ["פיל", "קרנף", "היפופוטם", "זברה"], image: "https://images.unsplash.com/photo-1745029795642-35953130a9c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyaGlubyUyMGxpbmUlMjBhcnQlMjBpbGx1c3RyYXRpb258ZW58MXx8fHwxNzc2NzUzODU1fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
-  { id: "camel", assetId: "item-3", name: "גמל", options: ["סוס", "גמל", "פרד", "שור"], image: "https://images.unsplash.com/photo-1525056477279-1527aee289f9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjYW1lbCUyMGxpbmUlMjBhcnQlMjBpbGx1c3RyYXRpb258ZW58MXx8fHwxNzc2NzUzODU1fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" },
-];
+interface NamingItem {
+  id: "item-1" | "item-2" | "item-3";
+  assetId: "item-1" | "item-2" | "item-3";
+  name: string;
+  options: string[];
+}
+
+const NAMING_ITEMS_BY_VERSION: Record<MocaVersion, NamingItem[]> = {
+  "8.1": [
+    { id: "item-1", assetId: "item-1", name: "אריה", options: ["נמר", "אריה", "כלב", "חתול"] },
+    { id: "item-2", assetId: "item-2", name: "קרנף", options: ["פיל", "קרנף", "היפופוטם", "זברה"] },
+    { id: "item-3", assetId: "item-3", name: "גמל", options: ["סוס", "גמל", "פרד", "שור"] },
+  ],
+  "8.2": [
+    { id: "item-1", assetId: "item-1", name: "נחש", options: ["נחש", "תולעת", "לטאה", "צב"] },
+    { id: "item-2", assetId: "item-2", name: "פיל", options: ["קרנף", "פיל", "היפופוטם", "גמל"] },
+    { id: "item-3", assetId: "item-3", name: "תנין", options: ["לטאה", "תנין", "נחש", "צב"] },
+  ],
+  "8.3": [
+    { id: "item-1", assetId: "item-1", name: "סוס", options: ["חמור", "פרד", "סוס", "גמל"] },
+    { id: "item-2", assetId: "item-2", name: "נמר", options: ["אריה", "נמר", "ברדלס", "חתול"] },
+    { id: "item-3", assetId: "item-3", name: "ברווז", options: ["אווז", "תרנגול", "ברווז", "ברבור"] },
+  ],
+};
 
 export function NamingTask() {
   const { state, updateTaskData } = useAssessmentStore();
   const { getAsset } = useStimuliManifest();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const mocaVersion = (state.scoringContext?.mocaVersion ?? DEFAULT_MOCA_VERSION) as MocaVersion;
+  const namingItems = NAMING_ITEMS_BY_VERSION[mocaVersion] ?? NAMING_ITEMS_BY_VERSION[DEFAULT_MOCA_VERSION];
   
   const savedData = state.tasks.naming || { answers: {} };
   const [answers, setAnswers] = useState<Record<string, string>>(savedData.answers);
 
-  const currentAnimal = ANIMALS[currentIndex];
+  const currentAnimal = namingItems[currentIndex];
   const stimulusAsset = getAsset("moca-naming", currentAnimal.assetId);
-  const imageSrc = stimulusAsset?.signedUrl ?? currentAnimal.image;
+  const imageSrc = stimulusAsset?.signedUrl ?? null;
   const selectedAnswer = answers[currentAnimal.id];
   const isAnswered = !!selectedAnswer;
 
@@ -33,7 +55,7 @@ export function NamingTask() {
   };
 
   const handleNext = () => {
-    if (currentIndex < ANIMALS.length - 1) {
+    if (currentIndex < namingItems.length - 1) {
       setCurrentIndex((prev: number) => prev + 1);
     }
   };
@@ -52,13 +74,13 @@ export function NamingTask() {
 
       {/* Progress Pips */}
       <div className="flex gap-2 mb-12">
-        {ANIMALS.map((_, i) => (
+        {namingItems.map((_, i) => (
           <div
             key={i}
             className={clsx(
               "h-2 rounded-full transition-all duration-300",
               i === currentIndex ? "w-12 bg-black" : "w-8",
-              i < (currentIndex || 0) ? (answers[ANIMALS[i].id] === ANIMALS[i].name ? "bg-green-600" : "bg-red-600") : "bg-gray-200"
+              i < (currentIndex || 0) ? (answers[namingItems[i].id] === namingItems[i].name ? "bg-green-600" : "bg-red-600") : "bg-gray-200"
             )}
           />
         ))}
@@ -67,12 +89,15 @@ export function NamingTask() {
       <div className="grid grid-cols-2 gap-10 bg-gray-50 p-10 rounded-2xl border border-gray-100 flex-1 min-h-[500px]">
         {/* Right half (RTL): Image */}
         <div className="flex flex-col items-center justify-center gap-4 bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          <img
-            src={imageSrc}
-            alt="Animal outline"
-            className="w-[360px] h-[360px] object-contain rounded-lg shadow-inner grayscale contrast-125"
-          />
-          {!stimulusAsset?.signedUrl && <DevStimulusNotice className="w-full text-center" />}
+          {imageSrc ? (
+            <img
+              src={imageSrc}
+              alt="Animal outline"
+              className="w-[360px] h-[360px] object-contain rounded-lg shadow-inner grayscale contrast-125"
+            />
+          ) : (
+            <DevStimulusNotice className="w-full text-center" />
+          )}
         </div>
 
         {/* Left half (RTL): Answers */}
@@ -117,7 +142,7 @@ export function NamingTask() {
             })}
           </div>
 
-          {isAnswered && currentIndex < ANIMALS.length - 1 && (
+          {isAnswered && currentIndex < namingItems.length - 1 && (
             <button
               onClick={handleNext}
               className="mt-8 py-5 rounded-xl bg-black text-white text-xl font-bold hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600"
