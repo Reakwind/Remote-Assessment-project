@@ -25,7 +25,7 @@ export function safeScore(
       score: 0,
       max: maxOnFailure,
       needsReview: true,
-      reviewReason: 'auto_score_failed',
+      reviewReason: 'rule_score_unavailable',
       rawData,
     }];
   }

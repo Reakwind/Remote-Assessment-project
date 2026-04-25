@@ -39,7 +39,7 @@ describe('safeScore', () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0].needsReview).toBe(true);
-    expect(result[0].reviewReason).toBe('auto_score_failed');
+    expect(result[0].reviewReason).toBe('rule_score_unavailable');
     expect(result[0].score).toBe(0);
   });
 

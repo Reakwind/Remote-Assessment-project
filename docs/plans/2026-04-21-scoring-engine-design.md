@@ -20,7 +20,7 @@ interface ItemScore {
   score: number;
   max: number;
   needsReview: boolean;     // true = pending clinician manual score
-  reviewReason?: string;    // 'drawing' | 'auto_score_failed'
+  reviewReason?: string;    // 'drawing' | 'rule_score_unavailable'
   rawData?: any;            // preserved when needsReview=true
 }
 
@@ -69,7 +69,7 @@ Scoring entry point: `scoreSession(results, ctx)` — pure function, no side eff
 | `moca-clock` | canvas imageData | Manual clinician rubric (3 criteria). `needsReview: true, reviewReason: 'drawing'` | 3 |
 | `moca-visuospatial` | canvas imageData | Manual clinician rubric. `needsReview: true, reviewReason: 'drawing'` | 1 |
 
-**Failure fallback:** any auto-scorer that throws → `needsReview: true, reviewReason: 'auto_score_failed', rawData: preserved`. Never silently zero.
+**Rule-scoring fallback:** unsupported or malformed payloads create `needsReview: true, reviewReason: 'rule_score_unavailable', rawData: preserved`. Never silently zero.
 
 ---
 

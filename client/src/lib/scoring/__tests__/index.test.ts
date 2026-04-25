@@ -44,7 +44,7 @@ describe('scoreSession', () => {
 
   it('totalRaw excludes drawing scores (they are 0 pending)', () => {
     const report = scoreSession(FULL_RESULTS, CTX);
-    // auto-scored max = 6+2+1+3+3+2+5+3 = 25, all correct
+    // deterministic rule-scored max = 6+2+1+3+3+2+5+3 = 25, all correct
     expect(report.totalRaw).toBe(25);
   });
 
@@ -130,14 +130,14 @@ describe('scoreSession', () => {
     expect(allTaskIds.some(id => id.includes('memory-learning'))).toBe(false);
   });
 
-  it('auto-score failure falls back to needsReview', () => {
+  it('unsupported rule payload falls back to needsReview', () => {
     const badResults = { ...FULL_RESULTS, 'moca-serial-7s': 'not-an-array' };
     const report = scoreSession(badResults, CTX);
     const serial = report.domains
       .flatMap(d => d.items)
       .find(i => i.taskId === 'moca-serial-7s');
     expect(serial?.needsReview).toBe(true);
-    expect(serial?.reviewReason).toBe('auto_score_failed');
+    expect(serial?.reviewReason).toBe('rule_score_unavailable');
   });
 
   it('sets completedAt as ISO string', () => {
@@ -158,14 +158,14 @@ describe('scoreSession', () => {
     expect(unknownItems).toHaveLength(0);
   });
 
-  it('treats malformed orientation payload as auto-score failure item', () => {
+  it('treats malformed orientation payload as a clinician review item', () => {
     const malformed = { ...FULL_RESULTS, 'moca-orientation-task': 'bad-shape' };
     const report = scoreSession(malformed, CTX);
     const orientationFailure = report.domains
       .flatMap((d) => d.items)
       .find((i) => i.taskId === 'moca-orientation-task');
     expect(orientationFailure?.needsReview).toBe(true);
-    expect(orientationFailure?.reviewReason).toBe('auto_score_failed');
+    expect(orientationFailure?.reviewReason).toBe('rule_score_unavailable');
   });
 
   it('computes norm metrics when config has no manual-review tasks', () => {
