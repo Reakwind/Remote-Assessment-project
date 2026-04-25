@@ -1,0 +1,3 @@
+-- Historical placeholder migration.
+-- The RLS definitions for this version now live in 20260421000001_initial_schema.sql.
+-- This file restores version continuity for remote migration history.
