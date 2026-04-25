@@ -7,6 +7,7 @@ Use this as the compact journey authority. Keep detailed UI, database, and imple
 ## MVP Guardrails
 
 - Use case ID as the only patient identifier in app data.
+- Use clinician email/password auth for MVP.
 - Clinician creates the session; patient only uses the generated link/code.
 - Clinician review happens after patient completion through dashboard review.
 - Keep caregivers as offline support contacts outside the app journey.
@@ -40,7 +41,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 
 | Step | Browser behavior | Backend/data behavior | Current vs target |
 |---|---|---|---|
-| Login | Clinician signs into `/dashboard`. | Supabase Auth identifies clinician. | Current target. |
+| Login | Clinician signs up or signs in with email/password and reaches `/dashboard`. | Supabase Auth validates credentials; clinician-only Edge Functions require the clinician JWT. | Current target. |
 | Create session | Clinician enters case ID, MoCA version, age band, education years, place, city. | `create-session` creates `sessions` row with `pending` status, `moca_version`, and `link_token`; writes `session_created` audit event. | Current target. |
 | Share link/code | Clinician copies/generated patient URL or sends it through clinic workflow. | SMS delivery uses the Twilio provider path behind a provider switch and records `patient_session_sms` outcomes. | Current. |
 | Wait for completion | Clinician waits for a completion notification, then opens the dashboard when ready. | `complete-session` attempts clinician completion email, records a `notification_events` outcome, and audits `clinician_completion_email_*`. | Current. Email-first completion ping. |
@@ -90,6 +91,7 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 
 | Area | Current implementation | Target MVP | Known gap |
 |---|---|---|---|
+| Clinician auth | Email/password Supabase Auth gates the dashboard; old `/clinician/2fa` links redirect out of the removed MFA screen. | Clinician email/password login with backend JWT checks. | MFA, SSO, device policy, and other security hardening are future milestones. |
 | Session creation | Case ID, MoCA version, age band, education, location, generated link token. | Same, with MoCA version visible in clinician and patient workflow and preserved for reporting. | Current target. |
 | Patient start | One-time token moves session to `in_progress`; same-device resume uses stored in-progress state and matching token links reopen saved progress. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
 | Stimulus delivery | `get-stimuli` returns versioned private Storage paths and signed URLs when licensed assets are uploaded. Patient UI uses explicit development placeholders when assets are missing. | Licensed MoCA assets are uploaded to private Storage by version and task before clinical use, then validated with `scripts/verify-stimuli.mjs`. | Production asset validation should be part of release readiness. |
@@ -110,6 +112,7 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 - Production release checklist for licensed stimulus validation.
 - Arabic/Russian/English future batteries.
 - Report comparison across prior sessions.
+- Clinician MFA, SSO, session policy, and device/session hardening.
 
 ## Decision Log
 
@@ -130,3 +133,4 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 - 2026-04-25: Scoring now uses explicit per-version MoCA config for `8.1`, `8.2`, and `8.3`; licensed stimuli remain outside the repo.
 - 2026-04-25: Patient stimulus delivery uses a versioned private Storage manifest and short-lived signed URLs; missing licensed assets show development placeholders.
 - 2026-04-25: Licensed stimulus readiness is verified through `scripts/verify-stimuli.mjs` and `docs/STIMULI_ASSET_RUNBOOK.md`.
+- 2026-04-25: Clinician MFA is deferred from the MVP; email/password auth is the active clinician login model.

@@ -20,16 +20,10 @@ function authState(overrides: Partial<UseClinicianAuthResult>): UseClinicianAuth
     signedIn: false,
     session: null,
     profile: null,
-    aal: null,
-    mfaEnrolled: false,
-    mfaRequired: false,
     refresh: vi.fn(async () => {}),
     signIn: vi.fn(async () => ({ ok: true })),
     signUp: vi.fn(async () => ({ ok: true })),
     signOut: vi.fn(async () => {}),
-    enrollTotp: vi.fn(async () => ({ ok: true })),
-    verifyTotp: vi.fn(async () => ({ ok: true })),
-    verifyExistingTotp: vi.fn(async () => ({ ok: true })),
     ...overrides,
   } as UseClinicianAuthResult;
 }
@@ -45,10 +39,6 @@ function renderWithRouter(initialPath = '/dashboard') {
       {
         path: '/clinician/auth',
         element: <div>Clinician auth page</div>,
-      },
-      {
-        path: '/clinician/2fa',
-        element: <div>Two factor page</div>,
       },
     ],
     { initialEntries: [initialPath] },
@@ -88,20 +78,8 @@ describe('ClinicianProtectedRoute', () => {
     expect(router.state.location.state).toEqual({ from: '/dashboard' });
   });
 
-  it('redirects signed-in clinicians to 2FA when assurance level is not aal2', async () => {
-    mockedUseClinicianAuth.mockReturnValue(authState({ signedIn: true, aal: 'aal1', mfaRequired: true }));
-
-    const router = renderWithRouter('/dashboard');
-
-    await waitFor(() => {
-      expect(screen.getByText('Two factor page')).toBeInTheDocument();
-    });
-    expect(router.state.location.pathname).toBe('/clinician/2fa');
-    expect(router.state.location.state).toEqual({ from: '/dashboard' });
-  });
-
-  it('renders protected children for signed-in clinicians with aal2', () => {
-    mockedUseClinicianAuth.mockReturnValue(authState({ signedIn: true, aal: 'aal2', mfaRequired: false }));
+  it('renders protected children for signed-in clinicians', () => {
+    mockedUseClinicianAuth.mockReturnValue(authState({ signedIn: true }));
 
     const router = renderWithRouter();
 
