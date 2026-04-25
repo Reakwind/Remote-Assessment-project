@@ -1,8 +1,8 @@
 # Remote Assessment Project
 
-Remote Hebrew MoCA pilot MVP.
+Remote Hebrew MoCA pilot MVP. Current `main` is the Pilot MVP baseline.
 
-The active product direction is simple: a clinician creates a session link, a patient completes the assessment, raw task/drawing/audio evidence is persisted, deterministic rule scoring is applied where supported by the active test manual, and the clinician reviews/finalizes anything requiring judgment.
+The active product direction is simple: a clinician creates a session and shares the generated test number outside the app, a patient completes the assessment, raw task/drawing/audio evidence is persisted, deterministic rule scoring is applied where supported by the active test manual, and the clinician reviews/finalizes anything requiring judgment.
 
 ## Source Of Truth
 
@@ -20,6 +20,7 @@ Read these first:
 ## Required GitHub Workflow
 
 - `main` is the integration branch.
+- Treat the current `origin/main` MVP as the source of truth before starting new work.
 - Do not commit or push directly to `main`.
 - Start every task from latest `origin/main`.
 - Use a feature branch, preferably `codex/<short-scope>`.
@@ -29,11 +30,13 @@ Read these first:
 - Merge to `main` only after explicit user approval for that specific merge.
 - Delete merged or superseded branches only after confirming they are no longer needed.
 
+Future work proceeds feature by feature: create a branch from current `origin/main`, review the change, open a PR, and merge only after explicit user approval.
+
 ## MVP Scope
 
 - Clinician login, session creation, dashboard list/detail, drawing/manual review, finalization.
 - Clinician auth uses email/password for MVP.
-- Patient session start by link/code, Hebrew MoCA flow, autosave, completion.
+- Patient session start by generated test number, Hebrew MoCA flow, autosave, completion.
 - Supabase persists sessions, task results, drawings, audio evidence, scoring reports, and audit events.
 - Server-side scoring is authoritative.
 - Drawings and ambiguous/manual items go to clinician review.

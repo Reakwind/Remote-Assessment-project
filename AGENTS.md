@@ -1,6 +1,6 @@
 # Agent Instructions
 
-Read [README.md](README.md) before making product, backend, scoring, or UX changes.
+Read [README.md](README.md) before making product, backend, scoring, or UX changes. Current `main` is the Pilot MVP baseline.
 
 ## Source Of Truth
 
@@ -22,6 +22,7 @@ Every agent must use GitHub branch-based version control for all repo changes. T
 - Start by checking `git status --short --branch`, `git branch --show-current`, and `git remote -v`.
 - Do not work directly on `main`; if the repo is on `main`, create a feature branch before editing files.
 - Start new work from latest `origin/main`.
+- Treat the current `origin/main` MVP as the source of truth before changing, deleting, or adding features.
 - Use a feature branch, preferably `codex/<short-scope>`.
 - Keep unrelated dirty work intact.
 - Do not reset, delete, or rewrite user work unless the user explicitly requests it.

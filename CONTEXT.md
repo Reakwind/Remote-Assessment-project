@@ -1,13 +1,13 @@
 # Project Context: Remote Neuropsychological Assessment (Hebrew MoCA)
 
 ## 1. Vision & Purpose
-A remote, web-based platform for cognitive assessment of the 60+ population in Israel.
+A remote, web-based platform for cognitive assessment of the 60+ population in Israel. Current `main` is the Pilot MVP baseline.
 - **Initial Goal:** Complete digital implementation of the Hebrew MoCA (Montreal Cognitive Assessment).
 - **Flexibility:** Modular "Playlist Engine" (JSON-driven) with i18n support (react-i18next) for future Arabic/Russian/English versions.
 - **Accessibility:** Minimalist, high-contrast Hebrew interface (RTL) with a computer orientation module.
 
 ## 2. Technical Stack
-- **Frontend:** React, TypeScript, Vanilla CSS (RTL), `react-i18next`.
+- **Frontend:** React, TypeScript, Vite, Tailwind/Radix UI, RTL Hebrew UI.
 - **Drawing:** HTML5 Canvas for Trail Making and Clock Drawing.
 - **Backend:** Supabase (Auth, PostgreSQL) - targeting AWS/Google Israel Region.
 - **Data Architecture:** 
@@ -16,8 +16,8 @@ A remote, web-based platform for cognitive assessment of the 60+ population in I
 
 ## 3. Core Requirements
 - **Scoring:** Hybrid Engine. Automated math/trails, manual review for drawings. Decoupled JSON-based Scoring Engine with Israeli norms.
-- **Access:** Clinician-generated "Open Links" (no patient verification step for MVP simplicity).
-- **Fallback:** Manual link sharing (Option B) to keep operational costs at zero.
+- **Access:** Clinician-generated test number entered by the patient on the home page.
+- **Fallback:** Clinician shares the test number outside the app to keep MVP messaging costs at zero.
 - **Reliability:** Per-section auto-save and patient retries for connection loss.
 - **Privacy:** Pseudonymization (Case IDs in DB).
 
@@ -33,4 +33,10 @@ A remote, web-based platform for cognitive assessment of the 60+ population in I
    - useScoring hook bridges battery state to scoreSession
    - save-drawing Edge Function: canvas PNG → Supabase Storage only
 5. **Clinician Dashboard:** Patient management, export tools (Excel/PDF), and manual review interface. (DONE)
-6. **Polishing & Export:** Final UX refinements, PDF generation, and CSV export tools. (PENDING)
+6. **Polishing & Export:** Final UX refinements, PDF generation, and CSV export tools. (MVP BASELINE)
+
+## 5. Current Operating Model
+- `main` is the MVP baseline and integration branch.
+- New work starts from latest `origin/main` on a feature branch.
+- Changes are reviewed through GitHub PRs and merge only after explicit user approval.
+- `JOURNEY.md` must be updated when patient, clinician, backend, scoring, notification, or review behavior changes.
