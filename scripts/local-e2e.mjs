@@ -226,6 +226,22 @@ async function runVersion(version) {
     eventTypes,
   );
 
+  const notificationEvents = await request(`/rest/v1/notification_events?select=notification_type,channel,provider,status&session_id=eq.${sessionId}`, {
+    method: 'GET',
+    headers: clinicianHeaders,
+  });
+  assert(notificationEvents.status === 200, `[${version}] notification events query`, notificationEvents);
+  assert(
+    (notificationEvents.body || []).some(event =>
+      event.notification_type === 'clinician_completion_email' &&
+      event.channel === 'email' &&
+      event.provider === 'resend' &&
+      ['sent', 'skipped', 'failed'].includes(event.status)
+    ),
+    `[${version}] completion email notification event recorded`,
+    notificationEvents.body,
+  );
+
   console.log(`[${version}] OK session=${sessionId} adjusted=${finalDetail.session.scoring_report.total_adjusted}/30 percentile=${finalDetail.session.scoring_report.norm_percentile}`);
 }
 

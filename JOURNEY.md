@@ -22,7 +22,7 @@ Use this as the compact journey authority. Keep detailed UI, database, and imple
 |---|---|---|
 | Clinician | Creates sessions, reviews evidence, enters manual scores, finalizes report. | Authenticated dashboard and clinician-only Edge Functions. |
 | Patient | Opens link, completes tasks, submits raw evidence, sees completion only. | Token-scoped patient routes and patient Edge Functions. |
-| System/backend | Validates tokens, persists raw data, scores deterministic items, prepares review rows, sends completion email, audits events. | Supabase Postgres, Storage, Auth, Edge Functions. |
+| System/backend | Validates tokens, persists raw data, scores deterministic items, prepares review rows, sends completion email, records notification outcomes, audits events. | Supabase Postgres, Storage, Auth, Edge Functions. |
 | Offline support contact | May help with device basics outside the app. | Offline contact only; the app journey is clinician and patient. |
 
 ## Lifecycle
@@ -43,7 +43,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 | Login | Clinician signs into `/dashboard`. | Supabase Auth identifies clinician. | Current target. |
 | Create session | Clinician enters case ID, MoCA version, age band, education years, place, city. | `create-session` creates `sessions` row with `pending` status, `moca_version`, and `link_token`; writes `session_created` audit event. | Current target. |
 | Share link/code | Clinician copies/generated patient URL or sends it through clinic workflow. | Target SMS provider is Twilio behind a swappable provider interface. | Current supports generated URL. SMS provider abstraction is future hardening. |
-| Wait for completion | Clinician waits for a completion notification, then opens the dashboard when ready. | `complete-session` attempts clinician completion email and audits `clinician_completion_email_*`. | Current. Email-first completion ping. |
+| Wait for completion | Clinician waits for a completion notification, then opens the dashboard when ready. | `complete-session` attempts clinician completion email, records a `notification_events` outcome, and audits `clinician_completion_email_*`. | Current. Email-first completion ping. |
 | Review session | Clinician opens dashboard detail for completed/awaiting review session and sees stored patient evidence. | `get-session` returns task results, scoring report, drawing reviews, scoring item reviews, signed drawing/audio URLs. | Current. |
 | Score manual items | Clinician scores drawings and any rule-unavailable items from the stored evidence view. | `update-drawing-review` and `update-scoring-review` persist clinician score/notes, recalculate report, write audit events. | Current. |
 | Finalize | Once pending review count reaches 0, session becomes `completed`. | Final report totals and norm lookup become final; PDF/CSV export is available after finalization. | Current. |
@@ -57,7 +57,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 | Complete tasks | Patient progresses through Hebrew MoCA task flow with selected MoCA version visible in the assessment header. Advancing without captured evidence records a skipped/requires-review payload. | Each task result is submitted with canonical `moca-*` task IDs and active client payload shapes, and the session keeps MoCA version context. | Current target for traceability. |
 | Draw/audio evidence | Drawing tasks save current strokes/PNG; audio tasks can save audio evidence. | Private Storage paths and stroke data are stored; clinician receives signed URLs only. | Current. External STT transcript evidence is future. |
 | Autosave | Per-task submit/save should survive refresh enough for MVP testing. | `submit-results`, `save-drawing`, and `save-audio` persist evidence during `in_progress`. | Current target. Full offline-first retry queue is future hardening. |
-| Finish | Patient sees a completion screen only; returning home clears completed local resume state. | `complete-session` runs server scoring, creates review rows, sets status, writes audit, triggers clinician email outcome. | Current. |
+| Finish | Patient sees a completion screen only; returning home clears completed local resume state. | `complete-session` runs server scoring, creates review rows, sets status, writes audit, records notification outcome, and triggers clinician email. | Current. |
 
 ## Backend/System Map
 
@@ -73,7 +73,7 @@ One-time start-token semantics remain strict. Target resume behavior uses same-d
 | `update-drawing-review` | Clinician | Persist drawing score/rubric/notes and recalculate final report. |
 | `update-scoring-review` | Clinician | Persist clinician score for non-drawing manual review items and recalculate final report. |
 
-Storage buckets are private. Browser-facing review access uses short-lived signed URLs. Audit events are part of the journey and should exist for create, start, task/audio/drawing save, completion, review updates, and notification outcome.
+Storage buckets are private. Browser-facing review access uses short-lived signed URLs. Audit events are part of the journey and should exist for create, start, task/audio/drawing save, completion, review updates, and notification outcome. Completion emails also create a `notification_events` row so sent, skipped, and failed outcomes are observable and retry-ready.
 
 ## Scoring Journey
 
@@ -93,7 +93,7 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 | Task persistence | Per-task submit, skipped-task review payloads, drawings, audio evidence. | Reliable autosave for every task; refresh preserves saved progress in normal use. | Full offline retry queue remains future hardening. |
 | Drawing review | Clinician dashboard reads stored drawing/audio evidence, signed URLs, and review rows from `get-session`; score updates persist through review functions. | Clinician rubric scoring from stored evidence. | Rubric UX can be refined for clinical ergonomics. |
 | Rule scoring | Server-side scoring for supported structured tasks. | Version-aware deterministic scoring by active test manual. | Some tasks still require more structured payloads/version-specific rules. |
-| Completion notification | Email outcome via Resend when configured; skipped outcome audited locally. | Email-first clinician ping when test is done. | Production sender/config and retry policy need hardening. |
+| Completion notification | Email outcome via Resend when configured; sent/skipped/failed outcome is stored in `notification_events` and audited. | Email-first clinician ping when test is done, with retry-ready failure records. | Dedicated retry worker and production sender monitoring are future hardening. |
 | Dashboard review | Real session list/detail, review updates, finalized PDF export, and completed-session CSV export. | Efficient clinician review, finalization, then export. | Export templates can be refined for clinical formatting. |
 | SMS | Generated link exists; Twilio is direction. | Twilio-first patient SMS behind provider abstraction. | Provider interface and message lifecycle not fully built. |
 | STT | Audio evidence storage exists. | External STT creates transcript evidence only. | Vendor/job model and clinician transcript editing are future. |
@@ -121,3 +121,4 @@ Storage buckets are private. Browser-facing review access uses short-lived signe
 - 2026-04-25: PDF export is available only after clinician finalization; CSV export uses modern report fields for completed sessions.
 - 2026-04-25: Clinician dashboard detail review uses backend `get-session` evidence, signed URLs, and review update functions instead of local patient-browser assessment state.
 - 2026-04-25: Patient start consumes links atomically; drawing saves send current strokes with PNG evidence; naming scoring accepts the active client answers object.
+- 2026-04-25: Completion emails write `notification_events` records for sent, skipped, and failed outcomes so notification delivery is observable and retry-ready.

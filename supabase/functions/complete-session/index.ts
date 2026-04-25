@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { writeAuditEvent } from '../_shared/audit.ts';
 import { corsResponse, json, methodNotAllowed } from '../_shared/http.ts';
-import { notifyClinicianSessionCompleted } from '../_shared/notifications.ts';
+import { notifyClinicianSessionCompleted, recordNotificationOutcome } from '../_shared/notifications.ts';
 import { ageFromBand, scoreSession } from '../_shared/scoring.ts';
 
 const DRAWING_TASKS = ['moca-visuospatial', 'moca-cube', 'moca-clock'];
@@ -154,6 +154,16 @@ Deno.serve(async (req) => {
       clinician_id: session.clinician_id,
       status: finalStatus,
     });
+
+    try {
+      await recordNotificationOutcome(supabase, {
+        sessionId: session.id,
+        notificationType: 'clinician_completion_email',
+        result: notification,
+      });
+    } catch (recordError) {
+      console.error('Clinician completion notification record failed:', recordError);
+    }
 
     await writeAuditEvent(supabase, {
       eventType: `clinician_completion_email_${notification.status}`,
