@@ -1,5 +1,7 @@
 import {
   escapeCsvField,
+  formatDomainSummary,
+  formatMaybeDate,
   getFinalizedExportBlockReason,
   normalizeExportReport,
 } from './export-report.ts';
@@ -12,6 +14,18 @@ Deno.test('normalizeExportReport prefers modern scoring columns', () => {
     norm_percentile: 44,
     norm_sd: -0.6,
     pending_review_count: 0,
+    finalized_at: '2026-04-25T10:20:30.000Z',
+    domains: [
+      {
+        domain: 'attention',
+        raw: 5,
+        max: 6,
+        items: [
+          { taskId: 'moca-digit-span', needsReview: false },
+          { taskId: 'moca-serial-7s', needsReview: false },
+        ],
+      },
+    ],
     total_score: 10,
     percentile: 12,
     needs_review: true,
@@ -23,6 +37,8 @@ Deno.test('normalizeExportReport prefers modern scoring columns', () => {
   if (report.normPercentile !== 44) throw new Error('expected modern percentile');
   if (report.totalProvisional !== false) throw new Error('expected finalized report');
   if (!report.isFinal) throw new Error('expected final report');
+  if (report.finalizedAt !== '2026-04-25T10:20:30.000Z') throw new Error('expected finalized timestamp');
+  if (report.domains[0]?.domain !== 'attention') throw new Error('expected domain summary');
 });
 
 Deno.test('normalizeExportReport falls back to legacy compatibility columns', () => {
@@ -62,4 +78,38 @@ Deno.test('getFinalizedExportBlockReason blocks provisional and unfinished sessi
 Deno.test('escapeCsvField handles spreadsheet injection and quoting', () => {
   const value = escapeCsvField('=SUM(1,2)');
   if (value !== '"\'=SUM(1,2)"') throw new Error(`unexpected escaped value: ${value}`);
+});
+
+Deno.test('formatDomainSummary includes scores and pending counts', () => {
+  const report = normalizeExportReport({
+    total_raw: 18,
+    total_adjusted: 19,
+    total_provisional: true,
+    pending_review_count: 1,
+    domains: [
+      {
+        domain: 'visuospatial',
+        raw: 2,
+        max: 5,
+        items: [
+          { taskId: 'moca-cube', needsReview: true },
+          { taskId: 'moca-clock', needsReview: false },
+        ],
+      },
+      { domain: 'naming', raw: 3, max: 3, items: [] },
+    ],
+  });
+
+  const summary = formatDomainSummary(report?.domains ?? []);
+  if (summary !== 'visuospatial: 2/5 (1 pending); naming: 3/3') {
+    throw new Error(`unexpected domain summary: ${summary}`);
+  }
+});
+
+Deno.test('formatMaybeDate returns stable ISO date or N/A', () => {
+  if (formatMaybeDate('2026-04-25T23:59:00.000Z') !== '2026-04-25') {
+    throw new Error('expected ISO date');
+  }
+  if (formatMaybeDate('not-a-date') !== 'N/A') throw new Error('expected invalid dates to be hidden');
+  if (formatMaybeDate(null) !== 'N/A') throw new Error('expected null date fallback');
 });

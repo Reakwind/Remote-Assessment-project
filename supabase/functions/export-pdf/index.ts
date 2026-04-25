@@ -1,6 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.1';
 import {
+  formatDomainSummary,
+  formatMaybeDate,
   formatScore,
   getFinalizedExportBlockReason,
   normalizeExportReport,
@@ -38,7 +40,12 @@ Deno.serve(async (req) => {
 
   const { data: session } = await supabase
     .from('sessions')
-    .select('*, scoring_reports(*)')
+    .select(`
+      *,
+      scoring_reports(*),
+      drawing_reviews(task_id, clinician_score, clinician_notes, reviewed_at),
+      scoring_item_reviews(item_id, task_type, clinician_score, clinician_notes, reviewed_at)
+    `)
     .eq('id', body.sessionId)
     .eq('clinician_id', user.id)
     .single();
@@ -57,6 +64,23 @@ Deno.serve(async (req) => {
   const normalizedReport = normalizeExportReport(report);
   const mocaVersion = session.moca_version ?? session.assessment_type ?? 'moca';
   const reportDate = session.completed_at ?? report?.finalized_at ?? report?.completed_at ?? session.created_at;
+  const location = [session.location_place, session.location_city].filter(Boolean).join(', ') || 'N/A';
+  const reviewRows = [
+    ...(session.drawing_reviews ?? []).map((review: any) => ({
+      kind: 'Drawing',
+      item: review.task_id,
+      score: review.clinician_score,
+      notes: review.clinician_notes,
+      reviewedAt: review.reviewed_at,
+    })),
+    ...(session.scoring_item_reviews ?? []).map((review: any) => ({
+      kind: 'Manual item',
+      item: review.item_id ?? review.task_type,
+      score: review.clinician_score,
+      notes: review.clinician_notes,
+      reviewedAt: review.reviewed_at,
+    })),
+  ];
 
   const doc = new jsPDF();
   doc.setFontSize(22);
@@ -67,13 +91,49 @@ Deno.serve(async (req) => {
   doc.text(`MoCA Version: ${mocaVersion}`, 20, 50);
   doc.text(`Age Band: ${session.age_band}`, 20, 60);
   doc.text(`Education Years: ${session.education_years ?? 'N/A'}`, 20, 70);
-  doc.text(`Date: ${new Date(reportDate).toLocaleDateString()}`, 20, 80);
+  doc.text(`Location: ${location}`, 20, 80);
+  doc.text(`Completed Date: ${formatMaybeDate(reportDate)}`, 20, 90);
+  doc.text(`Finalized Date: ${formatMaybeDate(normalizedReport?.finalizedAt)}`, 20, 100);
 
-  doc.text(`Total Raw: ${formatScore(normalizedReport?.totalRaw)}/30`, 20, 100);
-  doc.text(`Total Adjusted: ${formatScore(normalizedReport?.totalAdjusted)}/30`, 20, 110);
-  doc.text(`Norm Percentile: ${normalizedReport?.normPercentile ?? 'N/A'}%`, 20, 120);
-  doc.text(`Norm SD: ${normalizedReport?.normSd ?? 'N/A'}`, 20, 130);
-  doc.text('Review Status: Finalized by clinician', 20, 150);
+  doc.text(`Total Raw: ${formatScore(normalizedReport?.totalRaw)}/30`, 20, 120);
+  doc.text(`Total Adjusted: ${formatScore(normalizedReport?.totalAdjusted)}/30`, 20, 130);
+  doc.text(`Norm Percentile: ${normalizedReport?.normPercentile ?? 'N/A'}%`, 20, 140);
+  doc.text(`Norm SD: ${normalizedReport?.normSd ?? 'N/A'}`, 20, 150);
+  doc.text(`Pending Review Count: ${normalizedReport?.pendingReviewCount ?? 'N/A'}`, 20, 160);
+  doc.text('Review Status: Finalized by clinician', 20, 170);
+
+  let y = 190;
+  doc.setFontSize(16);
+  doc.text('Domain Scores', 20, y);
+  y += 10;
+  doc.setFontSize(11);
+  const domainSummary = formatDomainSummary(normalizedReport?.domains ?? []);
+  y = writeWrapped(doc, domainSummary, 20, y, 170);
+
+  y += 10;
+  doc.setFontSize(16);
+  doc.text('Clinician Review Evidence', 20, y);
+  y += 10;
+  doc.setFontSize(10);
+  if (reviewRows.length === 0) {
+    doc.text('No manual review rows recorded.', 20, y);
+  } else {
+    for (const row of reviewRows) {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      const notes = row.notes ? ` Notes: ${row.notes}` : '';
+      y = writeWrapped(
+        doc,
+        `${row.kind}: ${row.item} | Score: ${formatScore(row.score)} | Reviewed: ${formatMaybeDate(row.reviewedAt)}${notes}`,
+        20,
+        y,
+        170,
+      );
+      y += 3;
+    }
+  }
 
   const pdfOutput = doc.output('arraybuffer');
 
@@ -89,4 +149,10 @@ Deno.serve(async (req) => {
 function sanitizeFilename(value: unknown): string {
   const cleaned = String(value ?? 'session').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
   return cleaned || 'session';
+}
+
+function writeWrapped(doc: jsPDF, text: string, x: number, y: number, maxWidth: number): number {
+  const lines = doc.splitTextToSize(text, maxWidth);
+  doc.text(lines, x, y);
+  return y + lines.length * 6;
 }

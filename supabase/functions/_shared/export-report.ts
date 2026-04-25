@@ -5,6 +5,8 @@ export interface ExportReportRow {
   norm_percentile?: number | null;
   norm_sd?: number | string | null;
   pending_review_count?: number | null;
+  domains?: unknown;
+  finalized_at?: string | null;
   total_score?: number | null;
   percentile?: number | null;
   needs_review?: boolean | null;
@@ -22,6 +24,15 @@ export interface NormalizedExportReport {
   normSd: number | string | null;
   pendingReviewCount: number;
   isFinal: boolean;
+  finalizedAt: string | null;
+  domains: NormalizedExportDomain[];
+}
+
+export interface NormalizedExportDomain {
+  domain: string;
+  raw: number | null;
+  max: number | null;
+  pendingReviewCount: number;
 }
 
 export function normalizeExportReport(report: ExportReportRow | null | undefined): NormalizedExportReport | null {
@@ -38,6 +49,8 @@ export function normalizeExportReport(report: ExportReportRow | null | undefined
     normSd: report.norm_sd ?? null,
     pendingReviewCount,
     isFinal: !totalProvisional && pendingReviewCount === 0,
+    finalizedAt: report.finalized_at ?? null,
+    domains: normalizeExportDomains(report.domains),
   };
 }
 
@@ -60,6 +73,24 @@ export function formatScore(value: number | null | undefined): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+export function formatMaybeDate(value: string | null | undefined): string {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  return date.toISOString().split('T')[0];
+}
+
+export function formatDomainSummary(domains: NormalizedExportDomain[]): string {
+  if (domains.length === 0) return 'N/A';
+  return domains
+    .map((domain) => {
+      const score = `${formatScore(domain.raw)}/${formatScore(domain.max)}`;
+      const pending = domain.pendingReviewCount > 0 ? ` (${domain.pendingReviewCount} pending)` : '';
+      return `${domain.domain}: ${score}${pending}`;
+    })
+    .join('; ');
+}
+
 export function escapeCsvField(field: unknown): string {
   if (field === null || field === undefined) return '';
   let str = String(field);
@@ -70,4 +101,34 @@ export function escapeCsvField(field: unknown): string {
     str = '"' + str.replace(/"/g, '""') + '"';
   }
   return str;
+}
+
+function normalizeExportDomains(value: unknown): NormalizedExportDomain[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((domain) => normalizeExportDomain(domain))
+    .filter((domain): domain is NormalizedExportDomain => !!domain);
+}
+
+function normalizeExportDomain(value: unknown): NormalizedExportDomain | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const domain = typeof row.domain === 'string' ? row.domain : null;
+  if (!domain) return null;
+  const items = Array.isArray(row.items) ? row.items : [];
+  return {
+    domain,
+    raw: numberOrNull(row.raw),
+    max: numberOrNull(row.max),
+    pendingReviewCount: items.filter((item) => isPendingReviewItem(item)).length,
+  };
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function isPendingReviewItem(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return (value as { needsReview?: unknown }).needsReview === true;
 }

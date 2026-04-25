@@ -1,5 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
-import { escapeCsvField, formatScore, normalizeExportReport } from '../_shared/export-report.ts';
+import {
+  escapeCsvField,
+  formatDomainSummary,
+  formatMaybeDate,
+  formatScore,
+  normalizeExportReport,
+} from '../_shared/export-report.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,6 +39,9 @@ Deno.serve(async (req) => {
     .select(`
       case_id,
       age_band,
+      education_years,
+      location_place,
+      location_city,
       assessment_type,
       moca_version,
       status,
@@ -45,6 +54,8 @@ Deno.serve(async (req) => {
         norm_percentile,
         norm_sd,
         pending_review_count,
+        domains,
+        finalized_at,
         total_score,
         percentile,
         needs_review
@@ -59,14 +70,19 @@ Deno.serve(async (req) => {
     'Case ID',
     'MoCA Version',
     'Age Band',
+    'Education Years',
+    'Location Place',
+    'Location City',
     'Created Date',
     'Completed Date',
+    'Finalized Date',
     'Status',
     'Total Raw',
     'Total Adjusted',
     'Norm Percentile',
     'Norm SD',
     'Pending Review Count',
+    'Domain Scores',
     'Finalized',
   ].join(',');
   const rows = (sessions || []).map(s => {
@@ -76,14 +92,19 @@ Deno.serve(async (req) => {
       s.case_id,
       s.moca_version ?? s.assessment_type ?? 'moca',
       s.age_band,
-      new Date(s.created_at).toISOString().split('T')[0],
-      s.completed_at ? new Date(s.completed_at).toISOString().split('T')[0] : '',
+      s.education_years ?? '',
+      s.location_place ?? '',
+      s.location_city ?? '',
+      formatMaybeDate(s.created_at),
+      s.completed_at ? formatMaybeDate(s.completed_at) : '',
+      normalized?.finalizedAt ? formatMaybeDate(normalized.finalizedAt) : '',
       s.status,
       formatScore(normalized?.totalRaw),
       formatScore(normalized?.totalAdjusted),
       normalized?.normPercentile ?? 'N/A',
       normalized?.normSd ?? 'N/A',
       normalized?.pendingReviewCount ?? 'N/A',
+      normalized ? formatDomainSummary(normalized.domains) : 'N/A',
       normalized?.isFinal ? 'Yes' : 'No',
     ].map(escapeCsvField).join(',');
   });

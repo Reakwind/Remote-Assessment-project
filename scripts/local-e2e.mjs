@@ -203,11 +203,15 @@ async function runVersion(version) {
     method: 'POST',
     headers: clinicianHeaders,
   });
-  assert(
+  const csvHasExpectedFields =
     csvExport.status === 200 &&
-      typeof csvExport.body === 'string' &&
-      csvExport.body.includes('Total Adjusted') &&
-      csvExport.body.includes(caseId),
+    typeof csvExport.body === 'string' &&
+    csvExport.body.includes('Total Adjusted') &&
+    csvExport.body.includes('Domain Scores') &&
+    csvExport.body.includes(version) &&
+    csvExport.body.includes(caseId);
+  assert(
+    csvHasExpectedFields,
     `[${version}] completed-session CSV export`,
     csvExport,
   );
