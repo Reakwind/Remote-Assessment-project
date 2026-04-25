@@ -6,7 +6,7 @@ import {
   scoreDelayedRecall, scoreNaming, scoreDrawing,
 } from './scorers';
 import { lookupNorm, computePercentile } from './norms';
-import config from '../../data/scoring-config.json' with { type: 'json' };
+import { getMocaVersionConfig, type MocaScoringConfig } from './moca-config';
 import normsData from '../../data/lifshitz-norms.json' with { type: 'json' };
 
 function namingAnswers(rawData: unknown): (string | null)[] {
@@ -21,7 +21,7 @@ function namingAnswers(rawData: unknown): (string | null)[] {
   });
 }
 
-function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext): ItemScore[] {
+function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext, config: MocaScoringConfig): ItemScore[] {
   // Assessment context is persisted in localStorage; on resume, sessionDate can
   // come back as an ISO string. Coerce it so orientation scoring stays correct.
   const sessionDate = new Date((ctx as unknown as { sessionDate: Date | string }).sessionDate);
@@ -52,7 +52,7 @@ function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext): ItemS
       );
     case 'moca-language':
       return safeScore(taskId, rawData, d =>
-        scoreLanguage(d as Parameters<typeof scoreLanguage>[0])
+        scoreLanguage(d as Parameters<typeof scoreLanguage>[0], config.fluencyThreshold)
       );
     case 'moca-abstraction':
       return safeScore(taskId, rawData, d =>
@@ -75,14 +75,22 @@ export function scoreSession(
   results: Record<string, unknown>,
   ctx: ScoringContext
 ): ScoringReport {
+  return scoreSessionWithConfig(results, ctx, getMocaVersionConfig(ctx.mocaVersion));
+}
+
+export function scoreSessionWithConfig(
+  results: Record<string, unknown>,
+  ctx: ScoringContext,
+  config: MocaScoringConfig,
+): ScoringReport {
   const domains: DomainScore[] = config.domains.map(domainCfg => {
     const items = domainCfg.tasks.flatMap(t =>
-      scoreTask(t.taskId, results[t.taskId], ctx)
+      scoreTask(t.taskId, results[t.taskId], ctx, config)
     );
     return {
       domain: domainCfg.id,
       raw: items.filter(i => !i.needsReview).reduce((s, i) => s + i.score, 0),
-      max: domainCfg.tasks.reduce((s, t) => s + t.max, 0),
+      max: domainCfg.tasks.reduce((s, t) => s + (t.max ?? 0), 0),
       items,
     };
   });
@@ -107,6 +115,7 @@ export function scoreSession(
 
   return {
     sessionId: ctx.sessionId,
+    mocaVersion: config.version,
     totalRaw,
     totalAdjusted,
     totalProvisional,

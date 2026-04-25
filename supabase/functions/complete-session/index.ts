@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .select('id, clinician_id, status, age_band, education_years, location_place, location_city, started_at, created_at')
+    .select('id, clinician_id, status, age_band, education_years, location_place, location_city, started_at, created_at, moca_version')
     .eq('id', body.sessionId)
     .eq('link_token', body.linkToken)
     .single();
@@ -68,13 +68,19 @@ Deno.serve(async (req) => {
     return json({ error: 'Failed to prepare drawing reviews' }, 500, req);
   }
 
-  const report = scoreSession(results, {
-    sessionId: session.id,
-    sessionDate: new Date(session.started_at ?? session.created_at),
-    educationYears: session.education_years,
-    patientAge: ageFromBand(session.age_band),
-    sessionLocation: { place: session.location_place, city: session.location_city },
-  });
+  let report;
+  try {
+    report = scoreSession(results, {
+      sessionId: session.id,
+      sessionDate: new Date(session.started_at ?? session.created_at),
+      educationYears: session.education_years,
+      patientAge: ageFromBand(session.age_band),
+      mocaVersion: session.moca_version,
+      sessionLocation: { place: session.location_place, city: session.location_city },
+    });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to score session' }, 400, req);
+  }
 
   const scoringReviewRows = report.domains
     .flatMap(domain => domain.items)
@@ -142,6 +148,7 @@ Deno.serve(async (req) => {
         totalAdjusted: report.totalAdjusted,
         pendingReviewCount: report.pendingReviewCount,
         totalProvisional: report.totalProvisional,
+        mocaVersion: report.mocaVersion,
       },
     });
   } catch (auditError) {

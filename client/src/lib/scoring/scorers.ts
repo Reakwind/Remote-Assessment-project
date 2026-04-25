@@ -44,11 +44,11 @@ export function scoreSerial7s(data: { isCorrect: boolean }[]): ItemScore[] {
   return [item('moca-serial-7s', score, 3)];
 }
 
-export function scoreLanguage(data: { rep1: boolean; rep2: boolean; fluencyCount: number }): ItemScore[] {
+export function scoreLanguage(data: { rep1: boolean; rep2: boolean; fluencyCount: number }, fluencyThreshold = 11): ItemScore[] {
   return [
     item('language.rep1',    data.rep1 ? 1 : 0, 1),
     item('language.rep2',    data.rep2 ? 1 : 0, 1),
-    item('language.fluency', data.fluencyCount >= 11 ? 1 : 0, 1),
+    item('language.fluency', data.fluencyCount >= fluencyThreshold ? 1 : 0, 1),
   ];
 }
 

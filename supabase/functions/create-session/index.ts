@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { writeAuditEvent } from '../_shared/audit.ts';
+import { getMocaVersionConfig } from '../_shared/moca-config.ts';
 import { recordNotificationOutcome, sendSms } from '../_shared/notifications.ts';
 
 const corsHeaders = {
@@ -58,6 +59,12 @@ Deno.serve(async (req) => {
   }
   if (!SUPPORTED_ASSESSMENTS.has(assessmentType)) {
     return json({ error: `Unsupported assessmentType: ${assessmentType}` }, 400);
+  }
+  let resolvedMocaVersion: string;
+  try {
+    resolvedMocaVersion = getMocaVersionConfig(mocaVersion).version;
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Unsupported MoCA version' }, 400);
   }
 
   const supabase = createClient(
@@ -129,7 +136,7 @@ Deno.serve(async (req) => {
       patient_id: patientRecordId,
       access_code: accessCode,
       assessment_type: assessmentType,
-      moca_version: mocaVersion ?? '8.3',
+      moca_version: resolvedMocaVersion,
       location_place: locationPlace ?? null,
       location_city: locationCity ?? null,
     })

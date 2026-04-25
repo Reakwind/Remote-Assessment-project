@@ -17,6 +17,7 @@ export interface DomainScore {
 
 export interface ScoringReport {
   sessionId: string;
+  mocaVersion: string;
   totalRaw: number;
   totalAdjusted: number;
   totalProvisional: boolean;
