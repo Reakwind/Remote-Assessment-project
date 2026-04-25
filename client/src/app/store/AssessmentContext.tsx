@@ -103,7 +103,9 @@ interface AssessmentContextType {
   resumeAssessment: () => void;
   updateTaskData: (taskName: keyof AssessmentState['tasks'], data: any, imageBase64?: string) => void;
   setLastPath: (path: string) => void;
-  completeAssessment: () => void;
+  completeAssessment: () => Promise<boolean>;
+  completionStatus: 'idle' | 'submitting' | 'completed' | 'error';
+  completionError: string | null;
   hasInProgressAssessment: boolean;
 }
 
@@ -121,6 +123,10 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     }
     return DEFAULT_STATE;
   });
+  const [completionStatus, setCompletionStatus] = useState<'idle' | 'submitting' | 'completed' | 'error'>(
+    state.isComplete ? 'completed' : 'idle',
+  );
+  const [completionError, setCompletionError] = useState<string | null>(null);
 
   // Keep localStorage perfectly in sync with our React state
   useEffect(() => {
@@ -211,41 +217,64 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const completeAssessment = useCallback(() => {
-    setState((prev) => {
-      if (prev.isComplete) return prev;
+  const completeAssessment = useCallback(async (): Promise<boolean> => {
+    if (state.isComplete) {
+      setCompletionStatus('completed');
+      setCompletionError(null);
+      return true;
+    }
 
-      if (prev.id && prev.scoringContext) {
-        const scoringInputs: Record<string, unknown> = {};
-        for (const [stateKey, scoringId] of Object.entries(TASK_STATE_TO_SCORING_ID)) {
-          const taskData = (prev.tasks as Record<string, unknown>)[stateKey];
-          if (taskData !== undefined) {
-            scoringInputs[scoringId] = taskData;
-          }
-        }
+    if (!state.id || !state.linkToken || !state.scoringContext) {
+      setCompletionStatus('error');
+      setCompletionError('Missing session context');
+      return false;
+    }
 
-        let report;
-        try {
-          report = scoreSession(scoringInputs, prev.scoringContext);
-        } catch (err) {
-          console.error('scoreSession failed:', err);
-          report = undefined;
-        }
+    const scoringInputs: Record<string, unknown> = {};
+    for (const [stateKey, scoringId] of Object.entries(TASK_STATE_TO_SCORING_ID)) {
+      const taskData = (state.tasks as Record<string, unknown>)[stateKey];
+      if (taskData !== undefined) {
+        scoringInputs[scoringId] = taskData;
+      }
+    }
 
-        fetch(edgeFn('complete-session'), {
-          method: 'POST',
-          headers: edgeHeaders(),
-          body: JSON.stringify({
-            sessionId: prev.id,
-            linkToken: prev.linkToken,
-            scoringReport: report,
-          }),
-        }).catch((err) => console.error('Failed to complete session:', err));
+    let report;
+    try {
+      report = scoreSession(scoringInputs, state.scoringContext);
+    } catch (err) {
+      console.error('scoreSession failed:', err);
+      report = undefined;
+    }
+
+    setCompletionStatus('submitting');
+    setCompletionError(null);
+
+    try {
+      const response = await fetch(edgeFn('complete-session'), {
+        method: 'POST',
+        headers: edgeHeaders(),
+        body: JSON.stringify({
+          sessionId: state.id,
+          linkToken: state.linkToken,
+          scoringReport: report,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Failed to complete session');
       }
 
-      return { ...prev, isComplete: true };
-    });
-  }, []);
+      setState((prev) => prev.id === state.id ? { ...prev, isComplete: true } : prev);
+      setCompletionStatus('completed');
+      return true;
+    } catch (err) {
+      console.error('Failed to complete session:', err);
+      setCompletionStatus('error');
+      setCompletionError(err instanceof Error ? err.message : 'Failed to complete session');
+      return false;
+    }
+  }, [state]);
 
   const hasInProgressAssessment = Boolean(
     state.id &&
@@ -262,9 +291,21 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       updateTaskData,
       setLastPath,
       completeAssessment,
+      completionStatus,
+      completionError,
       hasInProgressAssessment,
     }),
-    [state, startNewAssessment, resumeAssessment, updateTaskData, setLastPath, completeAssessment, hasInProgressAssessment]
+    [
+      state,
+      startNewAssessment,
+      resumeAssessment,
+      updateTaskData,
+      setLastPath,
+      completeAssessment,
+      completionStatus,
+      completionError,
+      hasInProgressAssessment,
+    ]
   );
 
   return (

@@ -40,7 +40,17 @@ Deno.serve(async (req) => {
 
   if (sessionError || !session) return json({ error: 'Session not found' }, 404, req);
   if (session.status === 'completed' || session.status === 'awaiting_review') {
-    return json({ error: 'Session already completed' }, 409, req);
+    const { data: existingReport } = await supabase
+      .from('scoring_reports')
+      .select('*')
+      .eq('session_id', session.id)
+      .maybeSingle();
+
+    return json({
+      ok: true,
+      alreadyCompleted: true,
+      scoringReport: existingReport ?? null,
+    }, 200, req);
   }
   if (session.status !== 'in_progress') return json({ error: 'Session not in progress' }, 409, req);
 

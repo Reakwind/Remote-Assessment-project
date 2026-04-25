@@ -131,7 +131,7 @@ function readEnv(deps: NotificationDependencies, name: string): string | undefin
 function dashboardUrl(sessionId: string, deps: NotificationDependencies): string | undefined {
   const publicUrl = readEnv(deps, 'PUBLIC_URL')?.trim();
   if (!publicUrl) return undefined;
-  return `${publicUrl.replace(/\/$/, '')}/dashboard/${sessionId}`;
+  return `${publicUrl.replace(/\/$/, '')}/#/dashboard/session/${sessionId}`;
 }
 
 function notificationRecipient(result: ClinicianCompletionNotificationResult | SmsDeliveryResult): string | null {

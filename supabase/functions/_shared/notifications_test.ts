@@ -74,6 +74,7 @@ Deno.test(
           ({
             RESEND_API_KEY: "test-key",
             RESEND_API_BASE: "https://resend.test/",
+            PUBLIC_URL: "https://app.example.test/",
           })[name],
         fetch: fakeFetch,
       },
@@ -85,6 +86,12 @@ Deno.test(
     assertEquals(
       (calls[0].body as { to: string }).to,
       "clinician@example.test",
+    );
+    assert(
+      String((calls[0].body as { text: string }).text).includes(
+        "https://app.example.test/#/dashboard/session/session-1",
+      ),
+      "expected hash-router dashboard review URL",
     );
   },
 );

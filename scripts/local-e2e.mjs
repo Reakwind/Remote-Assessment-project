@@ -188,6 +188,17 @@ async function runVersion(version) {
   });
   assert(completed.status === 200 && completed.body?.scoringReport?.totalProvisional === true, `[${version}] complete provisional report`, completed);
 
+  const completedAgain = await request('/functions/v1/complete-session', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ sessionId, linkToken }),
+  });
+  assert(
+    completedAgain.status === 200 && completedAgain.body?.alreadyCompleted === true,
+    `[${version}] complete session is idempotent after provisional completion`,
+    completedAgain,
+  );
+
   const detail = await getSession(clinicianHeaders, sessionId);
   assert(detail.session.moca_version === version, `[${version}] dashboard preserves MoCA version`, detail.session);
   assert(detail.session.drawings.length === 3, `[${version}] dashboard has 3 drawing review rows`, detail.session.drawings);
