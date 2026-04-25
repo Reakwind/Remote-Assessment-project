@@ -25,6 +25,18 @@ interface AudioRecorderProps {
   }) => void;
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read audio recording"));
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Failed to encode audio recording"));
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
 export function AudioRecorder({
   taskId,
   initialAudioId,
@@ -83,6 +95,25 @@ export function AudioRecorder({
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+
+      const finishStop = async (
+        audio: { audioId: string; audioStoragePath?: string; audioContentType?: string },
+        blob: Blob,
+      ) => {
+        const idOrUrl = audio.audioId;
+        if (!idOrUrl.startsWith("http")) await AudioStore.saveAudio(idOrUrl, blob);
+        const url = idOrUrl.startsWith("http") ? idOrUrl : URL.createObjectURL(blob);
+        setAudioUrl(url);
+        setAudioId(idOrUrl);
+        onRecordingComplete(audio);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      const failStop = (message: string, cause?: unknown) => {
+        if (cause) console.error("Audio upload failed", cause);
+        setError(message);
+        stream.getTracks().forEach(track => track.stop());
+      };
       
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -100,51 +131,48 @@ export function AudioRecorder({
         };
         try {
           if (state.id && state.linkToken) {
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-              const base64 = reader.result as string;
-              const contentType = audioBlob.type || "audio/webm";
-              const res = await fetch(edgeFn('save-audio'), {
-                method: 'POST',
-                headers: edgeHeaders(),
-                body: JSON.stringify({
-                  sessionId: state.id,
-                  linkToken: state.linkToken,
-                  taskType: TASK_ID_TO_SCORING_ID[taskId] ?? taskId,
-                  audioBase64: base64,
-                  contentType,
-                })
-              });
-              if (res.ok) {
-                const data = await res.json();
-                finalAudio = {
-                  audioId: data.url ?? data.storagePath ?? finalAudio.audioId,
-                  audioStoragePath: data.audioStoragePath ?? data.storagePath,
-                  audioContentType: data.audioContentType ?? data.contentType ?? contentType,
-                };
+            const base64 = await blobToDataUrl(audioBlob);
+            const contentType = audioBlob.type || "audio/webm";
+            const res = await fetch(edgeFn('save-audio'), {
+              method: 'POST',
+              headers: edgeHeaders(),
+              body: JSON.stringify({
+                sessionId: state.id,
+                linkToken: state.linkToken,
+                taskType: TASK_ID_TO_SCORING_ID[taskId] ?? taskId,
+                audioBase64: base64,
+                contentType,
+              })
+            });
+            if (!res.ok) {
+              let message = "שמירת ההקלטה נכשלה. בדוק חיבור ונסה להקליט שוב.";
+              try {
+                const payload = await res.json();
+                if (payload?.error) message = payload.error;
+              } catch {
+                // Keep localized fallback for non-JSON errors.
               }
-              finishStop(finalAudio, audioBlob);
+              failStop(message);
+              return;
+            }
+            const data = await res.json();
+            finalAudio = {
+              audioId: data.url ?? data.storagePath ?? finalAudio.audioId,
+              audioStoragePath: data.audioStoragePath ?? data.storagePath,
+              audioContentType: data.audioContentType ?? data.contentType ?? contentType,
             };
+            if (!finalAudio.audioStoragePath) {
+              failStop("שמירת ההקלטה נכשלה. נסה להקליט שוב.");
+              return;
+            }
+            await finishStop(finalAudio, audioBlob);
             return;
           }
         } catch (e) {
-          console.error("Audio upload failed", e);
+          failStop("שמירת ההקלטה נכשלה. בדוק חיבור ונסה להקליט שוב.", e);
+          return;
         }
         finishStop(finalAudio, audioBlob);
-      };
-
-      const finishStop = async (
-        audio: { audioId: string; audioStoragePath?: string; audioContentType?: string },
-        blob: Blob,
-      ) => {
-        const idOrUrl = audio.audioId;
-        if (!idOrUrl.startsWith("http")) await AudioStore.saveAudio(idOrUrl, blob);
-        const url = idOrUrl.startsWith("http") ? idOrUrl : URL.createObjectURL(blob);
-        setAudioUrl(url);
-        setAudioId(idOrUrl);
-        onRecordingComplete(audio);
-        stream.getTracks().forEach(track => track.stop());
       };
       
       mediaRecorder.start();

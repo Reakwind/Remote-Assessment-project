@@ -73,6 +73,24 @@ Deno.serve(async (req) => {
     const rawData = addAudioSignedUrl(review.raw_data, await signedAudioUrl(supabase, audioStoragePathFromRaw(review.raw_data)));
     return { ...review, raw_data: rawData };
   }));
+  const scoreableScoringReviews = scoringReviews.filter((review: any) => Number(review.max_score ?? 0) > 0);
+  const audioEvidenceByTask = new Map<string, any>();
+  for (const result of taskResults) {
+    if (!audioStoragePathFromRaw(result.raw_data)) continue;
+    audioEvidenceByTask.set(result.task_type, {
+      id: `task-result-${result.id ?? result.task_type}`,
+      item_id: result.task_type,
+      task_type: result.task_type,
+      max_score: 0,
+      raw_data: result.raw_data,
+      clinician_score: null,
+      clinician_notes: null,
+    });
+  }
+  for (const review of scoringReviews) {
+    if (Number(review.max_score ?? 0) > 0 || !audioStoragePathFromRaw(review.raw_data)) continue;
+    if (!audioEvidenceByTask.has(review.task_type)) audioEvidenceByTask.set(review.task_type, review);
+  }
 
   return json({
     session: {
@@ -80,7 +98,8 @@ Deno.serve(async (req) => {
       task_results: taskResults,
       scoring_report: Array.isArray(session.scoring_reports) ? session.scoring_reports[0] ?? null : session.scoring_reports,
       drawings,
-      scoring_reviews: scoringReviews,
+      scoring_reviews: scoreableScoringReviews,
+      audio_evidence_reviews: Array.from(audioEvidenceByTask.values()),
     },
   }, 200, req);
 });

@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
       assessment_language: assessmentLanguage,
       patient_dominant_hand: patientDominantHand,
     })
-    .select('id, link_token, access_code, moca_version')
+    .select('id, access_code, moca_version')
     .single();
 
   if (error || !session) {
@@ -216,7 +216,6 @@ Deno.serve(async (req) => {
   return json({
     sessionId: session.id,
     caseId,
-    linkToken: session.link_token,
     sessionUrl,
     accessCode: session.access_code ?? accessCode,
     testNumber: session.access_code ?? accessCode,
