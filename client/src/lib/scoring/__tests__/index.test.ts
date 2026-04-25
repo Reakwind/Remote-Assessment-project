@@ -66,6 +66,16 @@ describe('scoreSession', () => {
     expect(report.totalAdjusted).toBeLessThanOrEqual(30);
   });
 
+  it('accepts persisted sessionDate strings for orientation scoring', () => {
+    const report = scoreSession(FULL_RESULTS, {
+      ...CTX,
+      // localStorage serialization path can rehydrate this as a string
+      sessionDate: '2026-04-21T00:00:00.000Z' as unknown as Date,
+    });
+    const orientation = report.domains.find((d) => d.domain === 'orientation');
+    expect(orientation?.raw).toBe(6);
+  });
+
   it('normPercentile is null when totalProvisional', () => {
     const report = scoreSession(FULL_RESULTS, CTX);
     expect(report.normPercentile).toBeNull();

@@ -10,6 +10,9 @@ import config from '../../data/scoring-config.json' with { type: 'json' };
 import normsData from '../../data/lifshitz-norms.json' with { type: 'json' };
 
 function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext): ItemScore[] {
+  // Assessment context is persisted in localStorage; on resume, sessionDate can
+  // come back as an ISO string. Coerce it so orientation scoring stays correct.
+  const sessionDate = new Date((ctx as unknown as { sessionDate: Date | string }).sessionDate);
   if ((config.drawingTasks as string[]).includes(taskId)) {
     const domainTask = config.domains.flatMap(d => d.tasks).find(t => t.taskId === taskId);
     return scoreDrawing(taskId, domainTask?.max ?? 1);
@@ -21,7 +24,7 @@ function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext): ItemS
   switch (taskId) {
     case 'moca-orientation-task':
       return safeScore(taskId, rawData, d =>
-        scoreOrientation(d as Parameters<typeof scoreOrientation>[0], ctx.sessionDate, loc)
+        scoreOrientation(d as Parameters<typeof scoreOrientation>[0], sessionDate, loc)
       );
     case 'moca-digit-span':
       return safeScore(taskId, rawData, d =>
