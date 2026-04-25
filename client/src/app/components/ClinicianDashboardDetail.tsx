@@ -17,6 +17,7 @@ import {
 
 interface PatientLite {
   id: string;
+  case_id?: string | null;
   full_name: string;
 }
 
@@ -595,7 +596,8 @@ export function ClinicianDashboardDetail() {
   };
 
   const breadcrumbTo = patient ? `/dashboard/patient/${patient.id}` : "/dashboard";
-  const breadcrumbLabel = patient ? `תיקים / ${patient.full_name} / מבחן` : "תיקים / מבחן";
+  const patientCaseLabel = patient?.case_id ?? patient?.full_name;
+  const breadcrumbLabel = patientCaseLabel ? `תיקים / ${patientCaseLabel} / מבחן` : "תיקים / מבחן";
   const reportNeedsReview = getReportNeedsReview(reportRecord);
   const canExportPdf =
     sessionRecord?.status === "completed" && !reportNeedsReview && getPendingReviewCount(reportRecord) === 0;
@@ -624,11 +626,11 @@ export function ClinicianDashboardDetail() {
       <div className="flex items-start justify-between mb-8 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
         <div className="flex gap-6 items-center">
           <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-3xl">
-            {(patient?.full_name?.trim()[0] ?? sessionRecord?.case_id?.trim()[0] ?? "ת").toUpperCase()}
+            {(patientCaseLabel?.trim()[0] ?? sessionRecord?.case_id?.trim()[0] ?? "ת").toUpperCase()}
           </div>
           <div>
             <h1 className="text-3xl font-extrabold text-black mb-2">
-              {patient?.full_name ? `תיק ${patient.full_name}` : sessionRecord?.case_id ? `תיק ${sessionRecord.case_id}` : "תיק"}
+              {patientCaseLabel ? `תיק ${patientCaseLabel}` : sessionRecord?.case_id ? `תיק ${sessionRecord.case_id}` : "תיק"}
             </h1>
             <div className="flex gap-4 text-gray-500 font-medium text-lg items-center flex-wrap">
               {sessionRecord?.case_id && (

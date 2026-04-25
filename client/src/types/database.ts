@@ -8,6 +8,11 @@ export interface Session {
   patient_id?: string | null;
   age_band: '60-64' | '65-69' | '70-74' | '75-79' | '80+';
   education_years: number | null;
+  patient_age_years?: number | null;
+  patient_date_of_birth?: string | null;
+  patient_gender?: 'male' | 'female' | null;
+  patient_dominant_hand?: 'right' | 'left' | 'ambidextrous' | null;
+  assessment_language?: string | null;
   access_code?: string | null;
   assessment_type?: string;
   patient_phone?: string | null;

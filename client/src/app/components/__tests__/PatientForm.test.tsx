@@ -35,19 +35,31 @@ describe('PatientForm', () => {
     vi.clearAllMocks();
   });
 
-  it('creates an MVP case record with case ID only', async () => {
+  it('creates a case record with clinical background data', async () => {
     const onCreated = vi.fn();
     render(<PatientForm open onClose={vi.fn()} onCreated={onCreated} />);
 
     await userEvent.type(screen.getByPlaceholderText('למשל CASE-20260425-001'), 'CASE-001');
+    await userEvent.type(screen.getByPlaceholderText('למשל 0501234567'), '0501234567');
+    await userEvent.type(screen.getByPlaceholderText('יום'), '15');
+    await userEvent.type(screen.getByPlaceholderText('חודש'), '04');
+    await userEvent.type(screen.getByPlaceholderText('שנה'), '1950');
+    await userEvent.selectOptions(screen.getByLabelText('מין*'), 'male');
+    await userEvent.selectOptions(screen.getByLabelText('יד דומיננטית*'), 'right');
+    await userEvent.type(screen.getByPlaceholderText('למשל 12'), '12');
     await userEvent.click(screen.getByRole('button', { name: 'פתח תיק' }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('case-record-1'));
     expect(insertMock).toHaveBeenCalledWith({
       clinician_id: 'clinician-1',
+      case_id: 'CASE-001',
       full_name: 'CASE-001',
-      phone: null,
-      date_of_birth: null,
+      phone: '0501234567',
+      date_of_birth: '1950-04-15',
+      gender: 'male',
+      language: 'he',
+      dominant_hand: 'right',
+      education_years: 12,
       id_number: null,
       notes: null,
     });
@@ -59,6 +71,16 @@ describe('PatientForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'פתח תיק' }));
 
     expect(await screen.findByText('יש למלא מזהה תיק.')).toBeInTheDocument();
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects likely PII in the case ID field', async () => {
+    render(<PatientForm open onClose={vi.fn()} onCreated={vi.fn()} />);
+
+    await userEvent.type(screen.getByPlaceholderText('למשל CASE-20260425-001'), 'איתי כהן');
+    await userEvent.click(screen.getByRole('button', { name: 'פתח תיק' }));
+
+    expect(await screen.findByText('מזהה תיק חייב להיות קוד באנגלית/מספרים בלבד, 3-50 תווים.')).toBeInTheDocument();
     expect(insertMock).not.toHaveBeenCalled();
   });
 });

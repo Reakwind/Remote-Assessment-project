@@ -5,7 +5,7 @@ type SupabaseClient = any;
 export async function recalculateReviewedReport(supabase: SupabaseClient, sessionId: string, finalizedBy: string | null) {
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .select('id, age_band, education_years, location_place, location_city, started_at, created_at, moca_version')
+    .select('id, age_band, education_years, patient_age_years, location_place, location_city, started_at, created_at, moca_version')
     .eq('id', sessionId)
     .single();
   if (sessionError || !session) throw new Error('Session not found');
@@ -41,7 +41,7 @@ export async function recalculateReviewedReport(supabase: SupabaseClient, sessio
     sessionId: session.id,
     sessionDate: new Date(session.started_at ?? session.created_at),
     educationYears: session.education_years,
-    patientAge: ageFromBand(session.age_band),
+    patientAge: session.patient_age_years ?? ageFromBand(session.age_band),
     mocaVersion: session.moca_version,
     sessionLocation: session.location_place || session.location_city
       ? { place: session.location_place, city: session.location_city }

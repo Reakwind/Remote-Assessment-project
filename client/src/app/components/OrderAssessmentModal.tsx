@@ -4,7 +4,11 @@ import { supabase } from "../../lib/supabase";
 
 export interface PatientSummary {
   id: string;
-  full_name: string;
+  case_id?: string | null;
+  full_name?: string | null;
+  language?: string | null;
+  education_years?: number | null;
+  date_of_birth?: string | null;
 }
 
 export interface OrderAssessmentModalProps {
@@ -14,11 +18,10 @@ export interface OrderAssessmentModalProps {
   onOrdered?: () => void;
 }
 
-type AgeBand = "60-64" | "65-69" | "70-74" | "75-79" | "80+";
-
 export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: OrderAssessmentModalProps) {
-  const [ageBand, setAgeBand] = useState<AgeBand>("70-74");
-  const [educationYears, setEducationYears] = useState("12");
+  const [assessmentType, setAssessmentType] = useState("moca");
+  const [language, setLanguage] = useState(patient.language ?? "he");
+  const [mocaVersion, setMocaVersion] = useState("8.3");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -32,9 +35,16 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
     e.preventDefault();
     setError(null);
 
-    const years = Number(educationYears);
-    if (!Number.isFinite(years) || years < 0 || years > 40) {
-      setError("שנות לימוד חייבות להיות בין 0 ל-40.");
+    if (assessmentType !== "moca") {
+      setError("בשלב זה נתמך MoCA בלבד.");
+      return;
+    }
+    if (language !== "he") {
+      setError("בשלב זה נתמכת עברית בלבד.");
+      return;
+    }
+    if (!["8.1", "8.2", "8.3"].includes(mocaVersion)) {
+      setError("יש לבחור גרסת MoCA תקינה.");
       return;
     }
 
@@ -55,9 +65,9 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
         },
         body: JSON.stringify({
           patientId: patient.id,
-          ageBand,
-          educationYears: years,
-          assessmentType: "moca",
+          assessmentType,
+          language,
+          mocaVersion,
         }),
       });
 
@@ -104,7 +114,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             </div>
             <div>
               <h2 className="text-2xl font-extrabold text-black">פתיחת מבחן חדש</h2>
-              <p className="text-gray-500 text-sm">עבור תיק {patient.full_name}</p>
+              <p className="text-gray-500 text-sm">עבור תיק {patient.case_id ?? patient.full_name}</p>
             </div>
           </div>
           <button
@@ -119,46 +129,43 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
 
         {!result && (
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <div className="text-sm font-bold text-gray-600 mb-2">בחירת סוללת הערכה</div>
-              <div className="border-2 border-black rounded-2xl p-5 flex items-center justify-between bg-black/5">
-                <div>
-                  <div className="font-extrabold text-lg text-black">MoCA (Hebrew)</div>
-                  <div className="text-sm text-gray-600">הערכה קוגניטיבית מקיפה — כ-25 דקות</div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-black text-white text-xs font-bold">נבחר</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">סוללות נוספות יתווספו בעתיד.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-1">קבוצת גיל</label>
+                <label className="block text-sm font-bold text-gray-600 mb-1">מבדק</label>
                 <select
-                  value={ageBand}
-                  onChange={(e) => setAgeBand(e.target.value as AgeBand)}
+                  value={assessmentType}
+                  onChange={(e) => setAssessmentType(e.target.value)}
                   className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
                 >
-                  <option value="60-64">60-64</option>
-                  <option value="65-69">65-69</option>
-                  <option value="70-74">70-74</option>
-                  <option value="75-79">75-79</option>
-                  <option value="80+">80+</option>
+                  <option value="moca">MoCA</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-1">שנות לימוד</label>
-                <input
-                  value={educationYears}
-                  onChange={(e) => setEducationYears(e.target.value)}
-                  inputMode="numeric"
-                  className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none"
-                />
+                <label className="block text-sm font-bold text-gray-600 mb-1">שפה</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+                >
+                  <option value="he">עברית</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-600 mb-1">גרסה</label>
+                <select
+                  value={mocaVersion}
+                  onChange={(e) => setMocaVersion(e.target.value)}
+                  className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+                >
+                  <option value="8.1">MoCA 8.1</option>
+                  <option value="8.2">MoCA 8.2</option>
+                  <option value="8.3">MoCA 8.3</option>
+                </select>
               </div>
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600">
-              ייווצר מספר מבחן. העתיקו אותו ושלחו למטופל בכל ערוץ שמתאים לכם.
+              גיל ושנות לימוד יילקחו מפרטי התיק השמורים. ייווצר מספר מבחן להעתקה ושליחה למטופל.
             </div>
 
             {error && (

@@ -6,7 +6,8 @@ Use this as the compact journey authority. Keep detailed UI, database, and imple
 
 ## MVP Guardrails
 
-- Use case ID as the only patient identifier in app data.
+- Use a pseudonymous case ID instead of patient names or national IDs.
+- Store the clinical background fields needed for interpretation: phone, date of birth, gender, language, dominant hand, and education years.
 - Use clinician email/password auth for MVP.
 - Clinician creates the session; patient only uses the generated test number.
 - Clinician review happens after patient completion through dashboard review.
@@ -42,7 +43,7 @@ One-time patient start semantics remain strict. Target resume behavior uses same
 | Step | Browser behavior | Backend/data behavior | Current vs target |
 |---|---|---|---|
 | Login | Clinician signs up or signs in with email/password and reaches `/dashboard`. | Supabase Auth validates credentials; clinician-only Edge Functions require the clinician JWT. | Current target. |
-| Create case/session | Clinician creates a case record with a case ID, then enters MoCA version, age band, and education years for the session. | `patients.full_name` stores the MVP case ID for compatibility; `create-session` creates `sessions` row with `pending` status, `moca_version`, internal `link_token`, and patient-facing `access_code`; writes `session_created` audit event. | Current target. |
+| Create case/session | Clinician creates a clinical case record with case ID, phone, birth date, gender, language, dominant hand, and education years. When opening a test, clinician chooses assessment, language, and test version. | `patients.case_id` stores the pseudonymous case ID; compatibility `patients.full_name` mirrors it. `create-session` snapshots case ID, calculated age/age band, education years, selected language/version, internal `link_token`, and patient-facing `access_code`; writes `session_created` audit event. | Current target. |
 | Share test number | Clinician copies the generated test number and sends it to the patient outside the app. | `create-session` stores the patient-facing test number in `sessions.access_code`. | Current target. |
 | Wait for completion | Clinician waits for a completion notification, then opens the dashboard when ready. | `complete-session` attempts clinician completion email, records a `notification_events` outcome, and audits `clinician_completion_email_*`. | Current. Email-first completion ping. |
 | Review session | Clinician opens dashboard detail for completed/awaiting review session and sees stored patient evidence. | `get-session` returns task results, scoring report, drawing reviews, scoring item reviews, signed drawing/audio URLs. | Current. |
@@ -92,7 +93,7 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 | Area | Current implementation | Target MVP | Known gap |
 |---|---|---|---|
 | Clinician auth | Email/password Supabase Auth gates the dashboard; old `/clinician/2fa` links redirect out of the removed MFA screen. | Clinician email/password login with backend JWT checks. | MFA, SSO, device policy, and other security hardening are future milestones. |
-| Session creation | Case ID, MoCA version, age band, education, internal session token, and generated patient test number. | Same, with MoCA version visible in clinician and patient workflow and preserved for reporting. | Current target. |
+| Session creation | Case profile stores birth date, gender, language, dominant hand, phone, and education. Test creation stores assessment, language, version, calculated age/age band, internal session token, and generated patient test number. | Same, with standardized scoring using the session snapshot from the case profile. | Current target. |
 | Patient start | One-time 8-digit test number moves session to `in_progress`; same-device resume uses stored in-progress state and matching session context to reopen saved progress. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
 | Stimulus delivery | `get-stimuli` returns versioned private Storage paths and signed URLs when licensed assets are uploaded. Patient UI uses explicit development placeholders when assets are missing. | Licensed MoCA assets are uploaded to private Storage by version and task before clinical use, then validated with `scripts/verify-stimuli.mjs`. | Production asset validation should be part of release readiness. |
 | Task persistence | Per-task submit, skipped-task review payloads, drawings, audio evidence. | Reliable autosave for every task; refresh preserves saved progress in normal use. | Full offline retry queue remains future hardening. |
@@ -136,5 +137,5 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 - 2026-04-25: Clinician MFA is deferred from the MVP; email/password auth is the active clinician login model.
 - 2026-04-25: Session place/city are legacy optional fields and are no longer part of MVP session creation.
 - 2026-04-25: Current `main` after the clinician email/password and test-number flow is the Pilot MVP baseline; future changes proceed feature by feature from current `origin/main` through reviewed PRs.
-- 2026-04-25: Active MVP case creation collects case ID only; legacy patient profile fields stay nullable for compatibility but are not part of the active workflow.
+- 2026-04-25: Active case creation collects clinical background fields for interpretation. Sessions snapshot calculated age, education, language, gender, and dominant hand from the case profile when the test is created.
 - 2026-04-25: Patient starts require the generated 8-digit test number; internal link tokens are used only after start for patient save/complete calls.

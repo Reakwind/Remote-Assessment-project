@@ -15,7 +15,14 @@ import { OrderAssessmentModal } from "./OrderAssessmentModal";
 
 interface PatientRecord {
   id: string;
+  case_id: string | null;
   full_name: string;
+  phone: string | null;
+  date_of_birth: string | null;
+  gender: "male" | "female" | null;
+  language: string | null;
+  dominant_hand: "right" | "left" | "ambidextrous" | null;
+  education_years: number | null;
   created_at: string;
 }
 
@@ -64,6 +71,23 @@ function reportScore(report: ScoringSummary | null | undefined): number | null {
   return report?.total_adjusted ?? report?.total_score ?? null;
 }
 
+function caseLabel(patient: PatientRecord): string {
+  return patient.case_id || patient.full_name;
+}
+
+function formatGender(value: PatientRecord["gender"]): string {
+  if (value === "male") return "זכר";
+  if (value === "female") return "נקבה";
+  return "-";
+}
+
+function formatDominantHand(value: PatientRecord["dominant_hand"]): string {
+  if (value === "right") return "ימין";
+  if (value === "left") return "שמאל";
+  if (value === "ambidextrous") return "שתי הידיים";
+  return "-";
+}
+
 export function PatientProfilePage() {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -79,7 +103,7 @@ export function PatientProfilePage() {
 
     const { data: patientData, error: patientError } = await supabase
       .from("patients")
-      .select("id, full_name, created_at")
+      .select("id, case_id, full_name, phone, date_of_birth, gender, language, dominant_hand, education_years, created_at")
       .eq("id", patientId)
       .maybeSingle();
 
@@ -141,7 +165,7 @@ export function PatientProfilePage() {
           className="text-gray-500 font-bold hover:text-black flex items-center gap-2 transition-colors w-fit"
         >
           <ChevronRight className="w-5 h-5" />
-          <span>תיקים / {patient.full_name}</span>
+          <span>תיקים / {caseLabel(patient)}</span>
         </Link>
       </div>
 
@@ -149,10 +173,10 @@ export function PatientProfilePage() {
         <div className="flex items-start justify-between gap-6 flex-wrap">
           <div className="flex items-center gap-6 min-w-0">
             <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-3xl shrink-0">
-              {patient.full_name.trim()[0]?.toUpperCase() || "ת"}
+              {caseLabel(patient).trim()[0]?.toUpperCase() || "ת"}
             </div>
             <div className="min-w-0">
-              <h1 className="text-3xl font-extrabold text-black mb-2 truncate">תיק {patient.full_name}</h1>
+              <h1 className="text-3xl font-extrabold text-black mb-2 truncate">תיק {caseLabel(patient)}</h1>
               <div className="flex gap-5 text-gray-500 font-medium flex-wrap">
                 <span className="inline-flex items-center gap-2">
                   <Hash className="w-4 h-4" />
@@ -171,9 +195,9 @@ export function PatientProfilePage() {
           </button>
       </div>
 
-	      </div>
+      </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="text-xs font-bold text-gray-500 uppercase mb-1">סה"כ מבחנים</div>
           <div className="text-3xl font-extrabold text-black tabular-nums">{sessions.length}</div>
@@ -186,6 +210,36 @@ export function PatientProfilePage() {
           <div className="text-xs font-bold text-gray-500 uppercase mb-1">ציון MoCA אחרון</div>
           <div className="text-3xl font-extrabold text-black tabular-nums">
             {latestScore != null ? `${latestScore}/30` : "—"}
+          </div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+          <div className="text-xs font-bold text-gray-500 uppercase mb-1">שנות לימוד</div>
+          <div className="text-3xl font-extrabold text-black tabular-nums">{patient.education_years ?? "—"}</div>
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mb-8">
+        <h2 className="text-lg font-extrabold text-black mb-4">פרטי רקע קליניים</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <div className="font-bold text-gray-500 mb-1">טלפון</div>
+            <div className="font-mono text-gray-900">{patient.phone ?? "—"}</div>
+          </div>
+          <div>
+            <div className="font-bold text-gray-500 mb-1">תאריך לידה</div>
+            <div className="text-gray-900">{formatDate(patient.date_of_birth)}</div>
+          </div>
+          <div>
+            <div className="font-bold text-gray-500 mb-1">מין</div>
+            <div className="text-gray-900">{formatGender(patient.gender)}</div>
+          </div>
+          <div>
+            <div className="font-bold text-gray-500 mb-1">שפה</div>
+            <div className="text-gray-900">{patient.language === "he" ? "עברית" : patient.language ?? "—"}</div>
+          </div>
+          <div>
+            <div className="font-bold text-gray-500 mb-1">יד דומיננטית</div>
+            <div className="text-gray-900">{formatDominantHand(patient.dominant_hand)}</div>
           </div>
         </div>
       </div>
@@ -261,7 +315,11 @@ export function PatientProfilePage() {
         onClose={() => setOrderOpen(false)}
         patient={{
           id: patient.id,
+          case_id: patient.case_id,
           full_name: patient.full_name,
+          language: patient.language,
+          education_years: patient.education_years,
+          date_of_birth: patient.date_of_birth,
         }}
         onOrdered={loadPatient}
       />

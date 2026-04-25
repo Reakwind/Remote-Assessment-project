@@ -25,8 +25,11 @@ test.beforeAll(async ({ request }) => {
 test('pilot MVP browser flow: patient completes and clinician review APIs finalize', async ({ page, request }) => {
   const runId = Date.now();
   const clinician = await createClinician(request, `browser-e2e-${runId}@example.test`);
-  const created = await createSession(request, clinician.accessToken, `BROWSER-E2E-${runId}`);
+  const patient = await createCase(request, clinician.accessToken, `BROWSER-E2E-${runId}`);
+  const created = await createSession(request, clinician.accessToken, patient.id);
   const started = await startPatientSession(request, created.testNumber);
+  expect(started.patientAge).toBeGreaterThanOrEqual(60);
+  expect(started.educationYears).toBe(16);
 
   await runPatientClickThrough(page, created.linkToken, started);
 
@@ -78,14 +81,40 @@ async function createClinician(request: APIRequestContext, email: string) {
   return { accessToken: body.access_token as string };
 }
 
-async function createSession(request: APIRequestContext, accessToken: string, caseId: string) {
+async function createCase(request: APIRequestContext, accessToken: string, caseId: string) {
+  const response = await request.post(`${SUPABASE_URL}/rest/v1/patients`, {
+    headers: {
+      ...clinicianHeaders(accessToken),
+      Prefer: 'return=representation',
+    },
+    data: {
+      clinician_id: jwtSubject(accessToken),
+      case_id: caseId,
+      full_name: caseId,
+      phone: '0501234567',
+      date_of_birth: '1950-04-15',
+      gender: 'male',
+      language: 'he',
+      dominant_hand: 'right',
+      education_years: 16,
+      id_number: null,
+      notes: null,
+    },
+  });
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  expect(body[0]?.id).toBeTruthy();
+  return body[0] as { id: string; case_id: string };
+}
+
+async function createSession(request: APIRequestContext, accessToken: string, patientId: string) {
   const response = await request.post(`${SUPABASE_URL}/functions/v1/create-session`, {
     headers: clinicianHeaders(accessToken),
     data: {
-      caseId,
+      patientId,
+      assessmentType: 'moca',
+      language: 'he',
       mocaVersion: '8.3',
-      ageBand: '70-79',
-      educationYears: 12,
     },
   });
   expect(response.ok()).toBeTruthy();
@@ -102,13 +131,13 @@ async function startPatientSession(request: APIRequestContext, testNumber: strin
     data: { token: testNumber },
   });
   expect(response.ok()).toBeTruthy();
-  return response.json() as Promise<{ sessionId: string; linkToken: string; ageBand: string; educationYears: number; sessionDate: string }>;
+  return response.json() as Promise<{ sessionId: string; linkToken: string; ageBand: string; patientAge: number; educationYears: number; sessionDate: string }>;
 }
 
 async function runPatientClickThrough(
   page: Page,
   linkToken: string,
-  started: { sessionId: string; ageBand: string; educationYears: number; sessionDate: string },
+  started: { sessionId: string; ageBand: string; patientAge: number; educationYears: number; sessionDate: string },
 ) {
   await page.addInitScript(({ linkToken: token, startedSession }) => {
     window.localStorage.setItem('moca_assessment_state', JSON.stringify({
@@ -118,7 +147,7 @@ async function runPatientClickThrough(
         sessionId: startedSession.sessionId,
         sessionDate: startedSession.sessionDate,
         educationYears: startedSession.educationYears ?? 12,
-        patientAge: 75,
+        patientAge: startedSession.patientAge ?? 75,
       },
       lastPath: '/patient/trail-making',
       isComplete: false,
@@ -250,6 +279,12 @@ function clinicianHeaders(accessToken: string) {
     ...anonHeaders(),
     Authorization: `Bearer ${accessToken}`,
   };
+}
+
+function jwtSubject(accessToken: string) {
+  const [, payload] = accessToken.split('.');
+  const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  return decoded.sub as string;
 }
 
 function readEnv(key: string): string | undefined {

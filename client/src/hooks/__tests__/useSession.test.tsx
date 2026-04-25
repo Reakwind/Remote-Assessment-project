@@ -63,10 +63,11 @@ describe('useSession', () => {
         status: 'ready',
         sessionId: 'sess-ready',
         linkToken: 'link-token',
-        sessionDate: '2026-04-01T00:00:00.000Z',
-        educationYears: 12,
-        ageBand: '70-79',
-      }),
+	        sessionDate: '2026-04-01T00:00:00.000Z',
+	        educationYears: 12,
+	        ageBand: '70-79',
+	        patientAge: 76,
+	      }),
     } as Response);
 
     await renderAndWaitForStatus('12345678', 'ready');
@@ -99,9 +100,30 @@ describe('useSession', () => {
 
     expect(state.linkToken).toBe('link-token');
     expect(state.startToken).toBe('session-token');
-    expect(state.scoringContext?.sessionId).toBe('sess-ready');
-    expect(state.scoringContext?.educationYears).toBe(12);
-    expect(state.scoringContext?.patientAge).toBe(67);
+	    expect(state.scoringContext?.sessionId).toBe('sess-ready');
+	    expect(state.scoringContext?.educationYears).toBe(12);
+	    expect(state.scoringContext?.patientAge).toBe(67);
+	  });
+
+  it('prefers exact patient age when start-session returns it', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        status: 'ready',
+        sessionId: 'sess-ready',
+        linkToken: 'link-token',
+        sessionDate: '2026-04-01T00:00:00.000Z',
+        educationYears: 14,
+        ageBand: '70-74',
+        patientAge: 73,
+      }),
+    } as Response);
+
+    const state = await renderAndWaitForStatus('session-token', 'ready');
+
+    expect(state.scoringContext?.educationYears).toBe(14);
+    expect(state.scoringContext?.patientAge).toBe(73);
   });
 
   it('moves to error state when start-session request fails', async () => {

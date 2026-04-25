@@ -102,13 +102,13 @@ export function useSession(
           sessionId: data.sessionId,
           linkToken: data.linkToken ?? token,
           startToken: token,
-          scoringContext: {
-            sessionId:       data.sessionId,
-            sessionDate:     new Date(data.sessionDate),
-            educationYears:  data.educationYears || 12,
-            patientAge:      AGE_BAND_MAP[data.ageBand] ?? 70,
-            mocaVersion:     data.mocaVersion,
-          },
+	          scoringContext: {
+	            sessionId:       data.sessionId,
+	            sessionDate:     new Date(data.sessionDate),
+	            educationYears:  data.educationYears || 12,
+	            patientAge:      typeof data.patientAge === 'number' ? data.patientAge : AGE_BAND_MAP[data.ageBand] ?? 70,
+	            mocaVersion:     data.mocaVersion,
+	          },
         });
       })
       .catch(() => {

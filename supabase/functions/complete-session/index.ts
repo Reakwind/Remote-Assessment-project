@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .select('id, clinician_id, status, age_band, education_years, location_place, location_city, started_at, created_at, moca_version')
+    .select('id, clinician_id, status, age_band, education_years, patient_age_years, location_place, location_city, started_at, created_at, moca_version')
     .eq('id', body.sessionId)
     .eq('link_token', body.linkToken)
     .single();
@@ -82,10 +82,10 @@ Deno.serve(async (req) => {
   try {
     report = scoreSession(results, {
       sessionId: session.id,
-      sessionDate: new Date(session.started_at ?? session.created_at),
-      educationYears: session.education_years,
-      patientAge: ageFromBand(session.age_band),
-      mocaVersion: session.moca_version,
+	      sessionDate: new Date(session.started_at ?? session.created_at),
+	      educationYears: session.education_years,
+	      patientAge: session.patient_age_years ?? ageFromBand(session.age_band),
+	      mocaVersion: session.moca_version,
       sessionLocation: session.location_place || session.location_city
         ? { place: session.location_place, city: session.location_city }
         : undefined,

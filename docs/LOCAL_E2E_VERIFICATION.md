@@ -53,15 +53,16 @@ Open the Vite URL in Chrome, then:
 
 1. Go to `/dashboard`.
 2. Create a local clinician account with the dashboard login form.
-3. Create a session using a case ID, age band, education years, and MoCA version.
-4. Copy the generated test number and enter it on the patient home page.
-5. Confirm the patient assessment header displays the selected MoCA version.
-6. Refresh the patient browser during an in-progress session and confirm same-device resume returns to saved progress.
-7. Complete the patient flow enough to confirm task auto-save calls succeed.
-8. Advance past at least one task without entering evidence and confirm it is recorded as requires-review/skipped evidence, not silently ignored.
-9. Finish the assessment and confirm `complete-session` creates a provisional report.
-10. Return home and confirm the completed session is no longer offered as a resumable test.
-11. Return to `/dashboard/{sessionId}`, review drawing rows, save scores, and confirm the report finalizes.
+3. Create a case using a pseudonymous case ID plus phone, birth date, gender, language, dominant hand, and education years.
+4. Create a session by choosing assessment, language, and MoCA version.
+5. Copy the generated test number and enter it on the patient home page.
+6. Confirm the patient assessment header displays the selected MoCA version.
+7. Refresh the patient browser during an in-progress session and confirm same-device resume returns to saved progress.
+8. Complete the patient flow enough to confirm task auto-save calls succeed.
+9. Advance past at least one task without entering evidence and confirm it is recorded as requires-review/skipped evidence, not silently ignored.
+10. Finish the assessment and confirm `complete-session` creates a provisional report.
+11. Return home and confirm the completed session is no longer offered as a resumable test.
+12. Return to `/dashboard/{sessionId}`, review drawing rows, save scores, and confirm the report finalizes.
 
 ## Verification Commands
 

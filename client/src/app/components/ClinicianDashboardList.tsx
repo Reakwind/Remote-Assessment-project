@@ -8,6 +8,7 @@ import { PatientForm } from "./PatientForm";
 
 interface PatientRow {
   id: string;
+  case_id: string | null;
   full_name: string;
   created_at: string;
   tests: number;
@@ -28,6 +29,7 @@ interface ScoringSummary {
 
 interface PatientWithSessions {
   id: string;
+  case_id: string | null;
   full_name: string;
   created_at: string;
   sessions:
@@ -84,7 +86,7 @@ export function ClinicianDashboardList() {
     const { data, error } = await supabase
       .from("patients")
       .select(
-        "id, full_name, created_at, sessions(id, status, created_at, scoring_reports(total_adjusted, total_provisional, pending_review_count, total_score, needs_review))",
+        "id, case_id, full_name, created_at, sessions(id, status, created_at, scoring_reports(total_adjusted, total_provisional, pending_review_count, total_score, needs_review))",
       )
       .eq("clinician_id", session.user.id)
       .order("created_at", { ascending: false });
@@ -109,6 +111,7 @@ export function ClinicianDashboardList() {
       const needsReview = sessions.some((s) => s.status === "awaiting_review" || s.scoring_reports?.some(reportNeedsReview));
       return {
         id: p.id,
+        case_id: p.case_id,
         full_name: p.full_name,
         created_at: p.created_at,
         tests: sessions.length,
@@ -132,7 +135,7 @@ export function ClinicianDashboardList() {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter(
-      (r) => r.full_name.toLowerCase().includes(q) || r.id.toLowerCase().includes(q),
+      (r) => (r.case_id ?? r.full_name).toLowerCase().includes(q) || r.id.toLowerCase().includes(q),
     );
   }, [rows, search]);
 
@@ -290,10 +293,10 @@ export function ClinicianDashboardList() {
                 >
                   <div className="w-5/12 flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">
-                      {(p.full_name.trim()[0] || "ת").toUpperCase()}
+                      {((p.case_id ?? p.full_name).trim()[0] || "ת").toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-bold text-lg text-black truncate">תיק {p.full_name}</div>
+	                      <div className="font-bold text-lg text-black truncate">תיק {p.case_id ?? p.full_name}</div>
                       <div className="text-sm text-gray-500 font-mono flex items-center gap-1.5">
                         <Hash className="w-3 h-3" />
                         {p.id.slice(0, 8)}

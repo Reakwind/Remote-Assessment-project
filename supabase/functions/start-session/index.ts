@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
   const { data: session, error } = await supabase
     .from('sessions')
-    .select('id, link_token, status, link_used_at, age_band, education_years, created_at, access_code, moca_version')
+    .select('id, link_token, status, link_used_at, age_band, education_years, patient_age_years, created_at, access_code, moca_version, assessment_language')
     .eq('access_code', token)
     .in('status', ['pending', 'in_progress'])
     .single();
@@ -84,11 +84,13 @@ Deno.serve(async (req) => {
     status:         'ready',
     sessionId:      session.id,
     linkToken:      session.link_token,
-    ageBand:        session.age_band,
-    educationYears: session.education_years,
-    mocaVersion:    session.moca_version,
-    sessionDate:    new Date().toISOString(),
-  });
+	    ageBand:        session.age_band,
+	    educationYears: session.education_years,
+	    patientAge:     session.patient_age_years,
+	    mocaVersion:    session.moca_version,
+	    language:       session.assessment_language,
+	    sessionDate:    new Date().toISOString(),
+	  });
 });
 
 function json(body: unknown, status = 200): Response {

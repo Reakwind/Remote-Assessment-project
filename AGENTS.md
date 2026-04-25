@@ -41,7 +41,8 @@ Generated local artifacts stay out of Git: `.env.local`, `.playwright-mcp/`, `cl
 - Build the asynchronous clinician-review flow.
 - Use clinician email/password auth for MVP; keep MFA, SSO, and device policy in future security hardening work.
 - Keep caregiver/support contact usage offline for MVP.
-- Use case IDs only for active MVP case records; keep patient PII out of the app workflow.
+- Use pseudonymous case IDs instead of patient names or national IDs.
+- Store only clinically useful patient profile fields needed for interpretation: phone, date of birth, gender, language, dominant hand, and education years.
 - Store raw drawing/audio/task evidence for clinician review.
 - Use deterministic scoring only where the active test manual supports it.
 - Route drawings and ambiguous/manual items to clinician review.

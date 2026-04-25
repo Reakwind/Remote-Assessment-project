@@ -10,6 +10,14 @@ export interface PatientFormProps {
 
 export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
   const [caseId, setCaseId] = useState("");
+  const [phone, setPhone] = useState("");
+  const [birthDay, setBirthDay] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [gender, setGender] = useState<"" | "male" | "female">("");
+  const [language, setLanguage] = useState("he");
+  const [dominantHand, setDominantHand] = useState<"" | "right" | "left" | "ambidextrous">("");
+  const [educationYears, setEducationYears] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -17,16 +25,81 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
 
   const reset = () => {
     setCaseId("");
+    setPhone("");
+    setBirthDay("");
+    setBirthMonth("");
+    setBirthYear("");
+    setGender("");
+    setLanguage("he");
+    setDominantHand("");
+    setEducationYears("");
     setError(null);
+  };
+
+  const normalizedCaseId = caseId.trim().toUpperCase();
+
+  const buildBirthDate = () => {
+    const day = Number(birthDay);
+    const month = Number(birthMonth);
+    const year = Number(birthYear);
+    if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) {
+      return null;
+    }
+    if (year < 1900 || year > new Date().getFullYear() || month < 1 || month > 12 || day < 1 || day > 31) {
+      return null;
+    }
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
+    ) {
+      return null;
+    }
+    return `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const trimmedCaseId = caseId.trim();
-    if (!trimmedCaseId) {
+    if (!normalizedCaseId) {
       setError("יש למלא מזהה תיק.");
+      return;
+    }
+    if (!/^[A-Z0-9][A-Z0-9_.-]{2,49}$/.test(normalizedCaseId)) {
+      setError("מזהה תיק חייב להיות קוד באנגלית/מספרים בלבד, 3-50 תווים.");
+      return;
+    }
+
+    const normalizedPhone = phone.replace(/[\s-]/g, "");
+    if (!/^\+?[0-9]{7,15}$/.test(normalizedPhone)) {
+      setError("יש להזין מספר טלפון תקין.");
+      return;
+    }
+
+    const dateOfBirth = buildBirthDate();
+    if (!dateOfBirth) {
+      setError("יש להזין תאריך לידה תקין.");
+      return;
+    }
+
+    if (!gender) {
+      setError("יש לבחור מין.");
+      return;
+    }
+    if (language !== "he") {
+      setError("בשלב זה נתמכת עברית בלבד.");
+      return;
+    }
+    if (!dominantHand) {
+      setError("יש לבחור יד דומיננטית.");
+      return;
+    }
+
+    const education = Number(educationYears);
+    if (!Number.isInteger(education) || education < 0 || education > 40) {
+      setError("שנות לימוד חייבות להיות בין 0 ל-40.");
       return;
     }
 
@@ -43,9 +116,14 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
         .from("patients")
         .insert({
           clinician_id: session.user.id,
-          full_name: trimmedCaseId,
-          phone: null,
-          date_of_birth: null,
+          case_id: normalizedCaseId,
+          full_name: normalizedCaseId,
+          phone: normalizedPhone,
+          date_of_birth: dateOfBirth,
+          gender,
+          language,
+          dominant_hand: dominantHand,
+          education_years: education,
           id_number: null,
           notes: null,
         })
@@ -72,7 +150,7 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl bg-white rounded-3xl shadow-xl border border-gray-200 p-8"
+        className="w-full max-w-xl bg-white rounded-3xl shadow-xl border border-gray-200 p-8 max-h-[90vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-6">
@@ -82,7 +160,7 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
             </div>
             <div>
               <h2 className="text-2xl font-extrabold text-black">פתיחת תיק חדש</h2>
-              <p className="text-gray-500 text-sm">ה-MVP משתמש במזהה תיק בלבד</p>
+              <p className="text-gray-500 text-sm">פרטי רקע קליניים נשמרים לתיק ולפענוח המבדק</p>
             </div>
           </div>
           <button
@@ -100,10 +178,105 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
             <label className="block text-sm font-bold text-gray-600 mb-1">מזהה תיק*</label>
             <input
               value={caseId}
-              onChange={(e) => setCaseId(e.target.value)}
+              onChange={(e) => setCaseId(e.target.value.toUpperCase())}
               placeholder="למשל CASE-20260425-001"
               className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none"
             />
+            <p className="mt-1 text-xs text-gray-500">קוד פסאודונימי בלבד: אותיות באנגלית, מספרים, נקודה, מקף או קו תחתון.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-600 mb-1">טלפון*</label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="למשל 0501234567"
+              inputMode="tel"
+              className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-600 mb-1">תאריך לידה*</label>
+            <div className="grid grid-cols-3 gap-3">
+              <input
+                value={birthDay}
+                onChange={(e) => setBirthDay(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                placeholder="יום"
+                inputMode="numeric"
+                className="h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none"
+              />
+              <input
+                value={birthMonth}
+                onChange={(e) => setBirthMonth(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                placeholder="חודש"
+                inputMode="numeric"
+                className="h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none"
+              />
+              <input
+                value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                placeholder="שנה"
+                inputMode="numeric"
+                className="h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-600 mb-1">מין*</label>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value as "" | "male" | "female")}
+                aria-label="מין*"
+                className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+              >
+                <option value="">בחרו</option>
+                <option value="male">זכר</option>
+                <option value="female">נקבה</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-600 mb-1">שפת המבדק*</label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                aria-label="שפת המבדק*"
+                className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+              >
+                <option value="he">עברית</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-600 mb-1">יד דומיננטית*</label>
+              <select
+                value={dominantHand}
+                onChange={(e) => setDominantHand(e.target.value as "" | "right" | "left" | "ambidextrous")}
+                aria-label="יד דומיננטית*"
+                className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+              >
+                <option value="">בחרו</option>
+                <option value="right">ימין</option>
+                <option value="left">שמאל</option>
+                <option value="ambidextrous">שתי הידיים</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-600 mb-1">שנות לימוד*</label>
+              <input
+                value={educationYears}
+                onChange={(e) => setEducationYears(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                placeholder="למשל 12"
+                inputMode="numeric"
+                className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none"
+              />
+            </div>
           </div>
 
           {error && (
