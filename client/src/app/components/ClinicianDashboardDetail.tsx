@@ -47,6 +47,7 @@ interface SessionWithPatient extends DBSession {
   task_results?: TaskResult[];
   drawings?: DrawingReviewRow[];
   scoring_reviews?: ScoringReviewRow[];
+  audio_evidence_reviews?: ScoringReviewRow[];
   scoring_report?: DBScoringReport | null;
 }
 
@@ -193,12 +194,13 @@ export function ClinicianDashboardDetail() {
   }, [sessionRecord]);
 
   const reviewQueue = useMemo(() => {
+    const scoringReviews = (sessionRecord?.scoring_reviews ?? []).filter((row) => row.max_score > 0);
     return REVIEW_TABS.map((tab) => {
       const tabDrawingTaskId = DRAWING_TAB_TO_TASK_ID[tab.id];
       const tabScoringTaskId = SCORING_TAB_TO_TASK_ID[tab.id];
       const review = tabDrawingTaskId
         ? sessionRecord?.drawings?.find((row) => row.task_id === tabDrawingTaskId)
-        : sessionRecord?.scoring_reviews?.find((row) => row.item_id === tabScoringTaskId || row.task_type === tabScoringTaskId);
+        : scoringReviews.find((row) => row.item_id === tabScoringTaskId || row.task_type === tabScoringTaskId);
       const maxScore = tabDrawingTaskId ? (tab.id === "clock" ? 3 : 1) : (review as ScoringReviewRow | undefined)?.max_score;
       return {
         ...tab,
@@ -207,6 +209,15 @@ export function ClinicianDashboardDetail() {
         isReviewed: review?.clinician_score != null,
       };
     }).filter((tab) => !!tab.review);
+  }, [sessionRecord]);
+  const audioEvidenceReviews = useMemo(() => {
+    const explicitEvidence = sessionRecord?.audio_evidence_reviews ?? [];
+    const legacyEvidence = (sessionRecord?.scoring_reviews ?? []).filter((row) => row.max_score === 0);
+    const byTaskType = new Map<string, ScoringReviewRow>();
+    for (const review of [...explicitEvidence, ...legacyEvidence]) {
+      if (typeof review.raw_data?.audioSignedUrl === "string") byTaskType.set(review.task_type, review);
+    }
+    return Array.from(byTaskType.values());
   }, [sessionRecord]);
 
   const pendingQueue = useMemo(() => reviewQueue.filter((tab) => !tab.isReviewed), [reviewQueue]);
@@ -225,7 +236,7 @@ export function ClinicianDashboardDetail() {
     .reverse()
     .find((result: any) => result.task_type === (drawingTaskId ?? scoringTaskId));
   const currentScoringReview = scoringTaskId
-    ? sessionRecord?.scoring_reviews?.find((review) => review.item_id === scoringTaskId || review.task_type === scoringTaskId)
+    ? sessionRecord?.scoring_reviews?.find((review) => review.max_score > 0 && (review.item_id === scoringTaskId || review.task_type === scoringTaskId))
     : null;
   const currentEvidence = currentScoringReview?.raw_data ?? currentTaskResult?.raw_data ?? null;
   const currentStrokes = normalizeStrokes(currentDrawing?.strokes_data ?? currentTaskResult?.raw_data);
@@ -790,6 +801,25 @@ export function ClinicianDashboardDetail() {
             );
           })}
         </div>
+
+        {audioEvidenceReviews.length > 0 && (
+          <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-extrabold text-blue-950">
+              <Mic className="h-4 w-4" />
+              <span>עדויות קוליות לבדיקה קלינית</span>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {audioEvidenceReviews.map((review) => (
+                <div key={review.id} className="rounded-lg border border-blue-100 bg-white p-3">
+                  <div className="mb-2 text-xs font-extrabold text-gray-500" dir="ltr">
+                    {review.task_type}
+                  </div>
+                  <PlaybackAudio audioId={review.raw_data.audioSignedUrl} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-12 gap-8">

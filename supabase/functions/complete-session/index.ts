@@ -105,18 +105,7 @@ Deno.serve(async (req) => {
       raw_data: item.rawData ?? null,
     }));
 
-  const existingReviewItemIds = new Set(scoringReviewRows.map(row => row.item_id));
-  const audioEvidenceReviewRows = (taskResults ?? [])
-    .filter((result: any) => !existingReviewItemIds.has(result.task_type) && audioStoragePathFromRaw(result.raw_data))
-    .map((result: any) => ({
-      session_id: session.id,
-      item_id: result.task_type,
-      task_type: result.task_type,
-      max_score: 0,
-      raw_data: result.raw_data ?? null,
-    }));
-
-  const reviewRows = [...scoringReviewRows, ...audioEvidenceReviewRows];
+  const reviewRows = scoringReviewRows;
   if (reviewRows.length > 0) {
     const { error: scoringReviewError } = await supabase
       .from('scoring_item_reviews')
@@ -208,10 +197,3 @@ Deno.serve(async (req) => {
 
   return json({ ok: true, scoringReport: report }, 200, req);
 });
-
-function audioStoragePathFromRaw(rawData: any): string | null {
-  if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) return null;
-  if (typeof rawData.audioStoragePath === 'string') return rawData.audioStoragePath;
-  if (typeof rawData.audioId === 'string' && rawData.audioId.includes('/')) return rawData.audioId;
-  return null;
-}

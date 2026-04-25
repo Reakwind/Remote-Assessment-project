@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       *,
       scoring_reports(*),
       drawing_reviews(task_id, clinician_score, clinician_notes, reviewed_at),
-      scoring_item_reviews(item_id, task_type, clinician_score, clinician_notes, reviewed_at)
+      scoring_item_reviews(item_id, task_type, max_score, clinician_score, clinician_notes, reviewed_at)
     `)
     .eq('id', body.sessionId)
     .eq('clinician_id', user.id)
@@ -72,13 +72,15 @@ Deno.serve(async (req) => {
       notes: review.clinician_notes,
       reviewedAt: review.reviewed_at,
     })),
-    ...(session.scoring_item_reviews ?? []).map((review: any) => ({
-      kind: 'Manual item',
-      item: review.item_id ?? review.task_type,
-      score: review.clinician_score,
-      notes: review.clinician_notes,
-      reviewedAt: review.reviewed_at,
-    })),
+    ...(session.scoring_item_reviews ?? [])
+      .filter((review: any) => Number(review.max_score ?? 0) > 0)
+      .map((review: any) => ({
+        kind: 'Manual item',
+        item: review.item_id ?? review.task_type,
+        score: review.clinician_score,
+        notes: review.clinician_notes,
+        reviewedAt: review.reviewed_at,
+      })),
   ];
 
   const doc = new jsPDF();
