@@ -27,19 +27,24 @@ interface ScoringSummary {
   pending_review_count: number | null;
 }
 
+interface PatientSessionSummary {
+  id: string;
+  status: "pending" | "in_progress" | "completed" | "awaiting_review";
+  created_at: string;
+  scoring_reports: ScoringSummary | ScoringSummary[] | null;
+}
+
 interface PatientWithSessions {
   id: string;
   case_id: string | null;
   full_name: string;
   created_at: string;
-  sessions:
-    | {
-        id: string;
-        status: "pending" | "in_progress" | "completed" | "awaiting_review";
-        created_at: string;
-        scoring_reports: ScoringSummary[] | null;
-      }[]
-    | null;
+  sessions: PatientSessionSummary | PatientSessionSummary[] | null;
+}
+
+function relationArray<T>(value: T | T[] | null | undefined): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 function reportScore(report: ScoringSummary | null | undefined): number | null {
@@ -51,9 +56,10 @@ function reportNeedsReview(report: ScoringSummary | null | undefined): boolean {
   return report.total_provisional ?? report.needs_review ?? false;
 }
 
-function deriveStatus(sessions: PatientWithSessions["sessions"]): PatientRow["status"] {
+function deriveStatus(sessionValue: PatientWithSessions["sessions"]): PatientRow["status"] {
+  const sessions = relationArray(sessionValue);
   if (!sessions || sessions.length === 0) return "new";
-  if (sessions.some((s) => s.status === "awaiting_review" || s.scoring_reports?.some(reportNeedsReview))) return "review";
+  if (sessions.some((s) => s.status === "awaiting_review" || relationArray(s.scoring_reports).some(reportNeedsReview))) return "review";
   if (sessions.some((s) => s.status === "in_progress")) return "in_progress";
   if (sessions.every((s) => s.status === "completed")) return "completed";
   return "new";
@@ -77,56 +83,60 @@ export function ClinicianDashboardList() {
 
   const loadPatients = useCallback(async () => {
     setLoading(true);
-    const { data: authData } = await supabase.auth.getSession();
-    const session = authData.session;
-    if (!session) {
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      const session = authData.session;
+      if (!session) {
+        setRows([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("patients")
+        .select(
+          "id, case_id, full_name, created_at, sessions(id, status, created_at, scoring_reports(total_adjusted, total_provisional, pending_review_count, total_score, needs_review))",
+        )
+        .eq("clinician_id", session.user.id)
+        .order("created_at", { ascending: false });
+
+      if (error || !data) {
+        console.error("Failed to fetch patients", error);
+        setRows([]);
+        return;
+      }
+
+      const mapped: PatientRow[] = (data as PatientWithSessions[]).map((p) => {
+        const sessions = relationArray(p.sessions);
+        const completed = sessions.filter((s) => s.status === "completed").length;
+        const latestSession = latestOf(sessions, (s) => s.created_at);
+        const latestScore =
+          sessions
+            .flatMap((s) => relationArray(s.scoring_reports))
+            .map(reportScore)
+            .filter((score): score is number => score != null)
+            .sort((a, b) => b - a)[0] ?? null;
+        const needsReview = sessions.some((s) => s.status === "awaiting_review" || relationArray(s.scoring_reports).some(reportNeedsReview));
+        return {
+          id: p.id,
+          case_id: p.case_id,
+          full_name: p.full_name,
+          created_at: p.created_at,
+          tests: sessions.length,
+          completed,
+          lastActive: latestSession ?? p.created_at,
+          latestScore,
+          needsReview,
+          status: deriveStatus(sessions),
+        };
+      });
+
+      setRows(mapped);
+    } catch (error) {
+      console.error("Failed to load patients", error);
       setRows([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data, error } = await supabase
-      .from("patients")
-      .select(
-        "id, case_id, full_name, created_at, sessions(id, status, created_at, scoring_reports(total_adjusted, total_provisional, pending_review_count, total_score, needs_review))",
-      )
-      .eq("clinician_id", session.user.id)
-      .order("created_at", { ascending: false });
-
-    if (error || !data) {
-      console.error("Failed to fetch patients", error);
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    const mapped: PatientRow[] = (data as PatientWithSessions[]).map((p) => {
-      const sessions = p.sessions ?? [];
-      const completed = sessions.filter((s) => s.status === "completed").length;
-      const latestSession = latestOf(sessions, (s) => s.created_at);
-      const latestScore =
-        sessions
-          .flatMap((s) => s.scoring_reports ?? [])
-          .map(reportScore)
-          .filter((score): score is number => score != null)
-          .sort((a, b) => b - a)[0] ?? null;
-      const needsReview = sessions.some((s) => s.status === "awaiting_review" || s.scoring_reports?.some(reportNeedsReview));
-      return {
-        id: p.id,
-        case_id: p.case_id,
-        full_name: p.full_name,
-        created_at: p.created_at,
-        tests: sessions.length,
-        completed,
-        lastActive: latestSession ?? p.created_at,
-        latestScore,
-        needsReview,
-        status: deriveStatus(sessions),
-      };
-    });
-
-    setRows(mapped);
-    setLoading(false);
   }, []);
 
   useEffect(() => {

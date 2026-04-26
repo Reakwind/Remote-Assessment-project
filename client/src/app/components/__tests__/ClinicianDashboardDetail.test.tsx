@@ -67,6 +67,12 @@ function sessionPayload(sessionOverrides: Record<string, unknown> = {}) {
         total_provisional: false,
         needs_review: false,
         pending_review_count: 0,
+        domains: [
+          { domain: 'visuospatial', raw: 5, max: 5, items: [] },
+          { domain: 'naming', raw: 2, max: 3, items: [] },
+          { domain: 'attention', raw: 6, max: 6, items: [] },
+          { domain: 'memory', raw: 5, max: 5, items: [] },
+        ],
         subscores: {},
       },
       ...sessionOverrides,
@@ -149,6 +155,8 @@ describe('ClinicianDashboardDetail', () => {
 
     await screen.findByRole('heading', { name: 'תיק CASE-1' });
     expect(screen.getByText('CSV זמין גם לפני סיום סקירה ויכול לכלול נתונים זמניים.')).toBeInTheDocument();
+    expect(screen.getByText('שיום')).toBeInTheDocument();
+    expect(screen.getByText('2/3')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'האזן להקלטת המטופל' })).toBeInTheDocument();
     expect(screen.queryByText(/audioStoragePath/)).not.toBeInTheDocument();
     expect(screen.queryByText(/audioSignedUrl/)).not.toBeInTheDocument();

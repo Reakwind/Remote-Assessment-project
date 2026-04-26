@@ -43,7 +43,7 @@ interface PatientSession {
   created_at: string;
   completed_at: string | null;
   access_code: string | null;
-  scoring_reports: ScoringSummary[] | null;
+  scoring_reports: ScoringSummary | ScoringSummary[] | null;
 }
 
 const STATUS_LABELS: Record<PatientSession["status"], string> = {
@@ -71,6 +71,11 @@ function formatDate(iso: string | null): string {
 
 function reportScore(report: ScoringSummary | null | undefined): number | null {
   return report?.total_adjusted ?? report?.total_score ?? null;
+}
+
+function relationArray<T>(value: T | T[] | null | undefined): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 function caseLabel(patient: PatientRecord): string {
@@ -105,30 +110,41 @@ export function PatientProfilePage() {
     const background = Boolean(options?.background);
     if (!background) setLoading(true);
 
-    const { data: patientData, error: patientError } = await supabase
-      .from("patients")
-      .select("id, case_id, full_name, phone, date_of_birth, gender, language, dominant_hand, education_years, created_at")
-      .eq("id", patientId)
-      .maybeSingle();
+    try {
+      const { data: patientData, error: patientError } = await supabase
+        .from("patients")
+        .select("id, case_id, full_name, phone, date_of_birth, gender, language, dominant_hand, education_years, created_at")
+        .eq("id", patientId)
+        .maybeSingle();
 
-    if (patientError || !patientData) {
+      if (patientError || !patientData) {
+        setNotFound(true);
+        return;
+      }
+
+      setPatient(patientData as PatientRecord);
+
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from("sessions")
+        .select(
+          "id, case_id, status, assessment_type, created_at, completed_at, access_code, scoring_reports(total_adjusted, total_provisional, total_score, needs_review)",
+        )
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false });
+
+      if (sessionsError) {
+        console.error("Failed to fetch patient sessions", sessionsError);
+        setSessions([]);
+        return;
+      }
+
+      setSessions((sessionsData ?? []) as PatientSession[]);
+    } catch (error) {
+      console.error("Failed to load patient profile", error);
       setNotFound(true);
+    } finally {
       if (!background) setLoading(false);
-      return;
     }
-
-    setPatient(patientData as PatientRecord);
-
-    const { data: sessionsData } = await supabase
-      .from("sessions")
-      .select(
-        "id, case_id, status, assessment_type, created_at, completed_at, access_code, scoring_reports(total_adjusted, total_provisional, total_score, needs_review)",
-      )
-      .eq("patient_id", patientId)
-      .order("created_at", { ascending: false });
-
-    setSessions((sessionsData ?? []) as PatientSession[]);
-    if (!background) setLoading(false);
   }, [patientId]);
 
   useEffect(() => {
@@ -157,7 +173,7 @@ export function PatientProfilePage() {
 
   const completedCount = sessions.filter((s) => s.status === "completed").length;
   const latestScore = sessions
-    .flatMap((s) => s.scoring_reports ?? [])
+    .flatMap((s) => relationArray(s.scoring_reports))
     .map(reportScore)
     .find((score) => score != null);
 
@@ -293,7 +309,7 @@ export function PatientProfilePage() {
             </thead>
             <tbody>
               {sessions.map((s) => {
-                const score = reportScore(s.scoring_reports?.[0]);
+                const score = reportScore(relationArray(s.scoring_reports)[0]);
                 return (
                   <tr
                     key={s.id}

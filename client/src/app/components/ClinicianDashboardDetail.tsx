@@ -116,6 +116,16 @@ function getPendingReviewCount(report: DBScoringReport | null): number {
   return report.pending_review_count ?? (getReportNeedsReview(report) ? 1 : 0);
 }
 
+function getDomainRaw(report: DBScoringReport | null, domainId: string): number | null {
+  const legacySubscores = (report?.subscores ?? {}) as Record<string, unknown>;
+  const legacyRaw = legacySubscores[domainId];
+  if (typeof legacyRaw === "number") return legacyRaw;
+
+  const domains = Array.isArray(report?.domains) ? report.domains : [];
+  const domain = domains.find((candidate: any) => candidate?.domain === domainId);
+  return typeof domain?.raw === "number" ? domain.raw : null;
+}
+
 function scoreSerial7Rubric(correctCount: number): number {
   if (correctCount >= 4) return 3;
   if (correctCount >= 2) return 2;
@@ -481,11 +491,6 @@ export function ClinicianDashboardDetail() {
   };
 
   const summary = useMemo(() => {
-    const subscores: Record<string, number | null> = (reportRecord?.subscores ?? {}) as Record<
-      string,
-      number | null
-    >;
-
     const pill = (raw: number | null, cap: number): { value: string; color: "warn" | "pass" | "neutral" } => {
       if (raw == null) return { value: "—", color: "neutral" };
       const pct = raw / cap;
@@ -500,10 +505,10 @@ export function ClinicianDashboardDetail() {
 
     return [
       { label: "סך הכל MoCA", ...totalPill },
-      { label: "מרחבי-חזותי", ...pill(subscores.visuospatial ?? null, SUBSCORE_CAPS.visuospatial) },
-      { label: "שיום", ...pill(subscores.naming ?? null, SUBSCORE_CAPS.naming) },
-      { label: "זכירה מושהית", ...pill(subscores.delayedRecall ?? null, SUBSCORE_CAPS.delayedRecall) },
-      { label: "קשב", ...pill(subscores.attention ?? null, SUBSCORE_CAPS.attention) },
+      { label: "מרחבי-חזותי", ...pill(getDomainRaw(reportRecord, "visuospatial"), SUBSCORE_CAPS.visuospatial) },
+      { label: "שיום", ...pill(getDomainRaw(reportRecord, "naming"), SUBSCORE_CAPS.naming) },
+      { label: "זכירה מושהית", ...pill(getDomainRaw(reportRecord, "memory"), SUBSCORE_CAPS.delayedRecall) },
+      { label: "קשב", ...pill(getDomainRaw(reportRecord, "attention"), SUBSCORE_CAPS.attention) },
       {
         label: "משך זמן",
         value: formatDuration(sessionRecord?.started_at ?? null, sessionRecord?.completed_at ?? null),
