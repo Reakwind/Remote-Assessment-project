@@ -85,6 +85,24 @@ Required verification:
 - Client and server test coverage for changed rules.
 - Explicit review of manual-review fallbacks for unsupported or ambiguous inputs.
 
+### 5. Keep Edge Function contracts single-named
+
+Evidence:
+
+- PR `#74` removed the legacy task-submit alias so patient task persistence uses canonical `submit-results` everywhere.
+
+Rules:
+
+- Do not keep two Edge Function routes for one app contract unless there is a documented compatibility window.
+- When removing an alias, update client calls, CI Deno checks, local E2E commands, hosted deployment docs, and journey docs in the same branch.
+- Prefer canonical names from `JOURNEY.md` over local convenience aliases.
+
+Required verification:
+
+- `rg` confirms the removed route name is absent from active code/docs.
+- Deno type checks use only existing function entrypoints.
+- Browser/local E2E exercises the canonical endpoint.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:

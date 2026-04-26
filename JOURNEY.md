@@ -70,7 +70,7 @@ One-time patient start semantics remain strict. Same-device resume is offered fr
 | `create-session` | Clinician | Create pending session from a complete patient profile, internal session token, and patient-facing test number. |
 | `start-session` | Patient | Rate-limit and validate one-time 8-digit test number, then return scoring context plus internal session token for post-start saves. |
 | `get-stimuli` | Patient | Return the active MoCA version's private stimulus manifest with short-lived signed URLs. |
-| `submit-results` / `submit-task` | Patient | Idempotently persist task result payloads. |
+| `submit-results` | Patient | Idempotently persist task result payloads. |
 | `save-drawing` | Patient | Store drawing strokes and optional PNG in private storage/review row. |
 | `save-audio` | Patient | Store audio evidence in private storage and attach path to raw data. |
 | `complete-session` | Patient | Run server-side scoring, create review rows, update status, notify clinician, audit completion. |

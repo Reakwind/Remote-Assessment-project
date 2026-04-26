@@ -11,7 +11,6 @@ import { StatusPill } from "./StatusPill";
 interface PatientRow {
   id: string;
   case_id: string | null;
-  full_name: string;
   created_at: string;
   tests: number;
   completed: number;
@@ -39,7 +38,6 @@ interface PatientSessionSummary {
 interface PatientWithSessions {
   id: string;
   case_id: string | null;
-  full_name: string;
   created_at: string;
   sessions: PatientSessionSummary | PatientSessionSummary[] | null;
 }
@@ -101,7 +99,7 @@ export function ClinicianDashboardList() {
       const { data, error } = await supabase
         .from("patients")
         .select(
-          "id, case_id, full_name, created_at, sessions(id, status, created_at, scoring_reports(total_adjusted, total_provisional, pending_review_count, total_score, needs_review))",
+          "id, case_id, created_at, sessions(id, status, created_at, scoring_reports(total_adjusted, total_provisional, pending_review_count, total_score, needs_review))",
         )
         .eq("clinician_id", session.user.id)
         .order("created_at", { ascending: false });
@@ -126,7 +124,6 @@ export function ClinicianDashboardList() {
         return {
           id: p.id,
           case_id: p.case_id,
-          full_name: p.full_name,
           created_at: p.created_at,
           tests: sessions.length,
           completed,

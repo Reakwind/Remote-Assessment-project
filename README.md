@@ -113,7 +113,7 @@ Backend/local E2E:
 
 ```bash
 supabase start
-supabase functions serve create-session start-session get-stimuli submit-results submit-task save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null
+supabase functions serve create-session start-session get-stimuli submit-results save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null
 node scripts/local-e2e.mjs --all-versions
 ```
 

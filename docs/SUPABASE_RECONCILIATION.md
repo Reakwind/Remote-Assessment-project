@@ -71,7 +71,6 @@ Observed on 2026-04-26:
   - `get-session`
   - `get-stimuli`
   - `save-audio`
-  - `submit-task`
   - `update-drawing-review`
   - `update-scoring-review`
   - `export-pdf`
@@ -156,7 +155,6 @@ supabase functions deploy create-session
 supabase functions deploy start-session
 supabase functions deploy get-stimuli
 supabase functions deploy submit-results
-supabase functions deploy submit-task
 supabase functions deploy save-drawing
 supabase functions deploy save-audio
 supabase functions deploy complete-session
@@ -170,7 +168,7 @@ supabase functions deploy export-csv
 Before deploying, run:
 
 ```bash
-deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/get-stimuli/index.ts supabase/functions/submit-results/index.ts supabase/functions/submit-task/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts supabase/functions/export-pdf/index.ts supabase/functions/export-csv/index.ts
+deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/get-stimuli/index.ts supabase/functions/submit-results/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts supabase/functions/export-pdf/index.ts supabase/functions/export-csv/index.ts
 ```
 
 ## Step 5: Verify Secrets

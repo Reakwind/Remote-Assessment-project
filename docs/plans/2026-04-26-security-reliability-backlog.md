@@ -34,7 +34,7 @@ Scope:
 Use a separate branch because this changes patient flow behavior and needs more browser testing.
 
 - Add a per-task pending/saved/error state in the assessment store.
-- Retry failed `submit-task`, `save-drawing`, and `save-audio` calls with bounded backoff.
+- Retry failed `submit-results`, `save-drawing`, and `save-audio` calls with bounded backoff.
 - Persist unsent task payloads locally so refresh does not lose evidence.
 - Block final completion while required evidence is still unsynced.
 - Surface clear patient-facing retry copy when sync is failing.

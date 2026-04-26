@@ -43,7 +43,6 @@ describe('ClinicianDashboardList', () => {
         {
           id: 'patient-1',
           case_id: 'CASE-1',
-          full_name: 'CASE-1',
           created_at: '2026-04-25T12:00:00.000Z',
           sessions: [
             {
@@ -76,6 +75,7 @@ describe('ClinicianDashboardList', () => {
     expect(await screen.findByText('1 תיקים · 1 דורשים סקירה')).toBeInTheDocument();
     expect(screen.getAllByText('29/30').length).toBeGreaterThan(0);
     expect(screen.getAllByText('בבדיקה').length).toBeGreaterThan(0);
+    expect(selectMock).toHaveBeenCalledWith(expect.not.stringContaining('full_name'));
     await waitFor(() => expect(screen.queryByText('טוען...')).not.toBeInTheDocument());
   });
 });

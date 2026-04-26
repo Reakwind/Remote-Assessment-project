@@ -50,7 +50,6 @@ supabase functions deploy create-session
 supabase functions deploy start-session
 supabase functions deploy get-stimuli
 supabase functions deploy submit-results
-supabase functions deploy submit-task
 supabase functions deploy save-drawing
 supabase functions deploy save-audio
 supabase functions deploy complete-session

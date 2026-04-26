@@ -225,7 +225,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
           rawData = { ...data, drawingPath: storagePath };
         }
 
-        const response = await fetch(edgeFn('submit-task'), {
+        const response = await fetch(edgeFn('submit-results'), {
           method: 'POST',
           headers: edgeHeaders(),
           body: JSON.stringify({

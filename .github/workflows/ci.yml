@@ -52,7 +52,6 @@ jobs:
             supabase/functions/start-session/index.ts \
             supabase/functions/get-stimuli/index.ts \
             supabase/functions/submit-results/index.ts \
-            supabase/functions/submit-task/index.ts \
             supabase/functions/save-drawing/index.ts \
             supabase/functions/save-audio/index.ts \
             supabase/functions/get-session/index.ts \
