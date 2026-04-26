@@ -31,7 +31,7 @@ test('pilot MVP browser flow: patient completes and clinician review APIs finali
   expect(started.patientAge).toBeGreaterThanOrEqual(60);
   expect(started.educationYears).toBe(16);
 
-  await runPatientClickThrough(page, created.linkToken, started);
+  await runPatientClickThrough(page, started.linkToken, started);
 
   const provisional = await getSession(request, clinician.accessToken, created.sessionId);
   expect(provisional.session.status).toBe('awaiting_review');
@@ -68,6 +68,71 @@ test('pilot MVP browser flow: patient completes and clinician review APIs finali
   expect(final.session.status).toBe('completed');
   expect(final.session.scoring_report.pending_review_count).toBe(0);
   expect(final.session.scoring_report.total_provisional).toBe(false);
+});
+
+test('review regression: session creation exposes test number but not patient bearer token', async ({ request }) => {
+  const runId = Date.now();
+  const clinician = await createClinician(request, `browser-token-${runId}@example.test`);
+  const patient = await createCase(request, clinician.accessToken, `TOKEN-E2E-${runId}`);
+  const created = await createSession(request, clinician.accessToken, patient.id);
+
+  expect(created.testNumber).toMatch(/^\d{8}$/);
+  expect(created.sessionUrl).toContain(created.testNumber);
+
+  const started = await startPatientSession(request, created.testNumber);
+  expect(started.linkToken).toBeTruthy();
+  expect(started.linkToken).not.toBe(created.testNumber);
+});
+
+test('review regression: audio evidence stays private and outside scoring review rows', async ({ request }) => {
+  const runId = Date.now();
+  const clinician = await createClinician(request, `browser-audio-${runId}@example.test`);
+  const patient = await createCase(request, clinician.accessToken, `AUDIO-E2E-${runId}`);
+  const created = await createSession(request, clinician.accessToken, patient.id);
+  const started = await startPatientSession(request, created.testNumber);
+
+  const malformedAudio = await saveAudioResponse(request, started.sessionId, started.linkToken, {
+    taskType: 'moca-memory-learning',
+    audioBase64: 'not-a-data-url',
+    contentType: 'audio/webm',
+  });
+  expect(malformedAudio.status()).toBe(400);
+  await expectJsonError(malformedAudio, 'audioBase64 must be a supported audio data URL');
+
+  const audio = await saveAudio(request, started.sessionId, started.linkToken, {
+    taskType: 'moca-memory-learning',
+    audioBase64: 'data:audio/webm;base64,QUJD',
+    contentType: 'audio/webm',
+  });
+  expect(audio.audioStoragePath).toMatch(new RegExp(`^${started.sessionId}/moca-memory-learning\\.webm$`));
+  await expectAnonAudioReadBlocked(request, audio.audioStoragePath);
+
+  await submitResult(request, started.sessionId, started.linkToken, 'moca-memory-learning', {
+    audioId: audio.audioStoragePath,
+    audioStoragePath: audio.audioStoragePath,
+    audioContentType: audio.audioContentType,
+  });
+  await completeSession(request, started.sessionId, started.linkToken);
+
+  const session = await getSession(request, clinician.accessToken, started.sessionId);
+  type ReviewRow = {
+    max_score?: unknown;
+    task_type?: unknown;
+    raw_data?: {
+      audioStoragePath?: unknown;
+      audioSignedUrl?: unknown;
+    };
+  };
+  const scoringReviews = session.session.scoring_reviews as ReviewRow[];
+  const audioEvidence = session.session.audio_evidence_reviews as ReviewRow[];
+
+  expect(scoringReviews.every(review => Number(review.max_score) > 0)).toBeTruthy();
+  expect(scoringReviews.some(review => review.raw_data?.audioStoragePath)).toBeFalsy();
+  expect(audioEvidence.some(review =>
+    review.task_type === 'moca-memory-learning' &&
+    review.raw_data?.audioStoragePath === audio.audioStoragePath &&
+    typeof review.raw_data?.audioSignedUrl === 'string'
+  )).toBeTruthy();
 });
 
 async function createClinician(request: APIRequestContext, email: string) {
@@ -120,9 +185,9 @@ async function createSession(request: APIRequestContext, accessToken: string, pa
   expect(response.ok()).toBeTruthy();
   const body = await response.json();
   expect(body.sessionId).toBeTruthy();
-  expect(body.linkToken).toBeTruthy();
+  expect(body.linkToken).toBeUndefined();
   expect(body.testNumber).toMatch(/^\d{8}$/);
-  return body as { sessionId: string; linkToken: string; testNumber: string };
+  return body as { sessionId: string; sessionUrl: string; testNumber: string };
 }
 
 async function startPatientSession(request: APIRequestContext, testNumber: string) {
@@ -187,6 +252,64 @@ async function updateDrawingReview(request: APIRequestContext, accessToken: stri
 
 async function updateScoringReview(request: APIRequestContext, accessToken: string, reviewId: string, clinicianScore: number) {
   const response = await updateScoringReviewResponse(request, accessToken, reviewId, clinicianScore);
+  expect(response.ok()).toBeTruthy();
+}
+
+async function saveAudio(
+  request: APIRequestContext,
+  sessionId: string,
+  linkToken: string,
+  audio: { taskType: string; audioBase64: string; contentType: string },
+) {
+  const response = await saveAudioResponse(request, sessionId, linkToken, audio);
+  expect(response.ok()).toBeTruthy();
+  return response.json() as Promise<{ audioStoragePath: string; audioContentType: string }>;
+}
+
+async function saveAudioResponse(
+  request: APIRequestContext,
+  sessionId: string,
+  linkToken: string,
+  audio: { taskType: string; audioBase64: string; contentType: string },
+) {
+  return request.post(`${SUPABASE_URL}/functions/v1/save-audio`, {
+    headers: anonHeaders(),
+    data: {
+      sessionId,
+      linkToken,
+      taskType: audio.taskType,
+      audioBase64: audio.audioBase64,
+      contentType: audio.contentType,
+    },
+  });
+}
+
+async function expectAnonAudioReadBlocked(request: APIRequestContext, storagePath: string) {
+  const response = await request.get(`${SUPABASE_URL}/storage/v1/object/audio/${storagePath}`, {
+    headers: anonHeaders(),
+  });
+  expect([400, 401, 403, 404]).toContain(response.status());
+}
+
+async function submitResult(
+  request: APIRequestContext,
+  sessionId: string,
+  linkToken: string,
+  taskType: string,
+  rawData: Record<string, unknown>,
+) {
+  const response = await request.post(`${SUPABASE_URL}/functions/v1/submit-results`, {
+    headers: anonHeaders(),
+    data: { sessionId, linkToken, taskType, rawData },
+  });
+  expect(response.ok()).toBeTruthy();
+}
+
+async function completeSession(request: APIRequestContext, sessionId: string, linkToken: string) {
+  const response = await request.post(`${SUPABASE_URL}/functions/v1/complete-session`, {
+    headers: anonHeaders(),
+    data: { sessionId, linkToken },
+  });
   expect(response.ok()).toBeTruthy();
 }
 
