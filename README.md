@@ -11,14 +11,16 @@ Read these first:
 1. [README.md](README.md)
 2. [AGENTS.md](AGENTS.md)
 3. [JOURNEY.md](JOURNEY.md)
-4. [CONTEXT.md](CONTEXT.md)
-5. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
-6. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
-7. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-8. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-9. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+4. [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md)
+5. [CONTEXT.md](CONTEXT.md)
+6. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
+7. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
+8. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
+9. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
+10. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
 
 `JOURNEY.md` is the bird's-eye patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
+`docs/HEBREW_TERMINOLOGY.md` is the Hebrew UI terminology authority. Use it before changing patient or clinician copy.
 `docs/DEVELOPMENT_PROCESS.md` defines the provider-neutral development workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
 `docs/AGENT_LEARNINGS.md` captures durable lessons from recent PRs and reviews so future agents can inherit them directly from the repo.
 

@@ -57,8 +57,8 @@ export function SessionValidation() {
   ]);
 
   const getErrorMessage = () => {
-    if (session.status === 'already_used') return "מספר המבחן כבר שומש. אנא פנה לקלינאי למספר חדש.";
-    if (session.status === 'invalid') return "קוד המבחן אינו תקין. הקוד שהזנת אינו קיים במערכת.";
+    if (session.status === 'already_used') return "מספר המבדק כבר שומש. אנא פנה לקלינאי למספר חדש.";
+    if (session.status === 'invalid') return "מספר המבדק אינו תקין. המספר שהזנת אינו קיים במערכת.";
     if (session.status === 'error') return "אירעה שגיאה בתקשורת עם השרת. אנא נסה שוב מאוחר יותר.";
     return null;
   };
@@ -77,7 +77,7 @@ export function SessionValidation() {
               <AlertTriangle className="w-10 h-10" />
             </div>
             <h1 className="text-3xl font-extrabold text-black mb-4">
-              קוד מבחן אינו תקין
+              מספר מבדק אינו תקין
             </h1>
             <p className="text-xl text-gray-600 mb-8">{error}</p>
             
@@ -93,7 +93,7 @@ export function SessionValidation() {
           <div className="flex flex-col items-center">
             <Loader2 className="w-16 h-16 text-blue-600 animate-spin mb-6" />
             <h1 className="text-2xl font-bold text-black mb-2">
-              מאמת קוד מבחן...
+              מאמת מספר מבדק...
             </h1>
             <p className="text-gray-500">אנא המתן, מכין את המערכת</p>
           </div>

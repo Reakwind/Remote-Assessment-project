@@ -136,16 +136,16 @@ export function PatientWelcome() {
         <div className="max-w-2xl w-full bg-white rounded-3xl border border-gray-200 shadow-lg overflow-hidden">
           <div className="p-10 border-b border-gray-100">
             <h2 className="text-4xl font-extrabold text-black mb-6">
-              ברוך הבא למבחן MoCA
+              ברוך הבא למבדק MoCA
             </h2>
             <div className="space-y-4 text-2xl text-gray-700">
-              <p>המבחן כולל 12 משימות קצרות.</p>
+              <p>המבדק כולל 12 משימות קצרות.</p>
               <p>זמן משוער: 25-30 דקות.</p>
             </div>
             
             <div className="mt-8 bg-blue-50 border border-blue-100 rounded-2xl p-6">
               <h3 className="text-xl font-bold text-blue-900 mb-4 flex items-center gap-2">
-                💡 טיפים להצלחה:
+                לפני שמתחילים:
               </h3>
               <ul className="space-y-3 text-lg text-blue-800">
                 <li>• מצא מקום שקט ללא הסחות דעת</li>
@@ -243,7 +243,7 @@ export function PatientWelcome() {
                   canStart ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed",
                 )}
               >
-                התחל מבחן
+                התחל מבדק
                 <ArrowLeft className="w-8 h-8" />
               </button>
             </div>

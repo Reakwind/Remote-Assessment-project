@@ -42,7 +42,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
     setError(null);
 
     if (missingClinicalFields.length > 0) {
-      setError("יש להשלים את כל פרטי הרקע הקליניים לפני פתיחת מבחן.");
+      setError("יש להשלים את כל פרטי הרקע הקליניים לפני פתיחת מבדק.");
       return;
     }
     if (assessmentType !== "moca") {
@@ -83,18 +83,18 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
 
       const payload = await res.json();
       if (!res.ok) {
-        throw new Error(payload?.error || "פתיחת מבחן נכשלה.");
+        throw new Error(payload?.error || "פתיחת מבדק נכשלה.");
       }
 
       const testNumber = payload.testNumber ?? payload.accessCode;
       if (!/^\d{8}$/.test(testNumber)) {
-        throw new Error("מספר מבחן לא התקבל מהשרת.");
+        throw new Error("מספר מבדק לא התקבל מהשרת.");
       }
 
       setResult({ testNumber });
       onOrdered?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "פתיחת מבחן נכשלה.");
+      setError(err instanceof Error ? err.message : "פתיחת מבדק נכשלה.");
     } finally {
       setSubmitting(false);
     }
@@ -127,10 +127,10 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             </div>
             <div className="min-w-0">
               <h2 className="text-xl sm:text-2xl font-extrabold text-black">
-                {result ? "המבחן נוצר בהצלחה" : "פתיחת מבחן חדש"}
+                {result ? "המבדק נוצר בהצלחה" : "פתיחת מבדק חדש"}
               </h2>
               <p className="text-gray-500 text-sm">
-                {result ? "העתק את מספר המבחן ושלח אותו למטופל" : `עבור תיק ${patient.case_id ?? patient.full_name}`}
+                {result ? "העתק את מספר המבדק ושלח אותו למטופל" : `עבור תיק ${caseDisplay(patient)}`}
               </p>
             </div>
           </div>
@@ -182,12 +182,12 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600">
-              גיל, שנות לימוד ושאר נתוני הרקע יילקחו מפרטי התיק השמורים. ייווצר מספר מבחן להעתקה ושליחה למטופל.
+              גיל, שנות לימוד ושאר נתוני הרקע יילקחו מפרטי התיק השמורים. ייווצר מספר מבדק להעתקה ושליחה למטופל.
             </div>
 
             {missingClinicalFields.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-sm font-bold">
-                <div>יש להשלים פרטי רקע לפני פתיחת מבחן:</div>
+                <div>יש להשלים פרטי רקע לפני פתיחת מבדק:</div>
                 <div className="mt-1 font-medium">{missingClinicalFields.join(" · ")}</div>
               </div>
             )}
@@ -211,7 +211,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
                 disabled={!canCreateSession}
                 className="flex-1 h-14 rounded-xl bg-black text-white font-bold hover:bg-gray-800 disabled:opacity-60"
               >
-                {submitting ? "יוצר..." : "צור מספר מבחן"}
+                {submitting ? "יוצר..." : "צור מספר מבדק"}
               </button>
             </div>
           </form>
@@ -222,7 +222,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-green-50 border border-green-200 rounded-xl p-4 text-green-800 font-bold">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="w-6 h-6" />
-                <span>המבחן נוצר בהצלחה.</span>
+                <span>המבדק נוצר בהצלחה.</span>
               </div>
               <button
                 type="button"
@@ -236,7 +236,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
 
             <div className="space-y-3">
               <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-xs font-bold text-gray-500 uppercase mb-1">מספר מבחן</div>
+                <div className="text-xs font-bold text-gray-500 mb-1">מספר מבדק</div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <span dir="ltr" className="font-mono text-3xl sm:text-4xl tabular-nums tracking-[0.18em] sm:tracking-[0.25em] text-left">
                     {result.testNumber}
@@ -251,7 +251,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
                   </button>
                 </div>
                 <p className="text-sm text-gray-600 mt-3">
-                  המטופל נכנס לדף הבית, מזין את מספר המבחן ומתחיל את המבדק.
+                  המטופל נכנס לדף הבית, מזין את מספר המבדק ומתחיל את המבדק.
                 </p>
               </div>
             </div>
@@ -261,7 +261,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
               onClick={onClose}
               className="w-full h-14 rounded-xl bg-black text-white font-bold hover:bg-gray-800"
             >
-              אישור
+              סגור
             </button>
           </div>
         )}
@@ -272,7 +272,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
 
 function clinicalContextGaps(patient: PatientSummary): string[] {
   const gaps: string[] = [];
-  if (!patient.case_id?.trim() && !patient.full_name?.trim()) gaps.push("מזהה תיק");
+  if (!patient.case_id?.trim()) gaps.push("מזהה תיק");
   if (!patient.phone?.trim()) gaps.push("טלפון");
   if (!patient.date_of_birth) gaps.push("תאריך לידה");
   if (patient.gender !== "male" && patient.gender !== "female") gaps.push("מין");
@@ -283,4 +283,8 @@ function clinicalContextGaps(patient: PatientSummary): string[] {
     gaps.push("שנות לימוד");
   }
   return gaps;
+}
+
+function caseDisplay(patient: PatientSummary): string {
+  return patient.case_id?.trim() || patient.id.slice(0, 8);
 }

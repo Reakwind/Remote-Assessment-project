@@ -189,7 +189,7 @@ describe('ClinicianDashboardDetail', () => {
     expect(screen.getByRole('heading', { name: 'האזן להקלטת המטופל' })).toBeInTheDocument();
     expect(screen.queryByText(/audioStoragePath/)).not.toBeInTheDocument();
     expect(screen.queryByText(/audioSignedUrl/)).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'CSV' }));
+    await userEvent.click(screen.getByRole('button', { name: 'ייצוא CSV' }));
     expect(screen.getByRole('dialog', { name: 'אישור ייצוא CSV' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('checkbox', { name: /אני מבין/ }));
     await userEvent.click(screen.getByRole('button', { name: 'ייצא CSV' }));

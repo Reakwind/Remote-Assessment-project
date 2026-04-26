@@ -3,7 +3,7 @@
 ## 1. Vision & Purpose
 A remote, web-based platform for cognitive assessment of the 60+ population in Israel. Current `main` is the Pilot MVP baseline.
 - **Initial Goal:** Complete digital implementation of the Hebrew MoCA (Montreal Cognitive Assessment).
-- **Flexibility:** Modular "Playlist Engine" (JSON-driven) with i18n support (react-i18next) for future Arabic/Russian/English versions.
+- **Flexibility:** Modular "Playlist Engine" (JSON-driven) with future i18n support for Arabic/Russian/English versions. `react-i18next` is not wired into the current MVP client.
 - **Accessibility:** Minimalist, high-contrast Hebrew interface (RTL) with a computer orientation module.
 
 ## 2. Technical Stack

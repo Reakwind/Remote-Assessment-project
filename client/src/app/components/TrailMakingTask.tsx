@@ -26,7 +26,7 @@ export function TrailMakingTask() {
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start mb-6 sm:mb-10">
         <div className="min-w-0">
           <div className="text-gray-500 font-bold uppercase tracking-wider text-xs sm:text-sm mb-2 sm:mb-3">
-            1. חיבור נקודות (Trail Making)
+            1. חיבור נקודות
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-black leading-tight">
             מתח קו בין מספר לאות בסדר עולה
@@ -43,7 +43,7 @@ export function TrailMakingTask() {
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
             <div className="flex w-full max-w-[600px] flex-col items-center gap-4 opacity-70 px-3">
               <div className="w-full aspect-[3/2] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-center text-gray-400 font-bold italic text-xs sm:text-base">
-                [Trail Making Template: 1-א-2-ב-3-ג-4-ד-5-ה]
+                [תבנית חיבור נקודות: 1-א-2-ב-3-ג-4-ד-5-ה]
               </div>
               <DevStimulusNotice className="pointer-events-auto" />
             </div>

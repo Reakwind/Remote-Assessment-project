@@ -51,7 +51,7 @@ export function LandingHub() {
             כניסת מטופל
           </h2>
           <p className="text-xl sm:text-2xl text-gray-600 mb-8 sm:mb-10">
-            הזן את מספר המבחן שקיבלת מהקלינאי
+            הזן את מספר המבדק שקיבלת מהקלינאי
           </p>
 
           {hasInProgressAssessment && (
@@ -64,7 +64,7 @@ export function LandingHub() {
                 onClick={handleResume}
                 className="w-full min-h-16 rounded-xl bg-blue-700 px-5 py-3 text-xl font-bold text-white transition-colors hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600"
               >
-                המשך את המבחן מאיפה שהפסקת
+                המשך מהמקום שעצרת
               </button>
             </div>
           )}
@@ -72,7 +72,7 @@ export function LandingHub() {
           {hasInProgressAssessment && (
             <div className="mb-8 flex items-center gap-3 text-sm font-bold text-gray-500">
               <div className="h-px flex-1 bg-gray-200" />
-              <span>או הזן מספר מבחן חדש</span>
+              <span>או הזן מספר מבדק חדש</span>
               <div className="h-px flex-1 bg-gray-200" />
             </div>
           )}
@@ -83,10 +83,10 @@ export function LandingHub() {
                 type="text"
                 value={formattedToken}
                 onChange={(e) => setToken(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="הזן מספר מבחן..."
+                placeholder="הזן מספר מבדק..."
                 inputMode="numeric"
                 maxLength={9}
-                aria-label="מספר מבחן בן 8 ספרות"
+                aria-label="מספר מבדק בן 8 ספרות"
                 aria-describedby="test-number-help"
                 dir="ltr"
                 className="w-full h-16 sm:h-20 text-center text-2xl sm:text-3xl font-mono font-bold tabular-nums border-2 border-gray-300 rounded-2xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none transition-all placeholder:text-gray-500 placeholder:font-normal"
@@ -104,7 +104,7 @@ export function LandingHub() {
                   ))}
                 </div>
                 <p id="test-number-help" className="text-sm font-bold text-gray-600">
-                  יש להזין מספר מבחן בן 8 ספרות
+                  יש להזין מספר מבדק בן 8 ספרות
                 </p>
                 <p className="text-sm font-bold text-gray-600" aria-live="polite">
                   {isCompleteTestNumber
@@ -118,7 +118,7 @@ export function LandingHub() {
                 disabled={!isCompleteTestNumber}
                 className="w-full h-16 sm:h-20 bg-black text-white text-xl sm:text-2xl font-bold rounded-2xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-4 focus:ring-4 focus:ring-black/20 outline-none"
               >
-                אישור
+                התחל מבדק
                 <ArrowLeft className="w-8 h-8" />
               </button>
             </div>

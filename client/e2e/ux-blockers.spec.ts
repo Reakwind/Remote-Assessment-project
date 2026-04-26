@@ -43,12 +43,12 @@ test.describe('landing test number entry', () => {
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
 
-    const input = page.getByPlaceholder(/הזן מספר מבחן/);
-    const submit = page.getByRole('button', { name: /אישור/ });
+    const input = page.getByPlaceholder(/הזן מספר מבדק/);
+    const submit = page.getByRole('button', { name: /התחל מבדק/ });
 
     await expect(submit).toBeDisabled();
     await input.fill('1234567');
-    await expect(page.getByText('יש להזין מספר מבחן בן 8 ספרות')).toBeVisible();
+    await expect(page.getByText('יש להזין מספר מבדק בן 8 ספרות')).toBeVisible();
     await expect(submit).toBeDisabled();
 
     await input.fill('12345678');
@@ -68,7 +68,7 @@ test.describe('landing test number entry', () => {
 
     await page.goto('/#/session/11112222');
 
-    await expect(page.getByRole('heading', { name: 'ברוך הבא למבחן MoCA' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ברוך הבא למבדק MoCA' })).toBeVisible();
     await expect(page).toHaveURL(/#\/patient\/welcome/);
   });
 
@@ -95,10 +95,10 @@ test.describe('landing test number entry', () => {
 
     await page.goto('/#/session/33334444');
 
-    await expect(page.getByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'המשך מהמקום שעצרת' })).toBeVisible();
     await expect(page).toHaveURL(/#\/$/);
 
-    await page.getByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' }).click();
+    await page.getByRole('button', { name: 'המשך מהמקום שעצרת' }).click();
 
     await expect(page).toHaveURL(/#\/patient\/clock/);
   });
@@ -140,14 +140,14 @@ test.describe('clinician mobile UX', () => {
 
     await signInClinician(page, email);
     await page.getByText(`תיק ${patient.case_id}`).click();
-    await page.getByRole('button', { name: 'פתיחת מבחן' }).click();
-    await page.getByRole('button', { name: 'צור מספר מבחן' }).click();
+    await page.getByRole('button', { name: 'פתח מבדק' }).click();
+    await page.getByRole('button', { name: 'צור מספר מבדק' }).click();
 
-    await expect(page.getByRole('heading', { name: 'המבחן נוצר בהצלחה' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'המבדק נוצר בהצלחה' })).toBeVisible();
     const testNumber = page.locator('span[dir="ltr"]').filter({ hasText: /^\d{8}$/ });
     await expect(testNumber).toBeVisible();
     await expect(page.getByRole('button', { name: /העתק/ }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'אישור' })).toBeVisible();
+    await expect(page.getByText('סגור', { exact: true })).toBeVisible();
   });
 });
 

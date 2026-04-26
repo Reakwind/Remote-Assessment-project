@@ -13,7 +13,7 @@ const STATUS_CONFIG: Record<
     Icon: Circle,
   },
   pending: {
-    label: "הוזמן",
+    label: "טרם החל",
     className: "bg-gray-100 text-gray-800",
     Icon: Clock3,
   },
@@ -23,12 +23,12 @@ const STATUS_CONFIG: Record<
     Icon: Clock3,
   },
   review: {
-    label: "בבדיקה",
+    label: "דורש סקירה",
     className: "bg-amber-100 text-amber-900",
     Icon: AlertTriangle,
   },
   awaiting_review: {
-    label: "בבדיקה",
+    label: "ממתין לסקירה",
     className: "bg-amber-100 text-amber-900",
     Icon: AlertTriangle,
   },
