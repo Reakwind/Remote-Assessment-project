@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { writeAuditEvent } from '../_shared/audit.ts';
 import { corsResponse, json, methodNotAllowed } from '../_shared/http.ts';
 import { notifyClinicianSessionCompleted, recordNotificationOutcome } from '../_shared/notifications.ts';
-import { ageFromBand, scoreSession } from '../_shared/scoring.ts';
+import { scoreSession } from '../_shared/scoring.ts';
 
 const DRAWING_TASKS = ['moca-visuospatial', 'moca-cube', 'moca-clock'];
 const TASK_ID_TO_TASK_NAME: Record<string, string> = {
@@ -53,6 +53,9 @@ Deno.serve(async (req) => {
     }, 200, req);
   }
   if (session.status !== 'in_progress') return json({ error: 'Session not in progress' }, 409, req);
+  if (!Number.isInteger(session.education_years) || !Number.isInteger(session.patient_age_years)) {
+    return json({ error: 'Session is missing required clinical scoring context' }, 409, req);
+  }
 
   const { data: taskResults, error: resultsError } = await supabase
     .from('task_results')
@@ -84,7 +87,7 @@ Deno.serve(async (req) => {
       sessionId: session.id,
       sessionDate: new Date(session.started_at ?? session.created_at),
       educationYears: session.education_years,
-      patientAge: session.patient_age_years ?? ageFromBand(session.age_band),
+      patientAge: session.patient_age_years,
       mocaVersion: session.moca_version,
       sessionLocation: session.location_place || session.location_city
         ? { place: session.location_place, city: session.location_city }

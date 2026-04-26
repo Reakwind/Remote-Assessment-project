@@ -88,14 +88,15 @@ async function runVersion(version) {
     Authorization: `Bearer ${signup.body.access_token}`,
   };
 
+  const patientId = await createPatient(clinicianHeaders, caseId, version);
+
   const created = await request('/functions/v1/create-session', {
     method: 'POST',
     headers: clinicianHeaders,
     body: JSON.stringify({
-      caseId,
+      patientId,
       mocaVersion: version,
-      ageBand: '70-79',
-      educationYears: 12,
+      language: 'he',
     }),
   });
   assert(
@@ -115,10 +116,9 @@ async function runVersion(version) {
     method: 'POST',
     headers: clinicianHeaders,
     body: JSON.stringify({
-      caseId,
+      patientId,
       mocaVersion: version,
-      ageBand: '70-79',
-      educationYears: 12,
+      language: 'he',
     }),
   });
   assert(
@@ -337,6 +337,31 @@ async function runVersion(version) {
   console.log(`[${version}] OK session=${sessionId} adjusted=${finalDetail.session.scoring_report.total_adjusted}/30 percentile=${finalDetail.session.scoring_report.norm_percentile}`);
 }
 
+async function createPatient(headers, caseId, version) {
+  const response = await request('/rest/v1/patients?select=id,case_id', {
+    method: 'POST',
+    headers: {
+      ...headers,
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      clinician_id: clinicianIdFromAccessToken(headers.Authorization),
+      case_id: caseId,
+      full_name: caseId,
+      phone: `050${version.replace('.', '')}${Date.now().toString().slice(-6)}`.slice(0, 10),
+      date_of_birth: '1950-04-15',
+      gender: 'male',
+      language: 'he',
+      dominant_hand: 'right',
+      education_years: 12,
+      id_number: null,
+      notes: null,
+    }),
+  });
+  assert(response.status === 201 && response.body?.[0]?.id, `[${version}] create complete patient profile`, response);
+  return response.body[0].id;
+}
+
 async function submitDrawing(headers, sessionId, linkToken, taskId) {
   const drawing = await request('/functions/v1/save-drawing', {
     method: 'POST',
@@ -411,6 +436,19 @@ function anonHeaders() {
     'Content-Type': 'application/json',
     Origin: origin,
   };
+}
+
+function clinicianIdFromAccessToken(authorization) {
+  const token = String(authorization || '').replace(/^Bearer\s+/i, '');
+  const [, payload] = token.split('.');
+  if (!payload) fail('Could not read clinician id from access token.');
+  try {
+    const json = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (!json.sub) fail('Clinician access token is missing sub.');
+    return json.sub;
+  } catch (error) {
+    fail(`Could not decode clinician access token: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function verifyLicensedFiles(version) {

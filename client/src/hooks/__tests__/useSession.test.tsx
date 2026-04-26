@@ -63,11 +63,11 @@ describe('useSession', () => {
         status: 'ready',
         sessionId: 'sess-ready',
         linkToken: 'link-token',
-	        sessionDate: '2026-04-01T00:00:00.000Z',
-	        educationYears: 12,
-	        ageBand: '70-79',
-	        patientAge: 76,
-	      }),
+        sessionDate: '2026-04-01T00:00:00.000Z',
+        educationYears: 12,
+        ageBand: '70-79',
+        patientAge: 76,
+      }),
     } as Response);
 
     await renderAndWaitForStatus('12345678', 'ready');
@@ -82,7 +82,7 @@ describe('useSession', () => {
     );
   });
 
-  it('maps a successful start-session payload into ready scoring context', async () => {
+  it('rejects a successful start-session payload when scoring context is incomplete', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
@@ -96,14 +96,11 @@ describe('useSession', () => {
       }),
     } as Response);
 
-    const state = await renderAndWaitForStatus('session-token', 'ready');
+    const state = await renderAndWaitForStatus('session-token', 'invalid');
 
-    expect(state.linkToken).toBe('link-token');
-    expect(state.startToken).toBe('session-token');
-	    expect(state.scoringContext?.sessionId).toBe('sess-ready');
-	    expect(state.scoringContext?.educationYears).toBe(12);
-	    expect(state.scoringContext?.patientAge).toBe(67);
-	  });
+    expect(state.linkToken).toBeNull();
+    expect(state.scoringContext).toBeNull();
+  });
 
   it('prefers exact patient age when start-session returns it', async () => {
     mockFetch.mockResolvedValue({

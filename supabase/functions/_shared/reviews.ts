@@ -1,4 +1,4 @@
-import { ageFromBand, applyManualScores, type ScoringReport } from './scoring.ts';
+import { applyManualScores, type ScoringReport } from './scoring.ts';
 
 type SupabaseClient = any;
 
@@ -9,6 +9,9 @@ export async function recalculateReviewedReport(supabase: SupabaseClient, sessio
     .eq('id', sessionId)
     .single();
   if (sessionError || !session) throw new Error('Session not found');
+  if (!Number.isInteger(session.education_years) || !Number.isInteger(session.patient_age_years)) {
+    throw new Error('Session is missing required clinical scoring context');
+  }
 
   const { data: scoringReport, error: reportError } = await supabase
     .from('scoring_reports')
@@ -41,7 +44,7 @@ export async function recalculateReviewedReport(supabase: SupabaseClient, sessio
     sessionId: session.id,
     sessionDate: new Date(session.started_at ?? session.created_at),
     educationYears: session.education_years,
-    patientAge: session.patient_age_years ?? ageFromBand(session.age_band),
+    patientAge: session.patient_age_years,
     mocaVersion: session.moca_version,
     sessionLocation: session.location_place || session.location_city
       ? { place: session.location_place, city: session.location_city }

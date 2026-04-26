@@ -6,9 +6,12 @@ export interface PatientSummary {
   id: string;
   case_id?: string | null;
   full_name?: string | null;
+  phone?: string | null;
   language?: string | null;
   education_years?: number | null;
   date_of_birth?: string | null;
+  gender?: "male" | "female" | null;
+  dominant_hand?: "right" | "left" | "ambidextrous" | null;
 }
 
 export interface OrderAssessmentModalProps {
@@ -31,10 +34,17 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
 
   if (!open) return null;
 
+  const missingClinicalFields = clinicalContextGaps(patient);
+  const canCreateSession = missingClinicalFields.length === 0 && !submitting;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    if (missingClinicalFields.length > 0) {
+      setError("יש להשלים את כל פרטי הרקע הקליניים לפני פתיחת מבחן.");
+      return;
+    }
     if (assessmentType !== "moca") {
       setError("בשלב זה נתמך MoCA בלבד.");
       return;
@@ -172,8 +182,15 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600">
-              גיל ושנות לימוד יילקחו מפרטי התיק השמורים. ייווצר מספר מבחן להעתקה ושליחה למטופל.
+              גיל, שנות לימוד ושאר נתוני הרקע יילקחו מפרטי התיק השמורים. ייווצר מספר מבחן להעתקה ושליחה למטופל.
             </div>
+
+            {missingClinicalFields.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-sm font-bold">
+                <div>יש להשלים פרטי רקע לפני פתיחת מבחן:</div>
+                <div className="mt-1 font-medium">{missingClinicalFields.join(" · ")}</div>
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 font-bold">
@@ -191,7 +208,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
               </button>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={!canCreateSession}
                 className="flex-1 h-14 rounded-xl bg-black text-white font-bold hover:bg-gray-800 disabled:opacity-60"
               >
                 {submitting ? "יוצר..." : "צור מספר מבחן"}
@@ -251,4 +268,19 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
       </div>
     </div>
   );
+}
+
+function clinicalContextGaps(patient: PatientSummary): string[] {
+  const gaps: string[] = [];
+  if (!patient.case_id?.trim() && !patient.full_name?.trim()) gaps.push("מזהה תיק");
+  if (!patient.phone?.trim()) gaps.push("טלפון");
+  if (!patient.date_of_birth) gaps.push("תאריך לידה");
+  if (patient.gender !== "male" && patient.gender !== "female") gaps.push("מין");
+  if (patient.language !== "he") gaps.push("שפת המבדק");
+  if (!["right", "left", "ambidextrous"].includes(patient.dominant_hand ?? "")) gaps.push("יד דומיננטית");
+  const educationYears = patient.education_years;
+  if (typeof educationYears !== "number" || !Number.isInteger(educationYears) || educationYears < 0 || educationYears > 40) {
+    gaps.push("שנות לימוד");
+  }
+  return gaps;
 }

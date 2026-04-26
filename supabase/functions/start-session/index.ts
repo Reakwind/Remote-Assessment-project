@@ -68,6 +68,16 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid test number' }, 404);
   }
 
+  if (!Number.isInteger(session.education_years) || !Number.isInteger(session.patient_age_years)) {
+    await recordStartAttempt(supabase, {
+      fingerprint,
+      success: false,
+      failureReason: 'missing_scoring_context',
+      sessionId: session.id,
+    });
+    return json({ error: 'Session is missing required clinical scoring context' }, 409);
+  }
+
   // Enforce single-use
   if (session.link_used_at) {
     await recordStartAttempt(supabase, {

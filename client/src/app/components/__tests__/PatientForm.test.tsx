@@ -74,6 +74,16 @@ describe('PatientForm', () => {
     expect(insertMock).not.toHaveBeenCalled();
   });
 
+  it('requires clinical background fields before saving', async () => {
+    render(<PatientForm open onClose={vi.fn()} onCreated={vi.fn()} />);
+
+    await userEvent.type(screen.getByPlaceholderText('למשל CASE-20260425-001'), 'CASE-002');
+    await userEvent.click(screen.getByRole('button', { name: 'פתח תיק' }));
+
+    expect(await screen.findByText('יש להזין מספר טלפון תקין.')).toBeInTheDocument();
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
   it('rejects likely PII in the case ID field', async () => {
     render(<PatientForm open onClose={vi.fn()} onCreated={vi.fn()} />);
 

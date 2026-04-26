@@ -384,9 +384,12 @@ export function PatientProfilePage() {
             id: patient.id,
             case_id: patient.case_id,
             full_name: patient.full_name,
+            phone: patient.phone,
             language: patient.language,
             education_years: patient.education_years,
             date_of_birth: patient.date_of_birth,
+            gender: patient.gender,
+            dominant_hand: patient.dominant_hand,
           }}
           onOrdered={() => {
             void loadPatient({ background: true });

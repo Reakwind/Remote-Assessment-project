@@ -21,14 +21,6 @@ interface UseSessionOptions {
   enabled?: boolean;
 }
 
-const AGE_BAND_MAP: Record<string, number> = {
-  '60-64': 62,
-  '65-69': 67,
-  '70-74': 72,
-  '75-79': 77,
-  '80+':   85,
-};
-
 export function useSession(
   tokenOverride?: string,
   options: UseSessionOptions = {},
@@ -97,18 +89,28 @@ export function useSession(
         }
 
         const data = await res.json();
+        if (typeof data.educationYears !== 'number' || typeof data.patientAge !== 'number') {
+          setState({
+            status: 'invalid',
+            sessionId: null,
+            linkToken: null,
+            startToken: null,
+            scoringContext: null,
+          });
+          return;
+        }
         setState({
           status: 'ready',
           sessionId: data.sessionId,
           linkToken: data.linkToken ?? token,
           startToken: token,
-	          scoringContext: {
-	            sessionId:       data.sessionId,
-	            sessionDate:     new Date(data.sessionDate),
-	            educationYears:  data.educationYears || 12,
-	            patientAge:      typeof data.patientAge === 'number' ? data.patientAge : AGE_BAND_MAP[data.ageBand] ?? 70,
-	            mocaVersion:     data.mocaVersion,
-	          },
+          scoringContext: {
+            sessionId: data.sessionId,
+            sessionDate: new Date(data.sessionDate),
+            educationYears: data.educationYears,
+            patientAge: data.patientAge,
+            mocaVersion: data.mocaVersion,
+          },
         });
       })
       .catch(() => {

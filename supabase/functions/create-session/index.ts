@@ -10,12 +10,6 @@ function generateTestNumber(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => (byte % 10).toString()).join('');
 }
 
-function generateCaseId(): string {
-  const date = new Date().toISOString().slice(0, 10).replaceAll('-', '');
-  const suffix = crypto.randomUUID().slice(0, 8).toUpperCase();
-  return `CASE-${date}-${suffix}`;
-}
-
 function sessionBaseUrl(req: Request): string {
   const configured = Deno.env.get('PUBLIC_URL')?.trim();
   if (configured) return configured.replace(/\/$/, '');
@@ -28,9 +22,6 @@ function sessionBaseUrl(req: Request): string {
 
 interface CreateSessionBody {
   patientId?: string;
-  caseId?: string;
-  ageBand?: string;
-  educationYears?: number;
   assessmentType?: string;
   language?: string;
   mocaVersion?: string;
@@ -54,9 +45,6 @@ Deno.serve(async (req) => {
 
   const {
     patientId,
-    caseId: caseIdInput,
-    ageBand,
-    educationYears,
     language,
     mocaVersion,
   } = body;
@@ -102,66 +90,60 @@ Deno.serve(async (req) => {
       clinic_name: user.user_metadata?.clinic_name ?? 'Remote Check',
     }, { onConflict: 'id' });
 
-  // Resolve case record: prefer patientId from the MVP case list, fall back to caseId for API compatibility.
+  if (!patientId) {
+    return json({ error: 'Missing required field: patientId' }, 400);
+  }
+
+  // Resolve the MVP case record. Session scoring context must come from the complete patient profile.
   let patientRecordId: string | null = null;
-  let caseId = caseIdInput?.trim() || '';
-  let resolvedAgeBand = ageBand;
-  let resolvedEducationYears = educationYears;
+  let caseId = '';
+  let resolvedAgeBand: string | null = null;
+  let resolvedEducationYears = 0;
   let patientAgeYears: number | null = null;
   let patientDateOfBirth: string | null = null;
   let patientGender: string | null = null;
   let patientDominantHand: string | null = null;
   let assessmentLanguage = requestedLanguage;
 
-  if (patientId) {
-    const { data: patient, error: patientError } = await supabase
-      .from('patients')
-      .select('id, clinician_id, case_id, full_name, date_of_birth, gender, language, dominant_hand, education_years')
-      .eq('id', patientId)
-      .eq('clinician_id', user.id)
-      .maybeSingle();
+  const { data: patient, error: patientError } = await supabase
+    .from('patients')
+    .select('id, clinician_id, case_id, full_name, phone, date_of_birth, gender, language, dominant_hand, education_years')
+    .eq('id', patientId)
+    .eq('clinician_id', user.id)
+    .maybeSingle();
 
-    if (patientError || !patient) {
-      return json({ error: 'Patient not found for this clinician' }, 404);
-    }
-
-    patientRecordId = patient.id;
-    caseId = caseId || patient.case_id || patient.full_name;
-    resolvedEducationYears = resolvedEducationYears ?? patient.education_years;
-    assessmentLanguage = requestedLanguage || patient.language || 'he';
-    patientDateOfBirth = patient.date_of_birth ?? null;
-    patientGender = patient.gender ?? null;
-    patientDominantHand = patient.dominant_hand ?? null;
-    if (patient.date_of_birth) {
-      try {
-        patientAgeYears = calculateAgeYears(patient.date_of_birth);
-        resolvedAgeBand = ageBandFromAge(patientAgeYears);
-      } catch (error) {
-        return json({ error: error instanceof Error ? error.message : 'Invalid patient date_of_birth' }, 400);
-      }
-    }
-    if (!caseId) {
-      caseId = generateCaseId();
-    }
+  if (patientError || !patient) {
+    return json({ error: 'Patient not found for this clinician' }, 404);
   }
 
-  if (!caseId) {
-    return json({ error: 'Missing required field: caseId or patientId' }, 400);
+  const profileGaps = patientProfileGaps(patient);
+  if (profileGaps.length > 0) {
+    return json({ error: `Patient profile missing required fields: ${profileGaps.join(', ')}` }, 400);
   }
+
+  patientRecordId = patient.id;
+  caseId = patient.case_id || patient.full_name;
+  resolvedEducationYears = patient.education_years;
+  assessmentLanguage = requestedLanguage;
+  patientDateOfBirth = patient.date_of_birth;
+  patientGender = patient.gender;
+  patientDominantHand = patient.dominant_hand;
+
   if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{2,49}$/.test(caseId)) {
     return json({ error: 'caseId must be a pseudonymous code using letters, numbers, dot, dash, or underscore' }, 400);
   }
-  if (!resolvedAgeBand) {
-    return json({ error: 'Missing required field: ageBand or patient date_of_birth' }, 400);
+  try {
+    patientAgeYears = calculateAgeYears(patient.date_of_birth);
+    resolvedAgeBand = ageBandFromAge(patientAgeYears);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Invalid patient date_of_birth' }, 400);
   }
-  if (!resolvedEducationYears && resolvedEducationYears !== 0) {
-    resolvedEducationYears = 12;
-  }
+
   if (!Number.isInteger(resolvedEducationYears) || resolvedEducationYears < 0 || resolvedEducationYears > 40) {
     return json({ error: 'educationYears must be between 0 and 40' }, 400);
   }
-  if (!SUPPORTED_LANGUAGES.has(assessmentLanguage)) {
-    return json({ error: `Unsupported language: ${assessmentLanguage}` }, 400);
+  if (!SUPPORTED_LANGUAGES.has(patient.language) || !SUPPORTED_LANGUAGES.has(assessmentLanguage)) {
+    return json({ error: `Unsupported language: ${patient.language || assessmentLanguage}` }, 400);
   }
 
   let accessCode: string;
@@ -234,6 +216,20 @@ function calculateAgeYears(dateOfBirth: string): number {
   if (age < 60) throw new Error('MoCA Hebrew norms require patient age 60 or older');
   if (age > 130) throw new Error('Invalid patient age');
   return age;
+}
+
+function patientProfileGaps(patient: any): string[] {
+  const gaps: string[] = [];
+  if (!String(patient.case_id || patient.full_name || '').trim()) gaps.push('case_id');
+  if (!String(patient.phone || '').trim()) gaps.push('phone');
+  if (!patient.date_of_birth) gaps.push('date_of_birth');
+  if (patient.gender !== 'male' && patient.gender !== 'female') gaps.push('gender');
+  if (patient.language !== 'he') gaps.push('language');
+  if (!['right', 'left', 'ambidextrous'].includes(patient.dominant_hand)) gaps.push('dominant_hand');
+  if (!Number.isInteger(patient.education_years) || patient.education_years < 0 || patient.education_years > 40) {
+    gaps.push('education_years');
+  }
+  return gaps;
 }
 
 function ageBandFromAge(age: number): string {
