@@ -75,6 +75,8 @@ describe('ClinicianDashboardList', () => {
     expect(await screen.findByText('1 תיקים · 1 דורשים סקירה')).toBeInTheDocument();
     expect(screen.getAllByText('29/30 (זמני)').length).toBeGreaterThan(0);
     expect(screen.getAllByText('דורש סקירה').length).toBeGreaterThan(0);
+    expect(screen.queryByText('ציון MoCA ממוצע')).not.toBeInTheDocument();
+    expect(screen.getByText('שינוי בציון MoCA לאורך זמן')).toBeInTheDocument();
     expect(selectMock).toHaveBeenCalledWith(expect.not.stringContaining('full_name'));
     await waitFor(() => expect(screen.queryByText('טוען...')).not.toBeInTheDocument());
   });

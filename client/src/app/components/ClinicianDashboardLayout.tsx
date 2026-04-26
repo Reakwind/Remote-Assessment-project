@@ -103,13 +103,13 @@ export function ClinicianDashboardLayout() {
           >
             התנתקות
           </button>
-          <div className="bg-white/10 rounded-xl p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center">
+          <div className="bg-white/10 rounded-xl p-4 flex min-w-0 items-center gap-3">
+            <div className="w-10 h-10 shrink-0 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center">
               {(profile?.full_name?.[0] || "ד").toUpperCase()}
             </div>
-            <div>
-              <div className="font-bold text-sm">{profile?.full_name || "ד״ר קלינאי"}</div>
-              <div className="text-gray-400 text-xs">{profile?.clinic_name || "Remote Check Clinic"}</div>
+            <div className="min-w-0">
+              <div className="truncate font-bold text-sm">{profile?.full_name || "ד״ר קלינאי"}</div>
+              <div className="truncate text-gray-400 text-xs">{profile?.clinic_name || "Remote Check Clinic"}</div>
             </div>
           </div>
         </div>

@@ -36,6 +36,12 @@ interface PatientSessionSummary {
   scoring_reports: ScoringSummary | ScoringSummary[] | null;
 }
 
+interface ScoreTrendPoint {
+  date: string;
+  score: number;
+  caseLabel: string;
+}
+
 interface PatientWithSessions {
   id: string;
   case_id: string | null;
@@ -82,10 +88,102 @@ function latestOf<T>(arr: T[] | null | undefined, key: (v: T) => string | null):
   return times.sort().slice(-1)[0];
 }
 
+function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
+  if (points.length === 0) {
+    return (
+      <div className="flex h-full min-h-44 flex-col">
+        <div className="mb-3">
+          <div className="text-sm font-bold text-gray-600">שינוי בציון MoCA לאורך זמן</div>
+          <div className="text-xs font-bold text-gray-500">0 מבדקים סופיים</div>
+        </div>
+        <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 text-center text-sm font-bold text-gray-500">
+          אין עדיין מבדקים סופיים להצגת שינוי בציון.
+        </div>
+      </div>
+    );
+  }
+
+  const width = 560;
+  const height = 180;
+  const padding = { top: 16, right: 36, bottom: 34, left: 28 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const xFor = (index: number) =>
+    padding.left + (points.length === 1 ? chartWidth / 2 : (index / (points.length - 1)) * chartWidth);
+  const yFor = (score: number) => padding.top + ((30 - score) / 30) * chartHeight;
+  const path = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${xFor(index).toFixed(1)} ${yFor(point.score).toFixed(1)}`)
+    .join(" ");
+  const first = points[0];
+  const last = points[points.length - 1];
+
+  return (
+    <div className="flex h-full min-h-44 flex-col">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <div className="text-sm font-bold text-gray-600">שינוי בציון MoCA לאורך זמן</div>
+          <div className="text-xs font-bold text-gray-500">
+            {points.length} מבדקים סופיים
+          </div>
+        </div>
+        <div className="text-2xl font-extrabold text-black tabular-nums">
+          {last.score}/30
+        </div>
+      </div>
+
+      <svg
+        role="img"
+        aria-label={`שינוי ציון MoCA מ-${first.score} ל-${last.score}`}
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-44 w-full overflow-visible"
+        preserveAspectRatio="none"
+      >
+        {[0, 15, 30].map((tick) => {
+          const y = yFor(tick);
+          return (
+            <g key={tick}>
+              <line
+                x1={padding.left}
+                x2={width - padding.right}
+                y1={y}
+                y2={y}
+                stroke="#e5e7eb"
+                strokeWidth="1"
+              />
+              <text x={width - padding.right + 8} y={y + 4} className="fill-gray-500 text-[11px] font-bold">
+                {tick}
+              </text>
+            </g>
+          );
+        })}
+        <path d={path} fill="none" stroke="#111827" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+        {points.map((point, index) => (
+          <g key={`${point.date}-${point.caseLabel}-${index}`}>
+            <circle cx={xFor(index)} cy={yFor(point.score)} r="6" fill="#16a34a" stroke="white" strokeWidth="3" />
+            <title>{`${point.caseLabel}: ${point.score}/30`}</title>
+          </g>
+        ))}
+        <text x={xFor(0)} y={height - 8} textAnchor="middle" className="fill-gray-500 text-[11px] font-bold">
+          {new Date(first.date).toLocaleDateString("he-IL")}
+        </text>
+        <text
+          x={xFor(points.length - 1)}
+          y={height - 8}
+          textAnchor="middle"
+          className="fill-gray-500 text-[11px] font-bold"
+        >
+          {new Date(last.date).toLocaleDateString("he-IL")}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 export function ClinicianDashboardList() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<PatientRow[]>([]);
+  const [scoreTrend, setScoreTrend] = useState<ScoreTrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
@@ -99,6 +197,7 @@ export function ClinicianDashboardList() {
       const session = authData.session;
       if (!session) {
         setRows([]);
+        setScoreTrend([]);
         return;
       }
 
@@ -144,11 +243,25 @@ export function ClinicianDashboardList() {
           status: deriveStatus(sessions),
         };
       });
+      const trendPoints = (data as PatientWithSessions[])
+        .flatMap((p) =>
+          relationArray(p.sessions).flatMap((s) => {
+            const finalScore = relationArray(s.scoring_reports)
+              .filter((report) => !reportNeedsReview(report))
+              .map(reportScore)
+              .find((score): score is number => score != null);
+            if (s.status !== "completed" || finalScore == null) return [];
+            return [{ date: s.created_at, score: finalScore, caseLabel: caseDisplay(p) }];
+          }),
+        )
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       setRows(mapped);
+      setScoreTrend(trendPoints);
     } catch (error) {
       console.error("Failed to load patients", error);
       setRows([]);
+      setScoreTrend([]);
     } finally {
       setLoading(false);
     }
@@ -224,53 +337,47 @@ export function ClinicianDashboardList() {
   const totalCases = rows.length;
   const reviewCount = rows.filter((r) => r.status === "review").length;
   const completedCount = rows.filter((r) => r.status === "completed").length;
-  const avgScore = (() => {
-    const scores = rows
-      .filter((r) => !r.latestScoreProvisional)
-      .map((r) => r.latestScore)
-      .filter((v): v is number => v != null);
-    if (scores.length === 0) return "—";
-    return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
-  })();
 
   return (
     <div className="max-w-6xl mx-auto min-h-[calc(100vh-120px)] lg:h-[calc(100vh-56px)] flex flex-col">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6 lg:mb-8 shrink-0">
-        <div>
-          <h1 className="text-3xl lg:text-4xl font-extrabold text-black mb-2">תיקים</h1>
-          <div className="text-gray-500 font-medium text-base lg:text-lg">
-            {loading
-              ? "טוען..."
-              : `${totalCases} תיקים · ${reviewCount} דורשים סקירה`}
+      <div className="mb-6 flex shrink-0 flex-col gap-4 lg:mb-8">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-extrabold text-black mb-2">תיקים</h1>
+            <div className="text-gray-500 font-medium text-base lg:text-lg">
+              {loading
+                ? "טוען..."
+                : `${totalCases} תיקים · ${reviewCount} דורשים סקירה`}
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr_auto] lg:flex lg:items-center lg:gap-4">
-          <button
-            onClick={() => setCsvConfirmOpen(true)}
-            disabled={exportingCsv}
-            className="flex items-center justify-center gap-2 bg-white text-black border border-gray-200 px-5 py-3 rounded-xl font-bold hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 transition-colors shadow-sm text-base lg:text-lg"
-          >
-            <span>{exportingCsv ? "מייצא CSV..." : "ייצוא CSV"}</span>
-          </button>
+          <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] xl:w-auto xl:grid-cols-[auto_minmax(18rem,20rem)_auto]">
+            <button
+              onClick={() => setCsvConfirmOpen(true)}
+              disabled={exportingCsv}
+              className="flex items-center justify-center gap-2 bg-white text-black border border-gray-200 px-5 py-3 rounded-xl font-bold hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 transition-colors shadow-sm text-base lg:text-lg"
+            >
+              <span>{exportingCsv ? "מייצא CSV..." : "ייצוא CSV"}</span>
+            </button>
 
-          <div className="relative min-w-0">
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="חיפוש לפי מזהה תיק…"
-              className="w-full lg:w-80 pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-xl text-base lg:text-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-600 focus:border-blue-600 transition-all"
-            />
+            <div className="relative min-w-0">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="חיפוש לפי מזהה תיק…"
+                className="w-full xl:w-80 pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-xl text-base lg:text-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-600 focus:border-blue-600 transition-all"
+              />
+            </div>
+
+            <button
+              onClick={() => setFormOpen(true)}
+              className="flex items-center justify-center gap-2 bg-black text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-md text-base lg:text-lg"
+            >
+              <Plus className="w-5 h-5" />
+              <span>תיק חדש</span>
+            </button>
           </div>
-
-          <button
-            onClick={() => setFormOpen(true)}
-            className="flex items-center justify-center gap-2 bg-black text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-md text-base lg:text-lg"
-          >
-            <Plus className="w-5 h-5" />
-            <span>תיק חדש</span>
-          </button>
         </div>
         {csvExportMessage && (
           <p
@@ -282,10 +389,9 @@ export function ClinicianDashboardList() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8 shrink-0">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8 shrink-0">
         {[
           { label: "סה״כ תיקים", value: String(totalCases), delta: "רשומים" },
-          { label: "ציון MoCA ממוצע", value: avgScore, delta: "מבדקים סופיים" },
           { label: "מבדקים הושלמו", value: String(completedCount), delta: "תיקים שהושלמו" },
           { label: "ממתינים לסקירה", value: String(reviewCount), delta: "דורשים סקירה", warn: true },
         ].map((stat, i) => (
@@ -303,6 +409,10 @@ export function ClinicianDashboardList() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mb-6 shrink-0 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:mb-8 lg:p-6">
+        <ScoreTrendChart points={scoreTrend} />
       </div>
 
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex-1 flex flex-col min-h-0">
