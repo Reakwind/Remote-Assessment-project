@@ -32,7 +32,8 @@ Every agent must use GitHub branch-based version control for all repo changes. T
 - Keep unrelated dirty work intact.
 - Do not reset, delete, or rewrite user work unless the user explicitly requests it.
 - Make focused commits after relevant verification passes.
-- Push the branch and open a GitHub PR into `main`.
+- Push the branch and open a normal, ready-for-review GitHub PR into `main` after checks pass.
+- Do not default to draft PRs. The current GitHub connector can create and merge PRs, but its draft-to-ready mutation is unreliable. Use drafts only when explicitly needed, and expect conversion to require the GitHub UI or a working `gh` login.
 - Review the diff before asking to merge; call out risks, skipped checks, and any open questions.
 - Merge to `main` only after explicit user approval for that specific merge.
 - Prefer squash merge for feature branches unless the user requests a different merge strategy.

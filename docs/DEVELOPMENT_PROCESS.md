@@ -7,7 +7,8 @@ This project uses Supabase as the current MVP runtime. The product architecture 
 - Start every change from latest `origin/main`.
 - Work on a feature branch, preferably `codex/<short-scope>`.
 - Keep each branch focused on one feature, bug fix, or cleanup.
-- Open a PR into `main` for every repo change.
+- Open a normal, ready-for-review PR into `main` for every repo change after the relevant checks pass.
+- Do not default to draft PRs. The current GitHub connector can create, close, and merge PRs, but the draft-to-ready mutation is unreliable. Use draft PRs only when explicitly needed, and record whether conversion requires the GitHub UI or a working `gh` login.
 - Record verification performed, skipped checks, risks, and follow-up work in the PR.
 - Update `docs/AGENT_LEARNINGS.md` before merge when review findings, recurring bugs, or new verification patterns produce reusable lessons for future agents.
 - Merge only after explicit user approval for that PR.

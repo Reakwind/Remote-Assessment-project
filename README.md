@@ -29,7 +29,8 @@ Read these first:
 - Do not commit or push directly to `main`.
 - Start every task from latest `origin/main`.
 - Use a feature branch, preferably `codex/<short-scope>`.
-- Keep commits focused and open a GitHub PR into `main`.
+- Keep commits focused and open a normal, ready-for-review GitHub PR into `main` after checks pass.
+- Do not default to draft PRs; the current GitHub connector has an unreliable draft-to-ready transition. Use drafts only when explicitly needed.
 - Run relevant checks before pushing or opening a PR.
 - Review the diff and document risks, skipped checks, and open questions.
 - Merge to `main` only after explicit user approval for that specific merge.
