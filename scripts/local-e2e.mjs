@@ -111,6 +111,25 @@ async function runVersion(version) {
 
   const { sessionId, testNumber } = created.body;
 
+  const repeatCreated = await request('/functions/v1/create-session', {
+    method: 'POST',
+    headers: clinicianHeaders,
+    body: JSON.stringify({
+      caseId,
+      mocaVersion: version,
+      ageBand: '70-79',
+      educationYears: 12,
+    }),
+  });
+  assert(
+    repeatCreated.status === 200 &&
+      repeatCreated.body?.sessionId &&
+      repeatCreated.body.sessionId !== sessionId &&
+      /^\d{8}$/.test(repeatCreated.body?.testNumber ?? ''),
+    `[${version}] create repeat session for same case`,
+    repeatCreated,
+  );
+
   const started = await request('/functions/v1/start-session', {
     method: 'POST',
     headers,
