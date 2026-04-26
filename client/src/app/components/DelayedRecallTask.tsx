@@ -3,7 +3,7 @@ import { SimpleTask } from "./SimpleTask";
 export function DelayedRecallTask() {
   return (
     <SimpleTask 
-      stepNumber={12}
+      stepNumber={11}
       stepTitle="שליפה מאוחרת"
       mainTitle="האם אתה זוכר את המילים?"
       audioText="כעת, חזור על חמשת המילים שביקשתי ממך לזכור בתחילת המבדק."

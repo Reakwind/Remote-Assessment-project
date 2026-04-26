@@ -218,6 +218,33 @@ async function runPatientClickThrough(
       isComplete: false,
       tasks: {},
     }));
+
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: async () => ({
+          getTracks: () => [{ stop: () => undefined }],
+        }),
+      },
+    });
+
+    class MockMediaRecorder {
+      mimeType = 'audio/webm';
+      ondataavailable: ((event: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+
+      start() {}
+
+      stop() {
+        this.ondataavailable?.({ data: new Blob(['audio'], { type: 'audio/webm' }) });
+        this.onstop?.();
+      }
+    }
+
+    Object.defineProperty(window, 'MediaRecorder', {
+      configurable: true,
+      value: MockMediaRecorder,
+    });
   }, { linkToken, startedSession: started });
 
   await page.goto('/#/patient/welcome');
@@ -230,13 +257,75 @@ async function runPatientClickThrough(
     resp.url().includes('/functions/v1/complete-session') && resp.request().method() === 'POST',
   );
 
-  for (let i = 0; i < 12; i += 1) {
-    await page.getByRole('button', { name: /^המשך$/ }).click();
-  }
+  await drawOnCanvas(page);
+  await clickContinue(page);
+
+  await drawOnCanvas(page);
+  await clickContinue(page);
+
+  await drawOnCanvas(page);
+  await clickContinue(page);
+
+  await page.getByRole('button', { name: 'סוס' }).click();
+  await page.getByRole('button', { name: 'לפריט הבא' }).click();
+  await page.getByRole('button', { name: 'נמר' }).click();
+  await page.getByRole('button', { name: 'לפריט הבא' }).click();
+  await page.getByRole('button', { name: 'ברווז' }).click();
+  await clickContinue(page);
+
+  await recordAudio(page);
+  await clickContinue(page);
+
+  await recordAudio(page);
+  await clickContinue(page);
+
+  await page.getByRole('button', { name: /הקש כאן/ }).click();
+  await clickContinue(page);
+
+  await recordAudio(page);
+  await clickContinue(page);
+
+  await recordAudio(page);
+  await clickContinue(page);
+
+  await recordAudio(page);
+  await clickContinue(page);
+
+  await recordAudio(page);
+  await clickContinue(page);
+
+  await recordAudio(page);
+  await clickContinue(page);
 
   const completed = await completionResponse;
   expect(completed.ok()).toBeTruthy();
   await expect(page.getByRole('heading', { name: /המבדק הושלם/ })).toBeVisible();
+}
+
+async function clickContinue(page: Page) {
+  await page.getByRole('button', { name: /^המשך$/ }).click();
+}
+
+async function drawOnCanvas(page: Page) {
+  const canvas = page.getByTestId('drawing-canvas');
+  await canvas.scrollIntoViewIfNeeded();
+  const box = await canvas.boundingBox();
+  expect(box).toBeTruthy();
+  const startX = box!.x + box!.width * 0.35;
+  const startY = box!.y + box!.height * 0.35;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + 40, startY + 40);
+  await page.mouse.move(startX + 80, startY + 10);
+  await page.mouse.up();
+  await expect(page.getByRole('button', { name: /בטל פעולה/ })).toBeEnabled();
+}
+
+async function recordAudio(page: Page) {
+  await page.getByRole('button', { name: /התחל הקלטה/ }).click();
+  await expect(page.getByRole('button', { name: /עצור הקלטה/ })).toBeVisible();
+  await page.getByRole('button', { name: /עצור הקלטה/ }).click();
+  await expect(page.getByText(/ההקלטה נשמרה בהצלחה/)).toBeVisible();
 }
 
 async function getSession(request: APIRequestContext, accessToken: string, sessionId: string) {

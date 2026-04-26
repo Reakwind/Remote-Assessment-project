@@ -9,6 +9,7 @@ import {
   Loader2,
   Activity,
   Copy,
+  FileText,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { supabase } from "../../lib/supabase";
@@ -277,7 +278,7 @@ export function PatientProfilePage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[780px] text-right">
+          <table className="w-full min-w-[900px] text-right">
             <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 font-bold">
               <tr>
                 <th className="px-6 py-3">מזהה</th>
@@ -287,6 +288,7 @@ export function PatientProfilePage() {
                 <th className="px-6 py-3">נפתח</th>
                 <th className="px-6 py-3">הושלם</th>
                 <th className="px-6 py-3">קוד</th>
+                <th className="px-6 py-3">סקירה</th>
               </tr>
             </thead>
             <tbody>
@@ -333,6 +335,21 @@ export function PatientProfilePage() {
                       ) : (
                         <span className="text-gray-400">—</span>
                       )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/dashboard/session/${s.id}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className={clsx(
+                          "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-extrabold transition-colors",
+                          s.status === "awaiting_review"
+                            ? "bg-black text-white hover:bg-gray-800"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200",
+                        )}
+                      >
+                        <FileText className="h-4 w-4" />
+                        {s.status === "awaiting_review" ? "סקור" : "פתח"}
+                      </Link>
                     </td>
                   </tr>
                 );

@@ -3,7 +3,7 @@ import { SimpleTask } from "./SimpleTask";
 export function OrientationTask() {
   return (
     <SimpleTask 
-      stepNumber={13}
+      stepNumber={12}
       stepTitle="התמצאות"
       mainTitle="התמצאות בזמן ובמקום"
       audioText="ספר לי בבקשה מהו התאריך המלא היום, ובאיזה מקום אנחנו נמצאים."

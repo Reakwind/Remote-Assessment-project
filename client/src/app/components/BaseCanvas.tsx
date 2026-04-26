@@ -9,6 +9,7 @@ export function BaseCanvas({
   onSave,
   initialStrokes = [],
   backgroundImageUrl,
+  backgroundPadding = 0,
 }: { 
   width?: number; 
   height?: number;
@@ -16,6 +17,7 @@ export function BaseCanvas({
   onSave?: (dataUrl: string, strokes: any[][]) => void;
   initialStrokes?: any[][];
   backgroundImageUrl?: string | null;
+  backgroundPadding?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
@@ -56,14 +58,14 @@ export function BaseCanvas({
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#000000";
 
-    redrawCanvas(ctx, width, height, initialStrokes, backgroundImageUrl).catch((error) => {
+    redrawCanvas(ctx, width, height, initialStrokes, backgroundImageUrl, backgroundPadding).catch((error) => {
       if (!cancelled) console.error("Failed to draw canvas background:", error);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [width, height, initialStrokes, backgroundImageUrl]);
+  }, [width, height, initialStrokes, backgroundImageUrl, backgroundPadding]);
 
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (stylusOnly && e.pointerType === "touch") return;
@@ -135,7 +137,7 @@ export function BaseCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    redrawCanvas(ctx, width, height, [], backgroundImageUrl).catch((error) => {
+    redrawCanvas(ctx, width, height, [], backgroundImageUrl, backgroundPadding).catch((error) => {
       console.error("Failed to clear canvas background:", error);
     });
     setStrokes([]);
@@ -155,7 +157,7 @@ export function BaseCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    redrawCanvas(ctx, width, height, newStrokes, backgroundImageUrl).catch((error) => {
+    redrawCanvas(ctx, width, height, newStrokes, backgroundImageUrl, backgroundPadding).catch((error) => {
       console.error("Failed to undo canvas stroke:", error);
     });
 
@@ -234,13 +236,14 @@ async function redrawCanvas(
   height: number,
   strokes: any[][],
   backgroundImageUrl?: string | null,
+  backgroundPadding = 0,
 ) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
 
   if (backgroundImageUrl) {
     const image = await loadImage(backgroundImageUrl);
-    drawContainedImage(ctx, image, width, height);
+    drawContainedImage(ctx, image, width, height, backgroundPadding);
   }
 
   ctx.lineCap = "round";
@@ -274,8 +277,11 @@ function drawContainedImage(
   image: HTMLImageElement,
   width: number,
   height: number,
+  padding = 0,
 ) {
-  const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+  const drawableWidth = Math.max(1, width - padding * 2);
+  const drawableHeight = Math.max(1, height - padding * 2);
+  const scale = Math.min(drawableWidth / image.naturalWidth, drawableHeight / image.naturalHeight);
   const drawWidth = image.naturalWidth * scale;
   const drawHeight = image.naturalHeight * scale;
   const x = (width - drawWidth) / 2;

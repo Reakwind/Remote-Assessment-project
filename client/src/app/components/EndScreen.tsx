@@ -25,7 +25,7 @@ export function EndScreen() {
       <div className="flex justify-between items-start mb-10">
         <div>
           <div className="text-gray-500 font-bold uppercase tracking-wider text-sm mb-3">
-            14. סיום
+            13. סיום
           </div>
           <h2 className="text-4xl font-extrabold text-black">
             {isCompleted ? "המבדק הושלם" : "שומר את המבדק"}
