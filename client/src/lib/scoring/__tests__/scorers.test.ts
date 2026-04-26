@@ -111,6 +111,23 @@ describe('scoreVigilance', () => {
     expect(scoreVigilance({ score: 3 })[0].score).toBe(1);
     expect(scoreVigilance({ score: -2 })[0].score).toBe(0);
   });
+
+  it('scores tap-count payloads within one target tap as correct', () => {
+    expect(scoreVigilance({ tapped: 10, targetCount: 11 })[0].score).toBe(1);
+    expect(scoreVigilance({ tapped: 11, targetCount: 11 })[0].score).toBe(1);
+    expect(scoreVigilance({ tapped: 12, targetCount: 11 })[0].score).toBe(1);
+  });
+
+  it('scores tap-count payloads outside the target tolerance as incorrect', () => {
+    expect(scoreVigilance({ tapped: 9, targetCount: 11 })[0].score).toBe(0);
+    expect(scoreVigilance({ tapped: 13, targetCount: 11 })[0].score).toBe(0);
+  });
+
+  it('rejects malformed tap-count payloads', () => {
+    expect(() => scoreVigilance({})).toThrow('Invalid vigilance');
+    expect(() => scoreVigilance({ tapped: 10 })).toThrow('Invalid vigilance');
+    expect(() => scoreVigilance({ targetCount: 11 })).toThrow('Invalid vigilance');
+  });
 });
 
 describe('scoreSerial7s', () => {
