@@ -25,48 +25,79 @@ function namingAnswers(rawData: unknown): (string | null)[] {
   });
 }
 
+function taskMax(taskId: string, config: MocaScoringConfig): number {
+  return config.domains
+    .flatMap((domain) => domain.tasks)
+    .find((task) => task.taskId === taskId)
+    ?.max ?? 0;
+}
+
 function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext, config: MocaScoringConfig): ItemScore[] {
   // Assessment context is persisted in localStorage; on resume, sessionDate can
   // come back as an ISO string. Coerce it so orientation scoring stays correct.
   const sessionDate = new Date((ctx as unknown as { sessionDate: Date | string }).sessionDate);
+  const max = taskMax(taskId, config);
   if ((config.drawingTasks as string[]).includes(taskId)) {
-    const domainTask = config.domains.flatMap(d => d.tasks).find(t => t.taskId === taskId);
-    return scoreDrawing(taskId, domainTask?.max ?? 1);
+    return scoreDrawing(taskId, max || 1);
   }
   if ((config.noScoreTasks as string[]).includes(taskId)) return [];
 
   switch (taskId) {
     case 'moca-orientation-task':
-      return safeScore(taskId, rawData, d =>
-        scoreOrientation(d as Parameters<typeof scoreOrientation>[0], sessionDate, ctx.sessionLocation)
+      return safeScore(
+        taskId,
+        rawData,
+        d => scoreOrientation(d as Parameters<typeof scoreOrientation>[0], sessionDate, ctx.sessionLocation),
+        max,
       );
     case 'moca-digit-span':
-      return safeScore(taskId, rawData, d =>
-        scoreDigitSpan(d as Parameters<typeof scoreDigitSpan>[0])
+      return safeScore(
+        taskId,
+        rawData,
+        d => scoreDigitSpan(d as Parameters<typeof scoreDigitSpan>[0]),
+        max,
       );
     case 'moca-vigilance':
-      return safeScore(taskId, rawData, d =>
-        scoreVigilance(d as Parameters<typeof scoreVigilance>[0])
+      return safeScore(
+        taskId,
+        rawData,
+        d => scoreVigilance(d as Parameters<typeof scoreVigilance>[0]),
+        max,
       );
     case 'moca-serial-7s':
-      return safeScore(taskId, rawData, d =>
-        scoreSerial7s(d as Parameters<typeof scoreSerial7s>[0]), 3
+      return safeScore(
+        taskId,
+        rawData,
+        d => scoreSerial7s(d as Parameters<typeof scoreSerial7s>[0]),
+        max,
       );
     case 'moca-language':
-      return safeScore(taskId, rawData, d =>
-        scoreLanguage(d as Parameters<typeof scoreLanguage>[0], config.fluencyThreshold)
+      return safeScore(
+        taskId,
+        rawData,
+        d => scoreLanguage(d as Parameters<typeof scoreLanguage>[0], config.fluencyThreshold),
+        max,
       );
     case 'moca-abstraction':
-      return safeScore(taskId, rawData, d =>
-        scoreAbstraction(d as Parameters<typeof scoreAbstraction>[0])
+      return safeScore(
+        taskId,
+        rawData,
+        d => scoreAbstraction(d as Parameters<typeof scoreAbstraction>[0]),
+        max,
       );
     case 'moca-delayed-recall':
-      return safeScore(taskId, rawData, d =>
-        scoreDelayedRecall(d as Parameters<typeof scoreDelayedRecall>[0], config.targetWords)
+      return safeScore(
+        taskId,
+        rawData,
+        d => scoreDelayedRecall(d as Parameters<typeof scoreDelayedRecall>[0], config.targetWords),
+        max,
       );
     case 'moca-naming':
-      return safeScore(taskId, rawData, d =>
-        scoreNaming(namingAnswers(d), config.correctAnimalNames)
+      return safeScore(
+        taskId,
+        rawData,
+        d => scoreNaming(namingAnswers(d), config.correctAnimalNames),
+        max,
       );
     default:
       return [];

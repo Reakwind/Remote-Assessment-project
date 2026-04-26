@@ -1,0 +1,241 @@
+{
+  "cases": [
+    {
+      "name": "full_correct_8_3_with_pending_drawings",
+      "context": {
+        "sessionId": "contract-full-83",
+        "sessionDate": "2026-04-21T00:00:00.000Z",
+        "educationYears": 16,
+        "patientAge": 72,
+        "mocaVersion": "8.3",
+        "sessionLocation": { "place": "מרפאה", "city": "תל אביב" }
+      },
+      "results": {
+        "moca-orientation-task": { "date": "21", "month": "אפריל", "year": "2026", "day": "שלישי", "place": "מרפאה", "city": "תל אביב" },
+        "moca-digit-span": { "forward": { "isCorrect": true }, "backward": { "isCorrect": true } },
+        "moca-vigilance": { "tapped": 10, "targetLetter": "א", "targetCount": 11, "sequenceLength": 29 },
+        "moca-serial-7s": [{ "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }],
+        "moca-language": { "rep1": true, "rep2": true, "fluencyCount": 12 },
+        "moca-abstraction": { "pair1": true, "pair2": true },
+        "moca-delayed-recall": { "recalled": ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"] },
+        "moca-naming": { "answers": { "item-1": "סוס", "item-2": "נמר", "item-3": "ברווז" } },
+        "moca-cube": { "strokes": [] },
+        "moca-clock": { "strokes": [] },
+        "moca-visuospatial": { "strokes": [] },
+        "moca-memory-learning": { "registered": true }
+      },
+      "expected": {
+        "summary": {
+          "mocaVersion": "8.3",
+          "totalRaw": 25,
+          "totalAdjusted": 25,
+          "totalProvisional": true,
+          "pendingReviewCount": 3,
+          "educationYears": 16,
+          "normPercentile": null,
+          "normSd": null
+        },
+        "domains": {
+          "visuospatial": { "raw": 0, "max": 5 },
+          "naming": { "raw": 3, "max": 3 },
+          "attention": { "raw": 6, "max": 6 },
+          "language": { "raw": 3, "max": 3 },
+          "abstraction": { "raw": 2, "max": 2 },
+          "memory": { "raw": 5, "max": 5 },
+          "orientation": { "raw": 6, "max": 6 }
+        },
+        "items": {
+          "moca-visuospatial": { "score": 0, "max": 1, "needsReview": true, "reviewReason": "drawing" },
+          "moca-cube": { "score": 0, "max": 1, "needsReview": true, "reviewReason": "drawing" },
+          "moca-clock": { "score": 0, "max": 3, "needsReview": true, "reviewReason": "drawing" },
+          "naming.item1": { "score": 1, "max": 1, "needsReview": false },
+          "naming.item2": { "score": 1, "max": 1, "needsReview": false },
+          "naming.item3": { "score": 1, "max": 1, "needsReview": false },
+          "digit-span.forward": { "score": 1, "max": 1, "needsReview": false },
+          "digit-span.backward": { "score": 1, "max": 1, "needsReview": false },
+          "moca-vigilance": { "score": 1, "max": 1, "needsReview": false },
+          "moca-serial-7s": { "score": 3, "max": 3, "needsReview": false },
+          "language.fluency": { "score": 1, "max": 1, "needsReview": false },
+          "recall.word5": { "score": 1, "max": 1, "needsReview": false },
+          "orientation.city": { "score": 1, "max": 1, "needsReview": false }
+        }
+      }
+    },
+    {
+      "name": "full_correct_8_2_version_specific_naming",
+      "context": {
+        "sessionId": "contract-full-82",
+        "sessionDate": "2026-04-21T00:00:00.000Z",
+        "educationYears": 16,
+        "patientAge": 72,
+        "mocaVersion": "8.2",
+        "sessionLocation": { "place": "מרפאה", "city": "תל אביב" }
+      },
+      "results": {
+        "moca-orientation-task": { "date": "21", "month": "אפריל", "year": "2026", "day": "שלישי", "place": "מרפאה", "city": "תל אביב" },
+        "moca-digit-span": { "forward": { "isCorrect": true }, "backward": { "isCorrect": true } },
+        "moca-vigilance": { "tapped": 10, "targetLetter": "א", "targetCount": 11, "sequenceLength": 29 },
+        "moca-serial-7s": [{ "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }],
+        "moca-language": { "rep1": true, "rep2": true, "fluencyCount": 12 },
+        "moca-abstraction": { "pair1": true, "pair2": true },
+        "moca-delayed-recall": { "recalled": ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"] },
+        "moca-naming": { "answers": { "item-1": "נחש", "item-2": "פיל", "item-3": "תנין" } },
+        "moca-cube": { "strokes": [] },
+        "moca-clock": { "strokes": [] },
+        "moca-visuospatial": { "strokes": [] },
+        "moca-memory-learning": { "registered": true }
+      },
+      "expected": {
+        "summary": {
+          "mocaVersion": "8.2",
+          "totalRaw": 25,
+          "totalAdjusted": 25,
+          "totalProvisional": true,
+          "pendingReviewCount": 3,
+          "educationYears": 16,
+          "normPercentile": null,
+          "normSd": null
+        },
+        "domains": {
+          "naming": { "raw": 3, "max": 3 },
+          "attention": { "raw": 6, "max": 6 }
+        },
+        "items": {
+          "naming.item1": { "score": 1, "max": 1, "needsReview": false },
+          "naming.item2": { "score": 1, "max": 1, "needsReview": false },
+          "naming.item3": { "score": 1, "max": 1, "needsReview": false }
+        }
+      }
+    },
+    {
+      "name": "malformed_serial_7s_requires_review_with_configured_max",
+      "context": {
+        "sessionId": "contract-malformed-serial",
+        "sessionDate": "2026-04-21T00:00:00.000Z",
+        "educationYears": 16,
+        "patientAge": 72,
+        "mocaVersion": "8.3",
+        "sessionLocation": { "place": "מרפאה", "city": "תל אביב" }
+      },
+      "results": {
+        "moca-orientation-task": { "date": "21", "month": "אפריל", "year": "2026", "day": "שלישי", "place": "מרפאה", "city": "תל אביב" },
+        "moca-digit-span": { "forward": { "isCorrect": true }, "backward": { "isCorrect": true } },
+        "moca-vigilance": { "tapped": 10, "targetLetter": "א", "targetCount": 11, "sequenceLength": 29 },
+        "moca-serial-7s": "bad-shape",
+        "moca-language": { "rep1": true, "rep2": true, "fluencyCount": 12 },
+        "moca-abstraction": { "pair1": true, "pair2": true },
+        "moca-delayed-recall": { "recalled": ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"] },
+        "moca-naming": { "answers": { "item-1": "סוס", "item-2": "נמר", "item-3": "ברווז" } },
+        "moca-cube": { "strokes": [] },
+        "moca-clock": { "strokes": [] },
+        "moca-visuospatial": { "strokes": [] },
+        "moca-memory-learning": { "registered": true }
+      },
+      "expected": {
+        "summary": {
+          "mocaVersion": "8.3",
+          "totalRaw": 22,
+          "totalAdjusted": 22,
+          "totalProvisional": true,
+          "pendingReviewCount": 4,
+          "educationYears": 16,
+          "normPercentile": null,
+          "normSd": null
+        },
+        "domains": {
+          "attention": { "raw": 3, "max": 6 }
+        },
+        "items": {
+          "moca-serial-7s": { "score": 0, "max": 3, "needsReview": true, "reviewReason": "rule_score_unavailable" }
+        }
+      }
+    },
+    {
+      "name": "orientation_without_location_keeps_place_city_manual",
+      "context": {
+        "sessionId": "contract-orientation-location",
+        "sessionDate": "2026-04-21T00:00:00.000Z",
+        "educationYears": 16,
+        "patientAge": 72,
+        "mocaVersion": "8.3"
+      },
+      "results": {
+        "moca-orientation-task": { "date": "21", "month": "אפריל", "year": "2026", "day": "שלישי", "place": "מרפאה", "city": "תל אביב" },
+        "moca-digit-span": { "forward": { "isCorrect": true }, "backward": { "isCorrect": true } },
+        "moca-vigilance": { "tapped": 10, "targetLetter": "א", "targetCount": 11, "sequenceLength": 29 },
+        "moca-serial-7s": [{ "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }],
+        "moca-language": { "rep1": true, "rep2": true, "fluencyCount": 12 },
+        "moca-abstraction": { "pair1": true, "pair2": true },
+        "moca-delayed-recall": { "recalled": ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"] },
+        "moca-naming": { "answers": { "item-1": "סוס", "item-2": "נמר", "item-3": "ברווז" } },
+        "moca-cube": { "strokes": [] },
+        "moca-clock": { "strokes": [] },
+        "moca-visuospatial": { "strokes": [] },
+        "moca-memory-learning": { "registered": true }
+      },
+      "expected": {
+        "summary": {
+          "mocaVersion": "8.3",
+          "totalRaw": 23,
+          "totalAdjusted": 23,
+          "totalProvisional": true,
+          "pendingReviewCount": 5,
+          "educationYears": 16,
+          "normPercentile": null,
+          "normSd": null
+        },
+        "domains": {
+          "orientation": { "raw": 4, "max": 6 }
+        },
+        "items": {
+          "orientation.date": { "score": 1, "max": 1, "needsReview": false },
+          "orientation.place": { "score": 0, "max": 1, "needsReview": true, "reviewReason": "rule_score_unavailable" },
+          "orientation.city": { "score": 0, "max": 1, "needsReview": true, "reviewReason": "rule_score_unavailable" }
+        }
+      }
+    },
+    {
+      "name": "off_target_vigilance_requires_review",
+      "context": {
+        "sessionId": "contract-vigilance-review",
+        "sessionDate": "2026-04-21T00:00:00.000Z",
+        "educationYears": 16,
+        "patientAge": 72,
+        "mocaVersion": "8.3",
+        "sessionLocation": { "place": "מרפאה", "city": "תל אביב" }
+      },
+      "results": {
+        "moca-orientation-task": { "date": "21", "month": "אפריל", "year": "2026", "day": "שלישי", "place": "מרפאה", "city": "תל אביב" },
+        "moca-digit-span": { "forward": { "isCorrect": true }, "backward": { "isCorrect": true } },
+        "moca-vigilance": { "tapped": 4, "targetLetter": "א", "targetCount": 11, "sequenceLength": 29 },
+        "moca-serial-7s": [{ "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }, { "isCorrect": true }],
+        "moca-language": { "rep1": true, "rep2": true, "fluencyCount": 12 },
+        "moca-abstraction": { "pair1": true, "pair2": true },
+        "moca-delayed-recall": { "recalled": ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"] },
+        "moca-naming": { "answers": { "item-1": "סוס", "item-2": "נמר", "item-3": "ברווז" } },
+        "moca-cube": { "strokes": [] },
+        "moca-clock": { "strokes": [] },
+        "moca-visuospatial": { "strokes": [] },
+        "moca-memory-learning": { "registered": true }
+      },
+      "expected": {
+        "summary": {
+          "mocaVersion": "8.3",
+          "totalRaw": 24,
+          "totalAdjusted": 24,
+          "totalProvisional": true,
+          "pendingReviewCount": 4,
+          "educationYears": 16,
+          "normPercentile": null,
+          "normSd": null
+        },
+        "domains": {
+          "attention": { "raw": 5, "max": 6 }
+        },
+        "items": {
+          "moca-vigilance": { "score": 0, "max": 1, "needsReview": true, "reviewReason": "rule_score_unavailable" }
+        }
+      }
+    }
+  ]
+}
