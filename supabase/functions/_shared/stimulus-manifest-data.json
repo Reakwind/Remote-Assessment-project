@@ -40,14 +40,6 @@
       "kind": "image",
       "contentType": "image/png",
       "required": true
-    },
-    {
-      "taskType": "moca-memory-learning",
-      "assetId": "word-list-audio",
-      "label": "Memory learning audio prompt",
-      "kind": "audio",
-      "contentType": "audio/mpeg",
-      "required": true
     }
   ]
 }

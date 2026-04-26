@@ -4,7 +4,7 @@ import { buildStimulusManifest, supportedMocaVersions } from './stimulus-manifes
 Deno.test('buildStimulusManifest creates version-scoped private storage paths', () => {
   const manifest = buildStimulusManifest('8.3');
 
-  assertEquals(manifest.length, 6);
+  assertEquals(manifest.length, 5);
   assertEquals(
     manifest.map((entry) => entry.storagePath),
     [
@@ -13,7 +13,6 @@ Deno.test('buildStimulusManifest creates version-scoped private storage paths', 
       '8.3/moca-naming/item-1.png',
       '8.3/moca-naming/item-2.png',
       '8.3/moca-naming/item-3.png',
-      '8.3/moca-memory-learning/word-list-audio.mp3',
     ],
   );
 });

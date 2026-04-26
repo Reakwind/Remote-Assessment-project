@@ -404,7 +404,7 @@ function assertStimuliManifest(response, version) {
   const body = response.body;
   assert(body?.mocaVersion === version, `[${version}] stimulus manifest preserves MoCA version`, body);
   assert(body?.bucket === 'stimuli', `[${version}] stimulus manifest uses private stimuli bucket`, body);
-  assert(Array.isArray(body?.assets) && body.assets.length >= 6, `[${version}] stimulus manifest has expected assets`, body);
+  assert(Array.isArray(body?.assets) && body.assets.length >= 5, `[${version}] stimulus manifest has expected visual assets`, body);
   assert(
     body.assets.every((asset) => typeof asset.storagePath === 'string' && asset.storagePath.startsWith(`${version}/`)),
     `[${version}] stimulus storage paths are version scoped`,

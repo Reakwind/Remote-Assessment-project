@@ -4,7 +4,7 @@ This runbook explains how to prepare and verify licensed MoCA stimulus assets wi
 
 ## Policy
 
-- Keep licensed MoCA PDFs, images, and audio outside the repository.
+- Keep licensed MoCA PDFs and images outside the repository.
 - Store runtime stimulus assets in the private Supabase Storage bucket named `stimuli`.
 - Use one versioned path per task asset.
 - Validate all required assets before any clinical pilot.
@@ -23,7 +23,8 @@ For each supported version (`8.1`, `8.2`, `8.3`), upload these private Storage o
 | Naming | Item 1 image | `image/png` | `{version}/moca-naming/item-1.png` |
 | Naming | Item 2 image | `image/png` | `{version}/moca-naming/item-2.png` |
 | Naming | Item 3 image | `image/png` | `{version}/moca-naming/item-3.png` |
-| Memory learning | Word-list audio | `audio/mpeg` | `{version}/moca-memory-learning/word-list-audio.mp3` |
+
+Memory learning uses generated Hebrew speech in the browser rather than a licensed MP3 asset.
 
 ## Local Verification
 
@@ -41,10 +42,10 @@ To extract the visual stimuli from the licensed local PDFs and upload them to th
 export SUPABASE_URL=http://127.0.0.1:54321
 export SUPABASE_SECRET_KEY="<local Secret value from supabase status>"
 node scripts/upload-stimuli-from-pdfs.mjs --all-versions --upload
-node scripts/verify-stimuli.mjs --all-versions --visual-only
+node scripts/verify-stimuli.mjs --all-versions
 ```
 
-The extraction script writes temporary PNGs under `/tmp/moca-stimuli` and does not commit licensed content to Git. The memory word-list audio still needs to be prepared and uploaded separately as MP3 before full clinical readiness verification passes.
+The extraction script writes temporary PNGs under `/tmp/moca-stimuli` and does not commit licensed content to Git.
 
 To print the expected manifest without contacting Supabase:
 
@@ -68,8 +69,7 @@ The script exits non-zero when any required asset is missing.
 
 1. Prepare licensed assets outside this repository.
 2. Convert visual stimuli to PNG with `scripts/upload-stimuli-from-pdfs.mjs` or an equivalent licensed-asset process.
-3. Prepare memory prompt audio as MP3.
-4. Upload each object to the private `stimuli` bucket using the exact versioned path.
-5. Run `node scripts/verify-stimuli.mjs --all-versions`.
-6. Run local E2E with `node scripts/local-e2e.mjs --all-versions`.
-7. Record verification in the PR or release note before clinical testing.
+3. Upload each object to the private `stimuli` bucket using the exact versioned path.
+4. Run `node scripts/verify-stimuli.mjs --all-versions`.
+5. Run local E2E with `node scripts/local-e2e.mjs --all-versions`.
+6. Record verification in the PR or release note before clinical testing.

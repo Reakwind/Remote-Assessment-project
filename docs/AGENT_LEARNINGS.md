@@ -145,6 +145,23 @@ Required verification:
 - Installed PWA/home-screen mode check before clinical pilot.
 - Local Supabase E2E when patient start, save, complete, storage, review, scoring, or export contracts are touched.
 
+### 8. Keep the MoCA stimulus manifest visual-only
+
+Evidence:
+
+- The 2026-04-26 Chrome QA pass confirmed memory learning should use generated Hebrew browser speech, not an uploaded licensed MP3.
+
+Rules:
+
+- Do not add `moca-memory-learning/word-list-audio.mp3` back to the required private stimulus manifest.
+- Keep `scripts/verify-stimuli.mjs --all-versions` focused on the licensed visual stimuli listed in `docs/STIMULI_ASSET_RUNBOOK.md`.
+- Patient memory learning should use generated Hebrew speech through the in-browser listen flow and still capture the patient's spoken response as audio evidence for clinician review.
+
+Required verification:
+
+- `node scripts/verify-stimuli.mjs --all-versions` should pass once visual assets are uploaded.
+- Browser testing should confirm Hebrew audio preflight and memory recording work in Chrome.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:

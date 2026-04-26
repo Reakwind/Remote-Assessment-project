@@ -81,10 +81,10 @@ To extract and upload visual stimuli from the local licensed PDFs into private l
 
 ```bash
 SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SECRET_KEY="<local Secret value>" node scripts/upload-stimuli-from-pdfs.mjs --all-versions --upload
-SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SECRET_KEY="<local Secret value>" node scripts/verify-stimuli.mjs --all-versions --visual-only
+SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SECRET_KEY="<local Secret value>" node scripts/verify-stimuli.mjs --all-versions
 ```
 
-The memory word-list audio is not extracted by this visual-stimulus script and must be uploaded separately as MP3 for full clinical readiness.
+Memory learning uses generated Hebrew speech in the browser, so there is no licensed memory MP3 to upload.
 
 To verify uploaded private stimulus assets before clinical testing:
 
@@ -146,7 +146,7 @@ This starts or reuses Vite and expects local Supabase plus Edge Functions to alr
 
 ## Known Clinical Blockers
 
-- Official licensed MoCA stimuli are still required before clinical pilot use and must not be committed to this repository.
-- The local E2E script verifies the PDF files exist locally. The clinician-facing MoCA version selector stores the selected version on each session for traceability; licensed stimuli are loaded from private Storage by version/task and verified with `scripts/verify-stimuli.mjs`.
+- Official licensed MoCA visual stimuli are still required before clinical pilot use and must not be committed to this repository.
+- The local E2E script verifies the PDF files exist locally. The clinician-facing MoCA version selector stores the selected version on each session for traceability; licensed visual stimuli are loaded from private Storage by version/task and verified with `scripts/verify-stimuli.mjs`. Memory learning uses generated Hebrew speech rather than a licensed MP3.
 - Audio/manual tasks are supported through clinician review, but fully structured rule-based scoring is still incomplete for several tasks.
 - External speech-to-text is future transcript evidence only; it must not become an automated scoring authority.

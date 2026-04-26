@@ -98,7 +98,7 @@ Useful local variants from the current runbooks:
 
 For browser or UX changes, verify the affected flow in Chrome when practical.
 
-For licensed stimulus storage or clinical-readiness changes, keep assets out of Git. Use `node scripts/upload-stimuli-from-pdfs.mjs --all-versions --upload` for local licensed visual assets when appropriate, and run `node scripts/verify-stimuli.mjs --all-versions` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY` configured. Use `node scripts/verify-stimuli.mjs --all-versions --print-manifest` to inspect the expected manifest, and use `--visual-only` only when memory word-list audio is intentionally not part of the check.
+For licensed stimulus storage or clinical-readiness changes, keep assets out of Git. Use `node scripts/upload-stimuli-from-pdfs.mjs --all-versions --upload` for local licensed visual assets when appropriate, and run `node scripts/verify-stimuli.mjs --all-versions` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY` configured. Use `node scripts/verify-stimuli.mjs --all-versions --print-manifest` to inspect the expected manifest. Memory learning uses generated Hebrew speech in the browser; do not add a licensed memory MP3 requirement.
 
 ## Supabase Remote Operations
 
