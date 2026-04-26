@@ -7,3 +7,4 @@ dist/
 .playwright-mcp/
 client/test-results/
 client/playwright-report/
+.claude/worktrees/
