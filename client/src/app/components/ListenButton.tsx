@@ -9,6 +9,8 @@ interface ListenButtonProps {
   className?: string;
 }
 
+const PACED_ITEM_INTERVAL_MS = 1000;
+
 export function ListenButton({ text, pacedItems, size = "md", className }: ListenButtonProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const isCancelledRef = useRef(false);
@@ -65,11 +67,16 @@ export function ListenButton({ text, pacedItems, size = "md", className }: Liste
           const utterance = new SpeechSynthesisUtterance(pacedItems[i]);
           utterance.lang = "he-IL";
           utterance.rate = 0.9;
+          let startedAt = performance.now();
+
+          utterance.onstart = () => {
+            startedAt = performance.now();
+          };
           
           utterance.onend = () => {
             if (isCancelledRef.current) return resolve();
-            // Wait 1 second (1000ms) interval between words to match MoCA protocol
-            setTimeout(resolve, 1000);
+            const elapsed = performance.now() - startedAt;
+            window.setTimeout(resolve, Math.max(0, PACED_ITEM_INTERVAL_MS - elapsed));
           };
           
           utterance.onerror = () => {

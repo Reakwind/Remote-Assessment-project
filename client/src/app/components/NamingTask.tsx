@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
 import { ListenButton } from "./ListenButton";
 import { clsx } from "clsx";
 import { useAssessmentStore } from "../store/AssessmentContext";
@@ -48,7 +47,6 @@ export function NamingTask() {
   const isAnswered = !!selectedAnswer;
 
   const handleSelect = (option: string) => {
-    if (isAnswered) return;
     const nextAnswers = { ...answers, [currentAnimal.id]: option };
     setAnswers(nextAnswers);
     updateTaskData('naming', { answers: nextAnswers });
@@ -77,13 +75,13 @@ export function NamingTask() {
         {namingItems.map((_, i) => (
           <div
             key={i}
-            className={clsx(
-              "h-2 rounded-full transition-all duration-300",
-              i === currentIndex ? "w-12 bg-black" : "w-8",
-              i < (currentIndex || 0) ? (answers[namingItems[i].id] === namingItems[i].name ? "bg-green-600" : "bg-red-600") : "bg-gray-200"
-            )}
-          />
-        ))}
+              className={clsx(
+                "h-2 rounded-full transition-all duration-300",
+                i === currentIndex ? "w-12 bg-black" : "w-8",
+                i < (currentIndex || 0) ? "bg-gray-500" : "bg-gray-200"
+              )}
+            />
+          ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-10 bg-gray-50 p-5 sm:p-10 rounded-2xl border border-gray-100 flex-1 min-h-[360px] sm:min-h-[500px]">
@@ -108,19 +106,14 @@ export function NamingTask() {
           <div className="grid grid-cols-1 gap-4">
             {currentAnimal.options.map((option) => {
               const isSelected = selectedAnswer === option;
-              const isCorrect = option === currentAnimal.name;
               
               let btnClass = "bg-white border-2 border-gray-200 text-gray-800 hover:border-black";
               
               if (isAnswered) {
-                if (isSelected && isCorrect) {
-                  btnClass = "bg-green-50 border-green-600 text-green-900 shadow-[0_0_0_3px_rgba(22,163,74,0.2)]";
-                } else if (isSelected && !isCorrect) {
-                  btnClass = "bg-red-50 border-red-600 text-red-900 shadow-[0_0_0_3px_rgba(220,38,38,0.2)]";
-                } else if (!isSelected && isCorrect) {
-                  btnClass = "bg-white border-green-300 text-green-700 opacity-60";
+                if (isSelected) {
+                  btnClass = "bg-blue-50 border-blue-600 text-blue-950 shadow-[0_0_0_3px_rgba(37,99,235,0.18)]";
                 } else {
-                  btnClass = "bg-white border-gray-100 text-gray-400 opacity-40";
+                  btnClass = "bg-white border-gray-100 text-gray-500";
                 }
               }
 
@@ -128,15 +121,14 @@ export function NamingTask() {
                 <button
                   key={option}
                   onClick={() => handleSelect(option)}
-                  disabled={isAnswered}
+                  aria-pressed={isSelected}
                   className={clsx(
                     "min-h-14 sm:min-h-[72px] rounded-xl text-xl sm:text-2xl font-bold flex items-center justify-between px-5 sm:px-8 transition-all relative overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600",
                     btnClass
                   )}
                 >
                   <span>{option}</span>
-                  {isSelected && isCorrect && <CheckCircle2 className="w-8 h-8 text-green-600" />}
-                  {isSelected && !isCorrect && <XCircle className="w-8 h-8 text-red-600" />}
+                  {isSelected && <span className="text-base sm:text-lg font-extrabold text-blue-800">נבחר</span>}
                 </button>
               );
             })}

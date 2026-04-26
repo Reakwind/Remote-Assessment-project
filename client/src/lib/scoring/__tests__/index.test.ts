@@ -104,6 +104,26 @@ describe('scoreSession', () => {
     expect(naming?.raw).toBe(3);
   });
 
+  it('scores vigilance from the structured patient tap-count payload', () => {
+    const report = scoreSession(
+      {
+        ...FULL_RESULTS,
+        'moca-vigilance': {
+          tapped: 10,
+          targetLetter: 'א',
+          targetCount: 11,
+          sequenceLength: 29,
+        },
+      },
+      CTX,
+    );
+
+    const vigilance = report.domains
+      .flatMap((domain) => domain.items)
+      .find((item) => item.taskId === 'moca-vigilance');
+    expect(vigilance).toEqual(expect.objectContaining({ score: 1, needsReview: false }));
+  });
+
   it('routes malformed naming payloads to clinician review', () => {
     const missingAnswers = scoreSession({ ...FULL_RESULTS, 'moca-naming': {} }, CTX);
     const nullPayload = scoreSession({ ...FULL_RESULTS, 'moca-naming': null }, CTX);

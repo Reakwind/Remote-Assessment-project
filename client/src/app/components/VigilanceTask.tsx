@@ -2,13 +2,27 @@ import { useState, useEffect } from "react";
 import { useAssessmentStore } from "../store/AssessmentContext";
 import { ListenButton } from "./ListenButton";
 
+const TARGET_LETTER = "א";
+const VIGILANCE_SEQUENCE = ["ו", "ב", "א", "ג", "מ", "נ", "א", "א", "י", "כ", "ל", "ב", "א", "ו", "א", "כ", "ד", "ה", "א", "א", "א", "י", "א", "מ", "ס", "ו", "א", "א", "ב"];
+const TARGET_COUNT = VIGILANCE_SEQUENCE.filter((letter) => letter === TARGET_LETTER).length;
+
+function scoreTapCount(tapped: number) {
+  return tapped >= TARGET_COUNT - 1 && tapped <= TARGET_COUNT + 1 ? 1 : 0;
+}
+
 export function VigilanceTask() {
   const { state, updateTaskData } = useAssessmentStore();
   const savedData = state.tasks.vigilance || { tapped: 0 };
   const [tapped, setTapped] = useState(savedData.tapped);
 
   useEffect(() => {
-    updateTaskData('vigilance', { tapped });
+    updateTaskData('vigilance', {
+      tapped,
+      targetLetter: TARGET_LETTER,
+      targetCount: TARGET_COUNT,
+      sequenceLength: VIGILANCE_SEQUENCE.length,
+      score: scoreTapCount(tapped),
+    });
   }, [tapped, updateTaskData]);
 
   return (
@@ -24,7 +38,7 @@ export function VigilanceTask() {
         </div>
         <ListenButton 
           text="אני אקריא סדרת אותיות. בכל פעם שאומר את האות א', עליך להקיש פעם אחת במסך." 
-          pacedItems={["ו", "ב", "א", "ג", "מ", "נ", "א", "א", "י", "כ", "ל", "ב", "א", "ו", "א", "כ", "ד", "ה", "א", "א", "א", "י", "א", "מ", "ס", "ו", "א", "א", "ב"]}
+          pacedItems={VIGILANCE_SEQUENCE}
           size="lg" 
         />
       </div>

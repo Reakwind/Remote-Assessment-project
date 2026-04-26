@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAssessmentStore } from "../store/AssessmentContext";
 import { StimuliManifestProvider, StimulusReadinessBanner } from "./StimuliManifestProvider";
@@ -119,13 +119,13 @@ const STEP_CONFIG: Record<string, StepConfig> = {
     incompleteMessage: "יש להקליט תשובה לפני סיום המבדק.",
   },
   end: {
-    step: 13,
+    step: 12,
     next: "/patient/welcome",
     prev: "/patient/orientation",
   },
 };
 
-const totalSteps = 13;
+const totalSteps = 12;
 
 function hasStrokeEvidence(data: unknown): boolean {
   const strokes = (data as { strokes?: unknown })?.strokes;
@@ -162,16 +162,20 @@ function taskHasEvidence(taskKey: TaskKey | undefined, tasks: ReturnType<typeof 
 export function AssessmentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { state, setLastPath } = useAssessmentStore();
+  const { state, setLastPath, taskSaveStatus } = useAssessmentStore();
   const mocaVersion = state.scoringContext?.mocaVersion ?? "8.3";
   const [validation, setValidation] = useState<{ path: string; message: string } | null>(null);
   const currentPath = location.pathname.split('/').pop() ?? "patient";
   const currentStepConfig = STEP_CONFIG[currentPath] ?? STEP_CONFIG.patient;
   const currentStep = currentStepConfig.step;
-  const canContinue = useMemo(
+  const hasEvidence = useMemo(
     () => taskHasEvidence(currentStepConfig.taskKey, state.tasks),
     [currentStepConfig.taskKey, state.tasks],
   );
+  const currentSaveStatus = currentStepConfig.taskKey ? taskSaveStatus[currentStepConfig.taskKey] : undefined;
+  const saveBlocksContinue = currentSaveStatus?.status === "saving" || currentSaveStatus?.status === "error";
+  const canContinue = hasEvidence && !saveBlocksContinue;
+  const isEndScreen = currentPath === "end";
 
   useEffect(() => {
     // Keep track of the last path the user was on
@@ -179,10 +183,24 @@ export function AssessmentLayout() {
   }, [location.pathname, setLastPath]);
 
   const handleNext = () => {
-    if (!canContinue) {
+    if (!hasEvidence) {
       setValidation({
         path: location.pathname,
         message: currentStepConfig.incompleteMessage ?? "יש להשלים את המשימה לפני מעבר למשימה הבאה.",
+      });
+      return;
+    }
+    if (currentSaveStatus?.status === "saving") {
+      setValidation({
+        path: location.pathname,
+        message: "הנתונים נשמרים כעת. יש להמתין לפני המעבר למשימה הבאה.",
+      });
+      return;
+    }
+    if (currentSaveStatus?.status === "error") {
+      setValidation({
+        path: location.pathname,
+        message: "שמירת התשובה נכשלה. בדוק חיבור ונסה שוב לפני המעבר.",
       });
       return;
     }
@@ -190,7 +208,7 @@ export function AssessmentLayout() {
     navigate(currentStepConfig.next);
   };
 
-  const progressPercent = (currentStep / totalSteps) * 100;
+  const progressPercent = (Math.min(currentStep, totalSteps) / totalSteps) * 100;
   const validationMessage = validation?.path === location.pathname ? validation.message : null;
 
   return (
@@ -214,7 +232,7 @@ export function AssessmentLayout() {
         </div>
 
         <div className="font-mono text-base sm:text-lg font-medium tabular-nums" style={{ fontVariantNumeric: "tabular-nums" }}>
-          שלב {currentStep} מתוך {totalSteps}
+          {isEndScreen ? "סיום" : `שלב ${currentStep} מתוך ${totalSteps}`}
         </div>
       </header>
       <StimulusReadinessBanner />
@@ -233,14 +251,14 @@ export function AssessmentLayout() {
       </main>
 
       {/* Footer */}
-      {currentStep !== totalSteps && (
+      {!isEndScreen && (
         <>
         {validationMessage && (
           <div className="mx-4 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-extrabold text-amber-900 sm:mx-6 lg:mx-10" role="alert">
             {validationMessage}
           </div>
         )}
-        <footer className="bg-white border-t border-gray-200 px-4 py-4 sm:px-6 lg:px-10 lg:py-5 flex items-center justify-between gap-3">
+        <footer className="bg-white border-t border-gray-200 px-4 py-4 sm:px-6 lg:px-10 lg:py-5 flex flex-wrap items-center justify-between gap-3">
           <button
             onClick={() => navigate(currentStepConfig.prev)}
             className="flex items-center justify-center gap-2 min-h-14 sm:min-h-[80px] px-4 sm:px-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-black font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
@@ -248,6 +266,32 @@ export function AssessmentLayout() {
             <ArrowRight className="w-6 h-6" />
             <span>חזרה</span>
           </button>
+
+          {currentSaveStatus && (
+            <div
+              className="order-3 flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-extrabold sm:order-none sm:w-auto"
+              role={currentSaveStatus.status === "error" ? "alert" : "status"}
+            >
+              {currentSaveStatus.status === "saving" && (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-700" />
+                  <span className="text-blue-900">שומר תשובה...</span>
+                </>
+              )}
+              {currentSaveStatus.status === "saved" && (
+                <>
+                  <CheckCircle2 className="h-5 w-5 text-green-700" />
+                  <span className="text-green-900">נשמר</span>
+                </>
+              )}
+              {currentSaveStatus.status === "error" && (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-red-700" />
+                  <span className="text-red-900">שמירה נכשלה</span>
+                </>
+              )}
+            </div>
+          )}
 
           <button 
             type="button"

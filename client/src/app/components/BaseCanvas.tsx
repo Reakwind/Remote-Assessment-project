@@ -132,6 +132,8 @@ export function BaseCanvas({
   };
 
   const handleClear = () => {
+    if (!window.confirm("האם למחוק את כל הציור?")) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");

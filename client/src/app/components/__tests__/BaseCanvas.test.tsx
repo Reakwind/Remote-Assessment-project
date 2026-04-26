@@ -82,4 +82,41 @@ describe("BaseCanvas", () => {
 
     expect(onDrawChange).toHaveBeenCalledWith([[expect.objectContaining({ x: 400, y: 200 })]]);
   });
+
+  it("requires confirmation before clearing all strokes", () => {
+    const onSave = vi.fn();
+    const onDrawChange = vi.fn();
+    mockCanvasContext();
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<BaseCanvas onDrawChange={onDrawChange} onSave={onSave} />);
+
+    const canvas = screen.getByRole("img", { name: "אזור לציור" }) as HTMLCanvasElement;
+    mockCanvasElement(canvas);
+
+    fireEvent.pointerDown(canvas, { pointerId: 1, pointerType: "mouse", clientX: 10, clientY: 20, pressure: 0.5 });
+    fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: "mouse", clientX: 30, clientY: 40, pressure: 0.5 });
+    fireEvent.click(screen.getByRole("button", { name: /נקה הכל/ }));
+
+    expect(window.confirm).toHaveBeenCalledWith("האם למחוק את כל הציור?");
+    expect(onDrawChange).not.toHaveBeenCalledWith([]);
+    expect(onSave).not.toHaveBeenCalledWith("", []);
+  });
+
+  it("clears all strokes after confirmation", () => {
+    const onSave = vi.fn();
+    const onDrawChange = vi.fn();
+    mockCanvasContext();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<BaseCanvas onDrawChange={onDrawChange} onSave={onSave} />);
+
+    const canvas = screen.getByRole("img", { name: "אזור לציור" }) as HTMLCanvasElement;
+    mockCanvasElement(canvas);
+
+    fireEvent.pointerDown(canvas, { pointerId: 1, pointerType: "mouse", clientX: 10, clientY: 20, pressure: 0.5 });
+    fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: "mouse", clientX: 30, clientY: 40, pressure: 0.5 });
+    fireEvent.click(screen.getByRole("button", { name: /נקה הכל/ }));
+
+    expect(onDrawChange).toHaveBeenCalledWith([]);
+    expect(onSave).toHaveBeenCalledWith("", []);
+  });
 });

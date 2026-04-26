@@ -56,6 +56,7 @@ One-time patient start semantics remain strict. Target resume behavior uses same
 |---|---|---|---|
 | Enter test number | Patient enters the clinician-provided test number on the home page. | Browser uses stored same-device session state or calls `start-session` with the test number. | Current target. |
 | Start once | Valid unused test number starts session; reopening the same test number on the same device resumes saved progress. | `start-session` rate-limits repeated failed attempts, records hashed attempt audit rows, resolves `sessions.access_code`, atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410 unless local same-device resume state matches. | Current target. |
+| System check | Patient confirms Hebrew audio output and microphone access before the first task. | Browser uses local device APIs only; no clinical response data is created during preflight. | Current target. |
 | Complete tasks | Patient progresses through Hebrew MoCA task flow with selected MoCA version visible in the assessment header. Advancing without captured evidence records a skipped/requires-review payload. | Each task result is submitted with canonical `moca-*` task IDs and active client payload shapes, and the session keeps MoCA version context. | Current. |
 | Load stimuli | Patient tasks request the versioned stimulus manifest for the active session and prefer short-lived signed URLs from private Storage. | `get-stimuli` returns version-scoped asset keys and signed URLs for uploaded licensed assets. Missing assets produce an explicit development placeholder state. | Current architecture. Licensed assets remain external. |
 | Draw/audio evidence | Drawing tasks save current strokes/PNG; audio tasks can save audio evidence. | Private Storage paths and stroke data are stored; clinician receives signed URLs only. | Current. External STT transcript evidence is future. |
@@ -84,6 +85,7 @@ Patient test-number starts also write hashed attempt records for operational rat
 
 - Use deterministic rule scoring when the active test manual defines a clear rule from structured payloads.
 - Send drawing tasks to clinician review with `needsReview=true` and stored drawing evidence.
+- Keep audio-only speech responses in clinician rubric review until an external transcript or structured response workflow exists.
 - Preserve raw data and create clinician review work for missing, malformed, ambiguous, unsupported, or unscorable payloads.
 - `total_provisional=true` until all review items are scored.
 - Norm percentile/SD are meaningful only after the report is final.
@@ -143,3 +145,4 @@ Patient test-number starts also write hashed attempt records for operational rat
 - 2026-04-25: Naming items are version-specific for MoCA 8.1, 8.2, and 8.3. Licensed visual stimuli are extracted from local licensed PDFs into private Storage with `scripts/upload-stimuli-from-pdfs.mjs`; extracted assets stay out of Git.
 - 2026-04-25: Audio recordings persist with explicit storage paths in task evidence. Clinician review receives signed audio URLs, including evidence-only audio rows for no-score tasks.
 - 2026-04-26: Patient test-number starts are rate-limited and audited with hashed fingerprints; raw test numbers and IP addresses are not stored in attempt logs.
+- 2026-04-26: Patient flow requires Hebrew audio and microphone preflight before task start; naming feedback is neutral during the test; audio-only speech tasks remain clinician-rubric review until structured transcript evidence exists.

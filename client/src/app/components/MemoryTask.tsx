@@ -57,6 +57,7 @@ export function MemoryTask() {
         <AudioRecorder 
           taskId="memory" 
           initialAudioId={savedData.audioId}
+          maxDurationSeconds={90}
           onRecordingComplete={handleRecordingComplete} 
         />
       </div>

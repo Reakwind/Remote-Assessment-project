@@ -14,7 +14,6 @@ export function TrailMakingTask() {
 
   const handleDrawChange = (strokes: any[]) => {
     setHasDrawn(strokes.length > 0);
-    updateTaskData('trailMaking', { strokes });
   };
 
   const handleSave = (dataUrl: string, strokes: any[][]) => {

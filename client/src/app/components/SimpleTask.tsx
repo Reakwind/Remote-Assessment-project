@@ -11,6 +11,7 @@ export function SimpleTask({
   audioText,
   pacedItems,
   taskId,
+  maxRecordingSeconds,
 }: {
   stepNumber: number;
   stepTitle: string;
@@ -19,6 +20,7 @@ export function SimpleTask({
   audioText: string;
   pacedItems?: string[];
   taskId: string;
+  maxRecordingSeconds?: number;
 }) {
   const { state, updateTaskData } = useAssessmentStore();
   // Safe cast since tasks is an indexable object in the store
@@ -52,6 +54,7 @@ export function SimpleTask({
         <AudioRecorder 
           taskId={taskId}
           initialAudioId={savedData.audioId}
+          maxDurationSeconds={maxRecordingSeconds}
           onRecordingComplete={handleRecordingComplete}
         />
       </div>

@@ -48,6 +48,23 @@ Deno.test('scoreSession scores version-specific naming answers', () => {
   assertEquals(report.domains.find((domain) => domain.domain === 'naming')?.raw, 3);
 });
 
+Deno.test('scoreSession scores structured vigilance tap-count payload', () => {
+  const report = scoreSession({
+    'moca-vigilance': {
+      tapped: 10,
+      targetLetter: 'א',
+      targetCount: 11,
+      sequenceLength: 29,
+    },
+  }, CTX);
+
+  const vigilance = report.domains
+    .flatMap((domain) => domain.items)
+    .find((item) => item.taskId === 'moca-vigilance');
+  assertEquals(vigilance?.score, 1);
+  assertEquals(vigilance?.needsReview, false);
+});
+
 Deno.test('scoreSession uses configured recall words shared with patient flow', () => {
   const report = scoreSession({
     'moca-delayed-recall': { recalled: ['פנים', 'קטיפה', 'כנסייה', 'חרצית', 'אדום'] },

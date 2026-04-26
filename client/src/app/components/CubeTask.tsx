@@ -14,7 +14,6 @@ export function CubeTask() {
 
   const handleDrawChange = (strokes: any[]) => {
     setHasDrawn(strokes.length > 0);
-    updateTaskData('cube', { strokes });
   };
 
   const handleSave = (dataUrl: string, strokes: any[][]) => {

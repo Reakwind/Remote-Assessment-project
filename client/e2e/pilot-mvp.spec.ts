@@ -228,6 +228,21 @@ async function runPatientClickThrough(
       },
     });
 
+    Object.defineProperty(window.speechSynthesis, 'getVoices', {
+      configurable: true,
+      value: () => [{ lang: 'he-IL', name: 'Hebrew test voice' }],
+    });
+    Object.defineProperty(window.speechSynthesis, 'speak', {
+      configurable: true,
+      value: (utterance: SpeechSynthesisUtterance) => {
+        window.setTimeout(() => utterance.onend?.(new Event('end') as SpeechSynthesisEvent), 0);
+      },
+    });
+    Object.defineProperty(window.speechSynthesis, 'cancel', {
+      configurable: true,
+      value: () => undefined,
+    });
+
     class MockMediaRecorder {
       mimeType = 'audio/webm';
       ondataavailable: ((event: { data: Blob }) => void) | null = null;
@@ -250,6 +265,10 @@ async function runPatientClickThrough(
   await page.goto('/#/patient/welcome');
   await expect(page.getByRole('heading', { name: /ברוך הבא למבחן MoCA/ })).toBeVisible();
 
+  await page.getByRole('button', { name: /בדיקת שמע בעברית/ }).click();
+  await expect(page.getByText(/השמעת ההוראות בעברית עובדת/)).toBeVisible();
+  await page.getByRole('button', { name: /בדיקת מיקרופון/ }).click();
+  await expect(page.getByText(/המיקרופון זמין/)).toBeVisible();
   await page.getByRole('button', { name: /התחל מבחן/ }).click();
   await expect(page.getByText(/שלב 1 מתוך/)).toBeVisible();
 
@@ -303,6 +322,9 @@ async function runPatientClickThrough(
 }
 
 async function clickContinue(page: Page) {
+  await page.waitForTimeout(50);
+  await page.getByText('שומר תשובה...').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => undefined);
+  await expect(page.getByText('שמירה נכשלה')).toHaveCount(0);
   await page.getByRole('button', { name: /^המשך$/ }).click();
 }
 

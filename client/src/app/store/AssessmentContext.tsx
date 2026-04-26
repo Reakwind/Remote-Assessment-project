@@ -47,6 +47,11 @@ export interface AssessmentState {
   };
 }
 
+export interface TaskSaveStatus {
+  status: 'saving' | 'saved' | 'error';
+  message?: string;
+}
+
 const DEFAULT_STATE: AssessmentState = {
   id: null,
   linkToken: null,
@@ -97,6 +102,17 @@ function normalizeStoredAssessmentState(value: unknown): AssessmentState {
   };
 }
 
+function shouldDeferBackendSync(taskName: keyof AssessmentState['tasks'], data: any): boolean {
+  if (taskName === 'naming') {
+    const answers = data?.answers;
+    return !answers || typeof answers !== 'object' || Object.keys(answers).length < 3;
+  }
+  if (taskName === 'vigilance') {
+    return Number(data?.tapped ?? 0) <= 0;
+  }
+  return false;
+}
+
 interface AssessmentContextType {
   state: AssessmentState;
   startNewAssessment: (sessionId: string, linkToken: string, scoringContext: ScoringContext, startToken?: string | null) => void;
@@ -106,6 +122,7 @@ interface AssessmentContextType {
   completeAssessment: () => Promise<boolean>;
   completionStatus: 'idle' | 'submitting' | 'completed' | 'error';
   completionError: string | null;
+  taskSaveStatus: Record<string, TaskSaveStatus | undefined>;
   hasInProgressAssessment: boolean;
 }
 
@@ -127,6 +144,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     state.isComplete ? 'completed' : 'idle',
   );
   const [completionError, setCompletionError] = useState<string | null>(null);
+  const [taskSaveStatus, setTaskSaveStatus] = useState<Record<string, TaskSaveStatus | undefined>>({});
 
   // Keep localStorage perfectly in sync with our React state
   useEffect(() => {
@@ -142,6 +160,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       scoringContext,
     };
     setState(newState);
+    setTaskSaveStatus({});
   }, []);
 
   const resumeAssessment = useCallback(() => {
@@ -152,63 +171,74 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     setState((prev) => {
       if (prev.tasks[taskName] === data) return prev;
       
-      const newState = {
+      return {
         ...prev,
         tasks: {
           ...prev.tasks,
           [taskName]: data,
         },
       };
+    });
 
-      // Sync with backend
-      if (prev.id) {
-        const taskType = TASK_STATE_TO_SCORING_ID[taskName] ?? `moca-${taskName}`;
-        
+    if (!state.id || !state.linkToken || shouldDeferBackendSync(taskName, data)) return;
+
+    const taskKey = String(taskName);
+    const taskType = TASK_STATE_TO_SCORING_ID[taskName] ?? `moca-${taskName}`;
+    setTaskSaveStatus((prev) => ({ ...prev, [taskKey]: { status: 'saving' } }));
+
+    const syncTask = async () => {
+      try {
+        let rawData = data;
+
         if (imageBase64 && ['trailMaking', 'cube', 'clock'].includes(taskName)) {
-          // Drawing task: save image first
-          fetch(edgeFn('save-drawing'), {
+          const drawingResponse = await fetch(edgeFn('save-drawing'), {
             method: 'POST',
             headers: edgeHeaders(),
             body: JSON.stringify({
-              sessionId: prev.id,
-              linkToken: prev.linkToken,
+              sessionId: state.id,
+              linkToken: state.linkToken,
               taskId: taskType,
               imageBase64,
               strokesData: data?.strokes,
             }),
-          })
-            .then(res => res.ok ? res.json() : Promise.reject())
-            .then(({ storagePath }) => {
-              fetch(edgeFn('submit-task'), {
-                method: 'POST',
-                headers: edgeHeaders(),
-                body: JSON.stringify({ 
-                  sessionId: prev.id, 
-                  linkToken: prev.linkToken,
-                  taskType, 
-                  rawData: { ...data, drawingPath: storagePath } 
-                }),
-              });
-            })
-            .catch(err => console.error('Failed to save drawing:', err));
-        } else {
-          // Normal task
-          fetch(edgeFn('submit-task'), {
-            method: 'POST',
-            headers: edgeHeaders(),
-            body: JSON.stringify({ 
-              sessionId: prev.id, 
-              linkToken: prev.linkToken,
-              taskType, 
-              rawData: data 
-            }),
-          }).catch(err => console.error('Failed to sync task data:', err));
-        }
-      }
+          });
 
-      return newState;
-    });
-  }, []);
+          if (!drawingResponse.ok) throw new Error('Failed to save drawing');
+          const { storagePath } = await drawingResponse.json();
+          rawData = { ...data, drawingPath: storagePath };
+        }
+
+        const response = await fetch(edgeFn('submit-task'), {
+          method: 'POST',
+          headers: edgeHeaders(),
+          body: JSON.stringify({
+            sessionId: state.id,
+            linkToken: state.linkToken,
+            taskType,
+            rawData,
+          }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          throw new Error(payload?.error || 'Failed to save task');
+        }
+
+        setTaskSaveStatus((prev) => ({ ...prev, [taskKey]: { status: 'saved' } }));
+      } catch (err) {
+        console.error('Failed to sync task data:', err);
+        setTaskSaveStatus((prev) => ({
+          ...prev,
+          [taskKey]: {
+            status: 'error',
+            message: err instanceof Error ? err.message : 'Failed to save task',
+          },
+        }));
+      }
+    };
+
+    void syncTask();
+  }, [state.id, state.linkToken]);
 
   const setLastPath = useCallback((path: string) => {
     setState((prev) => {
@@ -293,6 +323,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       completeAssessment,
       completionStatus,
       completionError,
+      taskSaveStatus,
       hasInProgressAssessment,
     }),
     [
@@ -304,6 +335,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       completeAssessment,
       completionStatus,
       completionError,
+      taskSaveStatus,
       hasInProgressAssessment,
     ]
   );

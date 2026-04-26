@@ -12,8 +12,6 @@ export function ClockTask() {
 
   const handleDrawChange = (strokes: any[]) => {
     setHasDrawn(strokes.length > 0);
-    // Sync strokes data immediately
-    updateTaskData('clock', { strokes });
   };
 
   const handleSave = (dataUrl: string, strokes: any[][]) => {

@@ -1,14 +1,120 @@
 import { useNavigate } from "react-router";
-import { CheckCircle2, Volume2, PenTool, ArrowLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Mic, PenTool, Volume2 } from "lucide-react";
+import { clsx } from "clsx";
+
+type CheckState = "idle" | "checking" | "success" | "error";
+type VoiceState = "checking" | "ready" | "missing" | "unsupported";
+
+function hasSpeechSupport() {
+  return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+}
+
+function findHebrewVoice() {
+  if (!hasSpeechSupport()) return null;
+  return window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith("he")) ?? null;
+}
 
 export function PatientWelcome() {
   const navigate = useNavigate();
+  const [voiceState, setVoiceState] = useState<VoiceState>(() => hasSpeechSupport() ? "checking" : "unsupported");
+  const [audioCheck, setAudioCheck] = useState<CheckState>("idle");
+  const [micCheck, setMicCheck] = useState<CheckState>("idle");
+  const [audioMessage, setAudioMessage] = useState<string | null>(null);
+  const [micMessage, setMicMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hasSpeechSupport()) return;
+
+    const refreshVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        setVoiceState("checking");
+        return;
+      }
+      setVoiceState(findHebrewVoice() ? "ready" : "missing");
+    };
+
+    window.speechSynthesis.addEventListener?.("voiceschanged", refreshVoices);
+    const initialCheckId = window.setTimeout(refreshVoices, 0);
+    const timeoutId = window.setTimeout(() => {
+      if (window.speechSynthesis.getVoices().length === 0) setVoiceState("missing");
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(initialCheckId);
+      window.clearTimeout(timeoutId);
+      window.speechSynthesis.removeEventListener?.("voiceschanged", refreshVoices);
+    };
+  }, []);
+
+  const canRunAudioTest = voiceState === "ready";
+  const canStart = audioCheck === "success" && micCheck === "success";
+  const startHelp = useMemo(() => {
+    if (canStart) return "המערכת מוכנה להתחלת המבדק.";
+    if (voiceState === "missing" || voiceState === "unsupported") return "יש צורך בהשמעת הוראות בעברית לפני התחלת המבדק.";
+    if (audioCheck !== "success") return "יש להשלים בדיקת שמע בעברית.";
+    return "יש להשלים בדיקת מיקרופון.";
+  }, [audioCheck, canStart, voiceState]);
 
   const handleAudioTest = () => {
-    const utterance = new SpeechSynthesisUtterance("בדיקת שמע הושלמה בהצלחה");
+    if (!canRunAudioTest) {
+      setAudioCheck("error");
+      setAudioMessage("לא נמצא קול עברי בדפדפן. יש להשתמש בדפדפן או מכשיר עם תמיכה בעברית.");
+      return;
+    }
+
+    setAudioCheck("checking");
+    setAudioMessage(null);
+    const utterance = new SpeechSynthesisUtterance("בדיקת שמע בעברית. אם שמעת את המשפט, אפשר להמשיך.");
     utterance.lang = 'he-IL';
     utterance.rate = 0.9;
+    const hebrewVoice = findHebrewVoice();
+    if (hebrewVoice) {
+      try {
+        utterance.voice = hebrewVoice;
+      } catch {
+        // Browser tests can stub voices with plain objects; lang still requests Hebrew.
+      }
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAudioCheck("error");
+      setAudioMessage("לא התקבל אישור שהשמעת הטקסט הסתיימה. נסה שוב או החלף דפדפן.");
+      window.speechSynthesis.cancel();
+    }, 8000);
+
+    utterance.onend = () => {
+      window.clearTimeout(timeoutId);
+      setAudioCheck("success");
+      setAudioMessage("השמעת ההוראות בעברית עובדת.");
+    };
+    utterance.onerror = () => {
+      window.clearTimeout(timeoutId);
+      setAudioCheck("error");
+      setAudioMessage("השמעת הטקסט נכשלה. נסה שוב או החלף דפדפן.");
+    };
+
+    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
+  };
+
+  const handleMicTest = async () => {
+    setMicCheck("checking");
+    setMicMessage(null);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("mediaDevices unavailable");
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMicCheck("success");
+      setMicMessage("המיקרופון זמין להקלטת תשובות.");
+    } catch (error) {
+      console.error("Microphone preflight failed:", error);
+      setMicCheck("error");
+      setMicMessage("לא ניתן לגשת למיקרופון. יש לאשר הרשאת מיקרופון בדפדפן לפני התחלת המבדק.");
+    }
   };
 
   return (
@@ -63,16 +169,52 @@ export function PatientWelcome() {
 
               <button
                 onClick={handleAudioTest}
+                disabled={!canRunAudioTest || audioCheck === "checking"}
+                className={clsx(
+                  "w-full flex items-center gap-4 bg-white p-4 rounded-xl border text-right transition-all",
+                  canRunAudioTest ? "border-gray-200 hover:border-blue-400 hover:shadow-md" : "border-amber-200 bg-amber-50 cursor-not-allowed",
+                )}
+              >
+                <div className={clsx(
+                  "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+                  audioCheck === "success" ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600",
+                )}>
+                  {audioCheck === "success" ? <CheckCircle2 className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                </div>
+                <div className="flex-1">
+                  <div className="text-lg font-medium text-black">
+                    {audioCheck === "checking" ? "משמיע בדיקת שמע..." : "בדיקת שמע בעברית"}
+                  </div>
+                  <div className="text-sm font-medium text-gray-600">
+                    {voiceState === "checking" && "בודק זמינות קול עברי בדפדפן."}
+                    {voiceState === "ready" && (audioMessage ?? "לחץ כדי לוודא שההוראות נשמעות בעברית.")}
+                    {voiceState === "missing" && "לא נמצא קול עברי בדפדפן זה."}
+                    {voiceState === "unsupported" && "הדפדפן לא תומך בהשמעת טקסט."}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={handleMicTest}
+                disabled={micCheck === "checking"}
                 className="w-full flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-right"
               >
-                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0">
-                  <Volume2 className="w-6 h-6" />
+                <div className={clsx(
+                  "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+                  micCheck === "success" ? "bg-green-100 text-green-600" : "bg-purple-100 text-purple-600",
+                )}>
+                  {micCheck === "success" ? <CheckCircle2 className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                 </div>
-                <div className="text-lg font-medium text-black flex-1">נסה קול (השמעת טקסט)</div>
+                <div className="text-lg font-medium text-black flex-1">
+                  <div>{micCheck === "checking" ? "בודק מיקרופון..." : "בדיקת מיקרופון"}</div>
+                  <div className="text-sm font-medium text-gray-600">
+                    {micMessage ?? "לחץ כדי לאשר שהמיקרופון זמין להקלטת תשובות."}
+                  </div>
+                </div>
               </button>
 
               <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-200">
-                <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-gray-100 text-gray-700 rounded-full flex items-center justify-center shrink-0">
                   <PenTool className="w-6 h-6" />
                 </div>
                 <div className="text-lg font-medium text-black flex-1">
@@ -82,9 +224,21 @@ export function PatientWelcome() {
             </div>
 
             <div className="mt-10">
+              {!canStart && (
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-right text-sm font-bold text-amber-900">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <span>{startHelp}</span>
+                </div>
+              )}
               <button
-                onClick={() => navigate("/patient/trail-making")}
-                className="w-full h-20 bg-black text-white text-2xl font-bold rounded-2xl hover:bg-gray-800 focus:ring-4 focus:ring-black/20 transition-all flex items-center justify-center gap-4"
+                onClick={() => {
+                  if (canStart) navigate("/patient/trail-making");
+                }}
+                disabled={!canStart}
+                className={clsx(
+                  "w-full h-20 text-white text-2xl font-bold rounded-2xl focus:ring-4 focus:ring-black/20 transition-all flex items-center justify-center gap-4",
+                  canStart ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed",
+                )}
               >
                 התחל מבחן
                 <ArrowLeft className="w-8 h-8" />

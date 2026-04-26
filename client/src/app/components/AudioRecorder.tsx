@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { Mic, Square, Play, Pause, RotateCcw, AlertTriangle } from "lucide-react";
 import { clsx } from "clsx";
 import { AudioStore } from "../store/audioStore";
@@ -18,6 +18,7 @@ const TASK_ID_TO_SCORING_ID: Record<string, string> = {
 interface AudioRecorderProps {
   taskId: string;
   initialAudioId?: string;
+  maxDurationSeconds?: number;
   onRecordingComplete: (audio: {
     audioId: string;
     audioStoragePath?: string;
@@ -37,9 +38,17 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
+function formatDuration(seconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(safeSeconds / 60).toString().padStart(2, "0");
+  const remainder = (safeSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${remainder}`;
+}
+
 export function AudioRecorder({
   taskId,
   initialAudioId,
+  maxDurationSeconds = 90,
   onRecordingComplete,
 }: AudioRecorderProps) {
   const { state } = useAssessmentStore();
@@ -48,11 +57,27 @@ export function AudioRecorder({
   const [audioId, setAudioId] = useState<string | null>(initialAudioId || null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const timerRef = useRef<number | null>(null);
+  const autoStopRef = useRef<number | null>(null);
   const displayAudioUrl = audioId?.startsWith("http") ? audioId : audioUrl;
+  const isNearLimit = isRecording && elapsedSeconds >= Math.floor(maxDurationSeconds * 0.8);
+
+  const clearRecordingTimers = useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (autoStopRef.current !== null) {
+      window.clearTimeout(autoStopRef.current);
+      autoStopRef.current = null;
+    }
+  }, []);
   
   // Load existing locally-cached audio URL if we have an ID
   useEffect(() => {
@@ -71,11 +96,12 @@ export function AudioRecorder({
     }
     
     return () => {
+      clearRecordingTimers();
       if (currentUrl) {
         URL.revokeObjectURL(currentUrl);
       }
     };
-  }, [audioId]);
+  }, [audioId, clearRecordingTimers]);
   
   // Audio playback event listeners
   useEffect(() => {
@@ -90,6 +116,7 @@ export function AudioRecorder({
   const startRecording = async () => {
     try {
       setError(null);
+      setNotice(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       const mediaRecorder = new MediaRecorder(stream);
@@ -100,6 +127,7 @@ export function AudioRecorder({
         audio: { audioId: string; audioStoragePath?: string; audioContentType?: string },
         blob: Blob,
       ) => {
+        clearRecordingTimers();
         const idOrUrl = audio.audioId;
         if (!idOrUrl.startsWith("http")) await AudioStore.saveAudio(idOrUrl, blob);
         const url = idOrUrl.startsWith("http") ? idOrUrl : URL.createObjectURL(blob);
@@ -111,7 +139,9 @@ export function AudioRecorder({
 
       const failStop = (message: string, cause?: unknown) => {
         if (cause) console.error("Audio upload failed", cause);
+        clearRecordingTimers();
         setError(message);
+        setIsRecording(false);
         stream.getTracks().forEach(track => track.stop());
       };
       
@@ -122,6 +152,8 @@ export function AudioRecorder({
       };
       
       mediaRecorder.onstop = async () => {
+        clearRecordingTimers();
+        setIsRecording(false);
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
         
         let finalAudio = {
@@ -176,7 +208,17 @@ export function AudioRecorder({
       };
       
       mediaRecorder.start();
+      setElapsedSeconds(0);
       setIsRecording(true);
+      const startedAt = Date.now();
+      timerRef.current = window.setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+      }, 250);
+      autoStopRef.current = window.setTimeout(() => {
+        setNotice("ההקלטה נעצרה אוטומטית לאחר הזמן המוקצב.");
+        if ("state" in mediaRecorder && mediaRecorder.state === "inactive") return;
+        mediaRecorder.stop();
+      }, maxDurationSeconds * 1000);
     } catch (err) {
       console.error("Microphone access denied or failed:", err);
       setError("לא ניתן לגשת למיקרופון. אנא אשר גישה למיקרופון בהגדרות הדפדפן.");
@@ -186,6 +228,7 @@ export function AudioRecorder({
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
+      clearRecordingTimers();
       setIsRecording(false);
     }
   };
@@ -207,6 +250,9 @@ export function AudioRecorder({
     if (audioId) {
       await AudioStore.deleteAudio(audioId);
     }
+    setError(null);
+    setNotice(null);
+    setElapsedSeconds(0);
     setAudioId(null);
     if (audioUrl) {
       if (!audioUrl.startsWith("http")) {
@@ -249,7 +295,25 @@ export function AudioRecorder({
             <p className="text-gray-500 font-medium">
               {isRecording ? "לחץ על עצור כשסיימת לדבר" : "לחץ על כפתור ההקלטה והתחל לדבר"}
             </p>
+            <p className={clsx(
+              "mt-3 font-mono text-lg font-black tabular-nums",
+              isNearLimit ? "text-amber-700" : "text-gray-900",
+            )}>
+              {formatDuration(elapsedSeconds)} / {formatDuration(maxDurationSeconds)}
+            </p>
           </div>
+
+          {isNearLimit && (
+            <div className="w-full rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-sm font-bold text-amber-900">
+              ההקלטה תיעצר אוטומטית בקרוב.
+            </div>
+          )}
+
+          {notice && (
+            <div className="w-full rounded-xl border border-blue-200 bg-blue-50 p-3 text-center text-sm font-bold text-blue-900">
+              {notice}
+            </div>
+          )}
           
           {error && (
             <div className="w-full bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3 mb-2">

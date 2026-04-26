@@ -40,8 +40,17 @@ export function scoreDigitSpan(data: { forward: { isCorrect: boolean }; backward
   ];
 }
 
-export function scoreVigilance(data: { score: number }): ItemScore[] {
-  return [item('moca-vigilance', Math.max(0, Math.min(1, data.score)), 1)];
+export function scoreVigilance(data: { score?: number; tapped?: number; targetCount?: number }): ItemScore[] {
+  if (typeof data.score === 'number') {
+    return [item('moca-vigilance', Math.max(0, Math.min(1, data.score)), 1)];
+  }
+
+  if (typeof data.tapped !== 'number' || typeof data.targetCount !== 'number') {
+    throw new Error('Invalid vigilance');
+  }
+
+  const score = data.tapped >= data.targetCount - 1 && data.tapped <= data.targetCount + 1 ? 1 : 0;
+  return [item('moca-vigilance', score, 1)];
 }
 
 export function scoreSerial7s(data: { isCorrect: boolean }[]): ItemScore[] {
