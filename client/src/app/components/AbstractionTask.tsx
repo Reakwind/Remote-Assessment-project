@@ -3,7 +3,7 @@ import { SimpleTask } from "./SimpleTask";
 export function AbstractionTask() {
   return (
     <SimpleTask 
-      stepNumber={11}
+      stepNumber={10}
       stepTitle="הפשטה"
       mainTitle="מה הקשר בין המילים הבאות?"
       audioText="ספר לי מה המשותף בין המילים הבאות שתשמע, למשל 'בננה ותפוז הם פירות'."

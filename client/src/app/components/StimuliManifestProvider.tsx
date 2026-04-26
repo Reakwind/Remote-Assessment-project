@@ -107,9 +107,12 @@ export function useStimuliManifest() {
 
 export function StimulusReadinessBanner() {
   const { manifest, isLoading, error } = useStimuliManifest();
+  const missingRequiredAssets = manifest?.assets.filter((asset) => asset.required && !asset.available) ?? [];
+  const hasMissingVisualAsset = missingRequiredAssets.some((asset) => asset.kind !== "audio");
 
   if (isLoading) return null;
-  if (!error && (!manifest || manifest.clinicalReady)) return null;
+  // Audio prompt gaps are surfaced on the task that needs them; keep the global banner for missing visual stimuli/load failures.
+  if (!error && (!manifest || manifest.clinicalReady || !hasMissingVisualAsset)) return null;
 
   return (
     <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 sm:px-6 lg:px-10 text-amber-950">

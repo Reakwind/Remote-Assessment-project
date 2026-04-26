@@ -2,6 +2,7 @@
 
 import '@testing-library/jest-dom/vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -146,6 +147,31 @@ describe('patient resume state', () => {
     await waitFor(() => {
       expect(screen.getByText('גרסה 8.2')).toBeInTheDocument();
     });
+  });
+
+  it('blocks patient navigation until the current task has required evidence', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storedAssessment({ lastPath: '/patient/trail-making' })));
+
+    const router = renderWithProvider(
+      [
+        {
+          path: '/patient',
+          element: <AssessmentLayout />,
+          children: [
+            { path: 'trail-making', element: <div>Trail body</div> },
+            { path: 'cube', element: <div>Cube body</div> },
+          ],
+        },
+      ],
+      '/patient/trail-making',
+    );
+
+    await screen.findByText('Trail body');
+    await userEvent.click(screen.getByRole('button', { name: 'המשך' }));
+
+    expect(router.state.location.pathname).toBe('/patient/trail-making');
+    expect(screen.getByRole('alert')).toHaveTextContent('יש להשלים את הציור לפני מעבר למשימה הבאה.');
+    expect(screen.queryByText('Cube body')).not.toBeInTheDocument();
   });
 
   it('keeps patients on the completion screen without a dashboard navigation action', async () => {

@@ -650,14 +650,15 @@ export function ClinicianDashboardDetail() {
   const reportNeedsReview = getReportNeedsReview(reportRecord);
   const canExportPdf =
     sessionRecord?.status === "completed" && !reportNeedsReview && getPendingReviewCount(reportRecord) === 0;
-  const pendingReviewCount = getPendingReviewCount(reportRecord);
+  const reportPendingReviewCount = getPendingReviewCount(reportRecord);
+  const pendingReviewCount = pendingQueue.length || reportPendingReviewCount;
   const reviewTabsForDisplay = visibleReviewTabs.length > 0
     ? visibleReviewTabs
     : REVIEW_TABS.map((tab) => ({ ...tab, review: null, maxScore: undefined, isEvidenceOnly: false, isReviewed: false }));
   const exportBlockReason = canExportPdf
     ? "הדוח מוכן לייצוא"
     : pendingReviewCount > 0
-    ? `נותרו ${pendingReviewCount} פריטי סקירה`
+    ? `נותרו ${pendingReviewCount} מסכי סקירה`
     : "ניתן לייצא לאחר השלמת הסקירה";
 
   return (
@@ -672,16 +673,16 @@ export function ClinicianDashboardDetail() {
         </Link>
       </div>
 
-      <div className="flex items-start justify-between mb-8 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
-        <div className="flex gap-6 items-center">
-          <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-3xl">
+      <div className="mb-8 flex flex-col gap-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 gap-4 sm:gap-6 items-center">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-100 text-2xl font-extrabold text-blue-700 sm:h-20 sm:w-20 sm:text-3xl">
             {(patientCaseLabel?.trim()[0] ?? sessionRecord?.case_id?.trim()[0] ?? "ת").toUpperCase()}
           </div>
-          <div>
-            <h1 className="text-3xl font-extrabold text-black mb-2">
+          <div className="min-w-0">
+            <h1 className="mb-2 truncate text-2xl font-extrabold text-black sm:text-3xl">
               {patientCaseLabel ? `תיק ${patientCaseLabel}` : sessionRecord?.case_id ? `תיק ${sessionRecord.case_id}` : "תיק"}
             </h1>
-            <div className="flex gap-4 text-gray-500 font-medium text-lg items-center flex-wrap">
+            <div className="flex flex-wrap items-center gap-3 text-base font-medium text-gray-500 sm:gap-4 sm:text-lg">
               {sessionRecord?.case_id && (
                 <span className="font-mono bg-gray-100 px-2 py-0.5 rounded-md">{sessionRecord.case_id}</span>
               )}
@@ -716,8 +717,8 @@ export function ClinicianDashboardDetail() {
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-4">
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex flex-wrap gap-3 sm:gap-4">
             <button
               onClick={handlePdfExport}
               disabled={!canExportPdf}
@@ -755,11 +756,11 @@ export function ClinicianDashboardDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-6 gap-4 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
         {summary.map((item, i) => (
           <div
             key={i}
-            className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center"
+            className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm sm:p-6"
           >
             <div className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">{item.label}</div>
             <div
@@ -784,7 +785,7 @@ export function ClinicianDashboardDetail() {
               <h2 className="text-xl font-extrabold text-black">סקירה קלינית</h2>
               <p className="text-sm font-bold text-gray-500">
                 {reviewQueue.length > 0
-                  ? `${pendingQueue.length} ממתינים · ${completedQueue.length} נשמרו · ${reviewQueue.length} פריטים`
+                  ? `${pendingQueue.length} ממתינים · ${completedQueue.length} נשמרו · ${reviewQueue.length} מסכי סקירה`
                   : "אין פריטי סקירה מוכנים להצגה"}
               </p>
             </div>
@@ -827,7 +828,7 @@ export function ClinicianDashboardDetail() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={clsx(
-                  "min-w-[150px] rounded-xl border p-4 text-right transition-colors",
+                  "min-w-[132px] rounded-xl border p-3 text-right transition-colors sm:min-w-[150px] sm:p-4",
                   isActive
                     ? "border-black bg-black text-white"
                     : tab.isReviewed
@@ -861,13 +862,13 @@ export function ClinicianDashboardDetail() {
 
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
-        <div className="col-span-7 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-8 lg:col-span-7">
           {renderTaskContent()}
         </div>
 
-        <div className="col-span-5 bg-gray-50 p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
+        <div className="flex flex-col rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm sm:p-8 lg:col-span-5">
+          <div className="mb-8 flex items-center justify-between border-b border-gray-200 pb-4">
             <h3 className="text-2xl font-extrabold text-black">ניקוד</h3>
             <div className="text-3xl font-extrabold tabular-nums bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200">
               <span className="text-black">{rubricData.score}</span>

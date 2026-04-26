@@ -52,9 +52,10 @@ export function TrailMakingTask() {
         )}
 
         <BaseCanvas 
-          width={800} 
-          height={400} 
+          width={760}
+          height={520}
           backgroundImageUrl={trailTemplate?.signedUrl}
+          backgroundPadding={24}
           initialStrokes={savedData.strokes}
           onDrawChange={handleDrawChange}
           onSave={handleSave}

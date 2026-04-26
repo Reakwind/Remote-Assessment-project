@@ -1,81 +1,197 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAssessmentStore } from "../store/AssessmentContext";
 import { StimuliManifestProvider, StimulusReadinessBanner } from "./StimuliManifestProvider";
+
+type TaskKey =
+  | "trailMaking"
+  | "cube"
+  | "clock"
+  | "naming"
+  | "memory"
+  | "digitSpan"
+  | "vigilance"
+  | "serial7"
+  | "language"
+  | "abstraction"
+  | "delayedRecall"
+  | "orientation";
+
+interface StepConfig {
+  step: number;
+  next: string;
+  prev: string;
+  taskKey?: TaskKey;
+  incompleteMessage?: string;
+}
+
+const STEP_CONFIG: Record<string, StepConfig> = {
+  patient: {
+    step: 1,
+    next: "/patient/cube",
+    prev: "/",
+    taskKey: "trailMaking",
+    incompleteMessage: "יש להשלים את הציור לפני מעבר למשימה הבאה.",
+  },
+  "trail-making": {
+    step: 1,
+    next: "/patient/cube",
+    prev: "/",
+    taskKey: "trailMaking",
+    incompleteMessage: "יש להשלים את הציור לפני מעבר למשימה הבאה.",
+  },
+  cube: {
+    step: 2,
+    next: "/patient/clock",
+    prev: "/patient/trail-making",
+    taskKey: "cube",
+    incompleteMessage: "יש להשלים את ציור הקובייה לפני מעבר למשימה הבאה.",
+  },
+  clock: {
+    step: 3,
+    next: "/patient/naming",
+    prev: "/patient/cube",
+    taskKey: "clock",
+    incompleteMessage: "יש להשלים את ציור השעון לפני מעבר למשימה הבאה.",
+  },
+  naming: {
+    step: 4,
+    next: "/patient/memory",
+    prev: "/patient/clock",
+    taskKey: "naming",
+    incompleteMessage: "יש לבחור תשובה לכל שלושת פריטי השיום.",
+  },
+  memory: {
+    step: 5,
+    next: "/patient/digit-span",
+    prev: "/patient/naming",
+    taskKey: "memory",
+    incompleteMessage: "יש להקליט תשובה לפני מעבר למשימה הבאה.",
+  },
+  "digit-span": {
+    step: 6,
+    next: "/patient/vigilance",
+    prev: "/patient/memory",
+    taskKey: "digitSpan",
+    incompleteMessage: "יש להקליט תשובה לפני מעבר למשימה הבאה.",
+  },
+  vigilance: {
+    step: 7,
+    next: "/patient/serial7",
+    prev: "/patient/digit-span",
+    taskKey: "vigilance",
+    incompleteMessage: "יש לבצע לפחות הקשה אחת במשימת הקשב לפני מעבר למשימה הבאה.",
+  },
+  serial7: {
+    step: 8,
+    next: "/patient/language",
+    prev: "/patient/vigilance",
+    taskKey: "serial7",
+    incompleteMessage: "יש להקליט תשובה לפני מעבר למשימה הבאה.",
+  },
+  language: {
+    step: 9,
+    next: "/patient/abstraction",
+    prev: "/patient/serial7",
+    taskKey: "language",
+    incompleteMessage: "יש להקליט תשובה לפני מעבר למשימה הבאה.",
+  },
+  abstraction: {
+    step: 10,
+    next: "/patient/delayed-recall",
+    prev: "/patient/language",
+    taskKey: "abstraction",
+    incompleteMessage: "יש להקליט תשובה לפני מעבר למשימה הבאה.",
+  },
+  "delayed-recall": {
+    step: 11,
+    next: "/patient/orientation",
+    prev: "/patient/abstraction",
+    taskKey: "delayedRecall",
+    incompleteMessage: "יש להקליט תשובה לפני מעבר למשימה הבאה.",
+  },
+  orientation: {
+    step: 12,
+    next: "/patient/end",
+    prev: "/patient/delayed-recall",
+    taskKey: "orientation",
+    incompleteMessage: "יש להקליט תשובה לפני סיום המבדק.",
+  },
+  end: {
+    step: 13,
+    next: "/patient/welcome",
+    prev: "/patient/orientation",
+  },
+};
+
+const totalSteps = 13;
+
+function hasStrokeEvidence(data: unknown): boolean {
+  const strokes = (data as { strokes?: unknown })?.strokes;
+  return Array.isArray(strokes) && strokes.some((stroke) => Array.isArray(stroke) && stroke.length > 0);
+}
+
+function hasAudioEvidence(data: unknown): boolean {
+  const audio = data as { audioId?: unknown; audioStoragePath?: unknown } | null | undefined;
+  return Boolean(
+    (typeof audio?.audioStoragePath === "string" && audio.audioStoragePath.length > 0) ||
+      (typeof audio?.audioId === "string" && audio.audioId.length > 0),
+  );
+}
+
+function taskHasEvidence(taskKey: TaskKey | undefined, tasks: ReturnType<typeof useAssessmentStore>["state"]["tasks"]): boolean {
+  if (!taskKey) return true;
+
+  switch (taskKey) {
+    case "trailMaking":
+    case "cube":
+    case "clock":
+      return hasStrokeEvidence(tasks[taskKey]);
+    case "naming": {
+      const answers = (tasks.naming as { answers?: unknown })?.answers;
+      return Boolean(answers && typeof answers === "object" && Object.keys(answers).length >= 3);
+    }
+    case "vigilance":
+      return Number((tasks.vigilance as { tapped?: unknown })?.tapped ?? 0) > 0;
+    default:
+      return hasAudioEvidence(tasks[taskKey]);
+  }
+}
 
 export function AssessmentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, setLastPath } = useAssessmentStore();
   const mocaVersion = state.scoringContext?.mocaVersion ?? "8.3";
+  const [validation, setValidation] = useState<{ path: string; message: string } | null>(null);
+  const currentPath = location.pathname.split('/').pop() ?? "patient";
+  const currentStepConfig = STEP_CONFIG[currentPath] ?? STEP_CONFIG.patient;
+  const currentStep = currentStepConfig.step;
+  const canContinue = useMemo(
+    () => taskHasEvidence(currentStepConfig.taskKey, state.tasks),
+    [currentStepConfig.taskKey, state.tasks],
+  );
 
   useEffect(() => {
     // Keep track of the last path the user was on
     setLastPath(location.pathname);
   }, [location.pathname, setLastPath]);
 
-  const getStepNumber = () => {
-    const path = location.pathname.split('/').pop();
-    switch (path) {
-      case 'patient': return 1;
-      case 'trail-making': return 1;
-      case 'cube': return 2;
-      case 'clock': return 3;
-      case 'naming': return 4;
-      case 'memory': return 5;
-      case 'digit-span': return 6;
-      case 'vigilance': return 7;
-      case 'serial7': return 8;
-      case 'language': return 9;
-      case 'abstraction': return 11;
-      case 'delayed-recall': return 12;
-      case 'orientation': return 13;
-      case 'end': return 14;
-      default: return 1;
+  const handleNext = () => {
+    if (!canContinue) {
+      setValidation({
+        path: location.pathname,
+        message: currentStepConfig.incompleteMessage ?? "יש להשלים את המשימה לפני מעבר למשימה הבאה.",
+      });
+      return;
     }
+    setValidation(null);
+    navigate(currentStepConfig.next);
   };
 
-  const currentStep = getStepNumber();
-  const totalSteps = 14;
-
-  const getNextRoute = () => {
-    switch (currentStep) {
-      case 1: return '/patient/cube';
-      case 2: return '/patient/clock';
-      case 3: return '/patient/naming';
-      case 4: return '/patient/memory';
-      case 5: return '/patient/digit-span';
-      case 6: return '/patient/vigilance';
-      case 7: return '/patient/serial7';
-      case 8: return '/patient/language';
-      case 9: return '/patient/abstraction';
-      case 11: return '/patient/delayed-recall';
-      case 12: return '/patient/orientation';
-      case 13: return '/patient/end';
-      default: return '/patient/welcome';
-    }
-  };
-
-  const getPrevRoute = () => {
-    switch (currentStep) {
-      case 1: return '/';
-      case 2: return '/patient/trail-making';
-      case 3: return '/patient/cube';
-      case 4: return '/patient/clock';
-      case 5: return '/patient/naming';
-      case 6: return '/patient/memory';
-      case 7: return '/patient/digit-span';
-      case 8: return '/patient/vigilance';
-      case 9: return '/patient/serial7';
-      case 11: return '/patient/language';
-      case 12: return '/patient/abstraction';
-      case 13: return '/patient/delayed-recall';
-      case 14: return '/patient/orientation';
-      default: return '/';
-    }
-  };
   const progressPercent = (currentStep / totalSteps) * 100;
+  const validationMessage = validation?.path === location.pathname ? validation.message : null;
 
   return (
     <StimuliManifestProvider>
@@ -117,10 +233,16 @@ export function AssessmentLayout() {
       </main>
 
       {/* Footer */}
-      {currentStep !== 14 && (
+      {currentStep !== totalSteps && (
+        <>
+        {validationMessage && (
+          <div className="mx-4 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-extrabold text-amber-900 sm:mx-6 lg:mx-10" role="alert">
+            {validationMessage}
+          </div>
+        )}
         <footer className="bg-white border-t border-gray-200 px-4 py-4 sm:px-6 lg:px-10 lg:py-5 flex items-center justify-between gap-3">
           <button
-            onClick={() => navigate(getPrevRoute())}
+            onClick={() => navigate(currentStepConfig.prev)}
             className="flex items-center justify-center gap-2 min-h-14 sm:min-h-[80px] px-4 sm:px-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-black font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
           >
             <ArrowRight className="w-6 h-6" />
@@ -128,13 +250,16 @@ export function AssessmentLayout() {
           </button>
 
           <button 
-            onClick={() => navigate(getNextRoute())}
+            type="button"
+            onClick={handleNext}
+            aria-disabled={!canContinue}
             className="flex items-center justify-center gap-2 min-h-14 sm:min-h-[80px] px-5 sm:px-10 rounded-lg bg-black hover:bg-gray-900 text-white font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
           >
             <span>המשך</span>
             <ArrowLeft className="w-6 h-6" />
           </button>
         </footer>
+        </>
       )}
       </div>
     </StimuliManifestProvider>
