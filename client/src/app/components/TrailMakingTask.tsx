@@ -7,7 +7,7 @@ import { DevStimulusNotice, useStimuliManifest } from "./StimuliManifestProvider
 
 export function TrailMakingTask() {
   const { state, updateTaskData } = useAssessmentStore();
-  const { getAsset } = useStimuliManifest();
+  const { getAsset, isLoading } = useStimuliManifest();
   
   const savedData = state.tasks.trailMaking || { strokes: [] };
   const [, setHasDrawn] = useState(savedData.strokes.length > 0);
@@ -39,7 +39,7 @@ export function TrailMakingTask() {
       </div>
 
       <div className="bg-gray-50 p-3 sm:p-6 rounded-2xl border border-gray-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden min-w-0">
-        {!trailTemplate?.signedUrl && (
+        {!isLoading && !trailTemplate?.signedUrl && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
             <div className="flex w-full max-w-[600px] flex-col items-center gap-4 opacity-70 px-3">
               <div className="w-full aspect-[3/2] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-center text-gray-400 font-bold italic text-xs sm:text-base">

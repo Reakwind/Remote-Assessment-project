@@ -40,19 +40,21 @@ const StimuliManifestContext = createContext<StimuliManifestContextValue | null>
 export function StimuliManifestProvider({ children }: { children: ReactNode }) {
   const { state } = useAssessmentStore();
   const [manifest, setManifest] = useState<StimuliManifest | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<{ sessionId: string; message: string } | null>(null);
   const hasSession = Boolean(state.id && state.linkToken);
 
   useEffect(() => {
-    if (!state.id || !state.linkToken) return;
+    const sessionId = state.id;
+    const linkToken = state.linkToken;
+    if (!sessionId || !linkToken) return;
 
     let cancelled = false;
     fetch(edgeFn("get-stimuli"), {
       method: "POST",
       headers: edgeHeaders(),
       body: JSON.stringify({
-        sessionId: state.id,
-        linkToken: state.linkToken,
+        sessionId,
+        linkToken,
       }),
     })
       .then(async (response) => {
@@ -64,14 +66,17 @@ export function StimuliManifestProvider({ children }: { children: ReactNode }) {
       })
       .then((data) => {
         if (!cancelled) {
-          setError(null);
+          setErrorState(null);
           setManifest(data);
         }
       })
       .catch((fetchError) => {
         if (!cancelled) {
           setManifest(null);
-          setError(fetchError instanceof Error ? fetchError.message : "Failed to load stimulus manifest");
+          setErrorState({
+            sessionId,
+            message: fetchError instanceof Error ? fetchError.message : "Failed to load stimulus manifest",
+          });
         }
       })
 
@@ -80,15 +85,17 @@ export function StimuliManifestProvider({ children }: { children: ReactNode }) {
     };
   }, [state.id, state.linkToken]);
 
+  const activeManifest = hasSession && manifest?.sessionId === state.id ? manifest : null;
+  const activeError = hasSession && errorState?.sessionId === state.id ? errorState.message : null;
+  const isLoading = hasSession && !activeManifest && !activeError;
+
   const contextValue = useMemo<StimuliManifestContextValue>(() => ({
-    manifest: hasSession ? manifest : null,
-    isLoading: false,
-    error: hasSession ? error : null,
+    manifest: activeManifest,
+    isLoading,
+    error: activeError,
     getAsset: (taskType: string, assetId: string) =>
-      hasSession
-        ? manifest?.assets.find((asset) => asset.taskType === taskType && asset.assetId === assetId) ?? null
-        : null,
-  }), [manifest, error, hasSession]);
+      activeManifest?.assets.find((asset) => asset.taskType === taskType && asset.assetId === assetId) ?? null,
+  }), [activeManifest, isLoading, activeError]);
 
   return (
     <StimuliManifestContext.Provider value={contextValue}>

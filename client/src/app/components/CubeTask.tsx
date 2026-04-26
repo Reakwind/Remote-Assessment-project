@@ -7,7 +7,7 @@ import { DevStimulusNotice, useStimuliManifest } from "./StimuliManifestProvider
 
 export function CubeTask() {
   const { state, updateTaskData } = useAssessmentStore();
-  const { getAsset } = useStimuliManifest();
+  const { getAsset, isLoading } = useStimuliManifest();
   
   const savedData = state.tasks.cube || { strokes: [] };
   const [, setHasDrawn] = useState(savedData.strokes.length > 0);
@@ -49,7 +49,7 @@ export function CubeTask() {
                   alt="Cube copy stimulus"
                   className="h-44 w-44 sm:h-56 sm:w-56 object-contain"
                 />
-              ) : (
+              ) : !isLoading ? (
                 <>
                   <svg viewBox="0 0 100 100" className="w-48 h-48" aria-label="Development cube placeholder">
                     <path d="M20 40 L50 40 L50 70 L20 70 Z" fill="none" stroke="black" strokeWidth="2" />
@@ -58,7 +58,7 @@ export function CubeTask() {
                   </svg>
                   <DevStimulusNotice className="w-full text-center" />
                 </>
-              )}
+              ) : null}
             </div>
           </div>
           <div className="flex flex-col items-center gap-4">

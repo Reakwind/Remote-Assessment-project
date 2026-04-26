@@ -32,7 +32,7 @@ const NAMING_ITEMS_BY_VERSION: Record<MocaVersion, NamingItem[]> = {
 
 export function NamingTask() {
   const { state, updateTaskData } = useAssessmentStore();
-  const { getAsset } = useStimuliManifest();
+  const { getAsset, isLoading } = useStimuliManifest();
   const [currentIndex, setCurrentIndex] = useState(0);
   const mocaVersion = (state.scoringContext?.mocaVersion ?? DEFAULT_MOCA_VERSION) as MocaVersion;
   const namingItems = NAMING_ITEMS_BY_VERSION[mocaVersion] ?? NAMING_ITEMS_BY_VERSION[DEFAULT_MOCA_VERSION];
@@ -93,9 +93,9 @@ export function NamingTask() {
               alt="Animal outline"
               className="w-full max-w-[360px] aspect-square object-contain rounded-lg shadow-inner grayscale contrast-125"
             />
-          ) : (
+          ) : !isLoading ? (
             <DevStimulusNotice className="w-full text-center" />
-          )}
+          ) : null}
         </div>
 
         {/* Left half (RTL): Answers */}
