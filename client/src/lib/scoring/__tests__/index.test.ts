@@ -124,6 +124,32 @@ describe('scoreSession', () => {
     expect(vigilance).toEqual(expect.objectContaining({ score: 1, needsReview: false }));
   });
 
+  it('routes off-target vigilance tap counts to clinician review', () => {
+    const report = scoreSession(
+      {
+        ...FULL_RESULTS,
+        'moca-vigilance': {
+          tapped: 4,
+          targetLetter: 'א',
+          targetCount: 11,
+          sequenceLength: 29,
+        },
+      },
+      CTX,
+    );
+
+    const vigilance = report.domains
+      .flatMap((domain) => domain.items)
+      .find((item) => item.taskId === 'moca-vigilance');
+    expect(vigilance).toEqual(expect.objectContaining({
+      score: 0,
+      needsReview: true,
+      reviewReason: 'rule_score_unavailable',
+    }));
+    expect(report.pendingReviewCount).toBeGreaterThan(0);
+    expect(report.totalProvisional).toBe(true);
+  });
+
   it('routes malformed naming payloads to clinician review', () => {
     const missingAnswers = scoreSession({ ...FULL_RESULTS, 'moca-naming': {} }, CTX);
     const nullPayload = scoreSession({ ...FULL_RESULTS, 'moca-naming': null }, CTX);
@@ -142,22 +168,21 @@ describe('scoreSession', () => {
     }
   });
 
-  it('applies education correction +1 for <= 12 years', () => {
+  it('does not add an education bonus for <= 12 years', () => {
     const ctx = { ...CTX, educationYears: 12 };
     const report = scoreSession(FULL_RESULTS, ctx);
-    expect(report.totalAdjusted).toBe(report.totalRaw + 1);
+    expect(report.totalAdjusted).toBe(report.totalRaw);
   });
 
-  it('does not apply education correction for > 12 years', () => {
+  it('does not add an education bonus for > 12 years', () => {
     const report = scoreSession(FULL_RESULTS, CTX); // educationYears: 16
     expect(report.totalAdjusted).toBe(report.totalRaw);
   });
 
-  it('totalAdjusted never exceeds 30', () => {
+  it('uses raw total as adjusted total for full-score cases', () => {
     const ctx = { ...CTX, educationYears: 12 };
-    // even with max score, adjusted caps at 30
     const report = scoreSession(FULL_RESULTS, ctx);
-    expect(report.totalAdjusted).toBeLessThanOrEqual(30);
+    expect(report.totalAdjusted).toBe(report.totalRaw);
   });
 
   it('accepts persisted sessionDate strings for orientation scoring', () => {

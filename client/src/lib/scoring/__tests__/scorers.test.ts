@@ -98,9 +98,10 @@ describe('scoreVigilance', () => {
     expect(items[0].score).toBe(1);
   });
 
-  it('passes through score=0', () => {
+  it('routes explicit score=0 to clinician review', () => {
     const items = scoreVigilance({ score: 0 });
     expect(items[0].score).toBe(0);
+    expect(items[0].needsReview).toBe(true);
   });
 
   it('max is 1', () => {
@@ -110,6 +111,7 @@ describe('scoreVigilance', () => {
   it('clamps score to item bounds', () => {
     expect(scoreVigilance({ score: 3 })[0].score).toBe(1);
     expect(scoreVigilance({ score: -2 })[0].score).toBe(0);
+    expect(scoreVigilance({ score: -2 })[0].needsReview).toBe(true);
   });
 
   it('scores tap-count payloads within one target tap as correct', () => {
@@ -118,9 +120,17 @@ describe('scoreVigilance', () => {
     expect(scoreVigilance({ tapped: 12, targetCount: 11 })[0].score).toBe(1);
   });
 
-  it('scores tap-count payloads outside the target tolerance as incorrect', () => {
-    expect(scoreVigilance({ tapped: 9, targetCount: 11 })[0].score).toBe(0);
-    expect(scoreVigilance({ tapped: 13, targetCount: 11 })[0].score).toBe(0);
+  it('routes tap-count payloads outside the target tolerance to clinician review', () => {
+    expect(scoreVigilance({ tapped: 9, targetCount: 11 })[0]).toEqual(expect.objectContaining({
+      score: 0,
+      needsReview: true,
+      reviewReason: 'rule_score_unavailable',
+    }));
+    expect(scoreVigilance({ tapped: 13, targetCount: 11 })[0]).toEqual(expect.objectContaining({
+      score: 0,
+      needsReview: true,
+      reviewReason: 'rule_score_unavailable',
+    }));
   });
 
   it('rejects malformed tap-count payloads', () => {

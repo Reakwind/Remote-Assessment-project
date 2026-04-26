@@ -63,6 +63,23 @@ const DEFAULT_STATE: AssessmentState = {
 };
 
 const STORAGE_KEY = 'moca_assessment_state';
+const PATIENT_ONBOARDING_KEY = 'moca_patient_onboarding_completed';
+
+export function hasCompletedPatientOnboarding(): boolean {
+  try {
+    return localStorage.getItem(PATIENT_ONBOARDING_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function markPatientOnboardingComplete(): void {
+  try {
+    localStorage.setItem(PATIENT_ONBOARDING_KEY, 'true');
+  } catch {
+    // If storage is unavailable, keep the current session flow working.
+  }
+}
 
 export function getAssessmentResumePath(path: string | null | undefined) {
   return path?.startsWith('/patient') ? path : '/patient/welcome';

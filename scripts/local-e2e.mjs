@@ -130,6 +130,20 @@ async function runVersion(version) {
     repeatCreated,
   );
 
+  const provisionalCsv = await request('/functions/v1/export-csv', {
+    method: 'POST',
+    headers: clinicianHeaders,
+    body: JSON.stringify({ sessionId: repeatCreated.body.sessionId }),
+  });
+  assert(
+    provisionalCsv.status === 200 &&
+      typeof provisionalCsv.body === 'string' &&
+      provisionalCsv.body.includes(caseId) &&
+      provisionalCsv.body.includes('pending'),
+    `[${version}] incomplete session CSV export`,
+    provisionalCsv,
+  );
+
   const started = await request('/functions/v1/start-session', {
     method: 'POST',
     headers,

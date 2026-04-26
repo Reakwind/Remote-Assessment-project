@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router";
 import { User, Lock, ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { useAssessmentStore } from "../store/AssessmentContext";
+import { getAssessmentResumePath, useAssessmentStore } from "../store/AssessmentContext";
 
 export function LandingHub() {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ export function LandingHub() {
   };
 
   const handleResume = () => {
-    navigate(state.lastPath || "/patient/welcome");
+    navigate(getAssessmentResumePath(state.lastPath));
   };
 
   return (

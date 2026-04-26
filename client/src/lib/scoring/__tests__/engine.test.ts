@@ -3,7 +3,7 @@ import { scoreSession } from '../index';
 import type { ScoringContext } from '../../../types/scoring';
 
 describe('Scoring Engine', () => {
-  it('calculates total score correctly with education correction', () => {
+  it('keeps adjusted total equal to raw total without an education bonus', () => {
     const ctx: ScoringContext = {
       sessionId: 'test-1',
       sessionDate: new Date(),
@@ -16,7 +16,6 @@ describe('Scoring Engine', () => {
     };
     
     const report = scoreSession(results, ctx);
-    // Since raw is 0 and education <= 12, adjusted should be 1
-    expect(report.totalAdjusted).toBe(1);
+    expect(report.totalAdjusted).toBe(report.totalRaw);
   });
 });

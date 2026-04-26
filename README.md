@@ -44,12 +44,15 @@ Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full deve
 - Clinician login, clinical case creation, session creation, dashboard list/detail, drawing/manual review, finalization.
 - Clinician auth uses email/password for MVP.
 - Patient session start by generated test number, Hebrew MoCA flow, autosave, completion.
+- New local patients complete welcome/audio/microphone preflight once; returning local patients start new tests at the first task.
+- Same-device resume is explicit from the home-page continue button for in-progress local state.
 - Supabase persists sessions, task results, drawings, audio evidence, scoring reports, and audit events.
 - Server-side scoring is authoritative.
 - Drawings and ambiguous/manual items go to clinician review.
 - Clinician gets an email when a test is completed.
 - Clinician copies the generated test number and sends it to the patient outside the app.
 - Licensed stimuli load from private Storage through versioned manifests and signed URLs.
+- CSV export can include incomplete/provisional data with inline feedback; finalized PDF export remains gated by clinician review.
 
 ## Guardrails
 
@@ -60,6 +63,7 @@ Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full deve
 - Store only clinically useful patient profile fields needed for interpretation: phone, date of birth, gender, language, dominant hand, and education years.
 - Store raw drawing/audio/task evidence for clinician review.
 - Use deterministic scoring only where the active manual supports it.
+- Use education years for normative interpretation bands only; do not add an education bonus point to the MoCA total.
 - Use external speech-to-text only as transcript evidence.
 - Send completion notifications when a test is done.
 - Keep licensed MoCA assets outside the repository.

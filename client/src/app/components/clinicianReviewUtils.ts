@@ -4,6 +4,7 @@ export type ReviewTab =
   | "trail"
   | "memory"
   | "digitSpan"
+  | "vigilance"
   | "serial7"
   | "language"
   | "abstraction"
@@ -27,6 +28,7 @@ export const DRAWING_TAB_TO_TASK_ID: Partial<Record<ReviewTab, string>> = {
 export const SCORING_TAB_TO_TASK_ID: Partial<Record<ReviewTab, string>> = {
   memory: "moca-memory-learning",
   digitSpan: "moca-digit-span",
+  vigilance: "moca-vigilance",
   serial7: "moca-serial-7s",
   language: "moca-language",
   abstraction: "moca-abstraction",

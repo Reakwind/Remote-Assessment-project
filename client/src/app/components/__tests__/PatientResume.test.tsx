@@ -17,6 +17,7 @@ import { SessionValidation } from '../SessionValidation';
 import { AssessmentProvider } from '../../store/AssessmentContext';
 
 const STORAGE_KEY = 'moca_assessment_state';
+const ONBOARDING_KEY = 'moca_patient_onboarding_completed';
 
 function storedAssessment(overrides: Record<string, unknown> = {}) {
   return {
@@ -88,38 +89,89 @@ describe('patient resume state', () => {
     expect(stored.lastPath).toBe('/patient/welcome');
   });
 
-  it('reopens a matching in-progress link from local resume state without consuming the token again', async () => {
+  it('opens a fresh valid test number at the first task after local onboarding is complete', async () => {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          sessionId: 'session-returning',
+          linkToken: 'link-token-returning',
+          sessionDate: '2026-04-25T12:00:00.000Z',
+          educationYears: 14,
+          patientAge: 72,
+          mocaVersion: '8.3',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const router = renderWithProvider(
+      [
+        { path: '/session/:token', element: <SessionValidation /> },
+        { path: '/patient/welcome', element: <div>Welcome system check</div> },
+        { path: '/patient/trail-making', element: <div>Trail making task</div> },
+      ],
+      '/session/87654322',
+    );
+
+    await screen.findByText('Trail making task');
+    expect(router.state.location.pathname).toBe('/patient/trail-making');
+    expect(screen.queryByText('Welcome system check')).not.toBeInTheDocument();
+  });
+
+  it('sends a matching in-progress link to the explicit continue-test button without consuming the token again', async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(storedAssessment()));
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     const router = renderWithProvider(
       [
         { path: '/session/:token', element: <SessionValidation /> },
+        { path: '/', element: <LandingHub /> },
         { path: '/patient/clock', element: <div>Clock task resumed</div> },
       ],
       '/session/token-1',
     );
 
-    await screen.findByText('Clock task resumed');
-    expect(router.state.location.pathname).toBe('/patient/clock');
+    await screen.findByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' });
+    expect(router.state.location.pathname).toBe('/');
+    expect(screen.queryByText('Clock task resumed')).not.toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('reopens a matching in-progress test number from local resume state without consuming it again', async () => {
+  it('sends a matching in-progress test number to the explicit continue-test button without consuming it again', async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(storedAssessment()));
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     const router = renderWithProvider(
       [
         { path: '/session/:token', element: <SessionValidation /> },
+        { path: '/', element: <LandingHub /> },
         { path: '/patient/clock', element: <div>Clock task resumed</div> },
       ],
       '/session/12345678',
     );
 
+    await screen.findByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' });
+    expect(router.state.location.pathname).toBe('/');
+    expect(screen.queryByText('Clock task resumed')).not.toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('resumes an in-progress test only after the patient clicks continue', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storedAssessment()));
+
+    const router = renderWithProvider(
+      [
+        { path: '/', element: <LandingHub /> },
+        { path: '/patient/clock', element: <div>Clock task resumed</div> },
+      ],
+      '/',
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' }));
+
     await screen.findByText('Clock task resumed');
     expect(router.state.location.pathname).toBe('/patient/clock');
-    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('does not offer resume controls for stale stored state without a token', () => {

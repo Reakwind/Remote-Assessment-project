@@ -30,9 +30,23 @@ Deno.serve(async (req) => {
   
   if (authError || !user) return new Response('Unauthorized', { status: 401, headers: corsHeaders(req) });
 
-  const { data: sessions, error: dbError } = await supabase
+  const url = new URL(req.url);
+  let requestedSessionId = url.searchParams.get('sessionId');
+  if (req.method === 'POST') {
+    try {
+      const body = await req.clone().json();
+      if (typeof body?.sessionId === 'string' && body.sessionId.trim()) {
+        requestedSessionId = body.sessionId.trim();
+      }
+    } catch {
+      // POST without a JSON body exports all clinician sessions.
+    }
+  }
+
+  let query = supabase
     .from('sessions')
     .select(`
+      id,
       case_id,
       age_band,
       education_years,
@@ -56,9 +70,21 @@ Deno.serve(async (req) => {
       )
     `)
     .eq('clinician_id', user.id)
-    .eq('status', 'completed');
+    .order('created_at', { ascending: false });
+
+  if (requestedSessionId) {
+    query = query.eq('id', requestedSessionId);
+  }
+
+  const { data: sessions, error: dbError } = await query;
 
   if (dbError) return new Response('Database error', { status: 500, headers: corsHeaders(req) });
+  if (requestedSessionId && (!sessions || sessions.length === 0)) {
+    return new Response(JSON.stringify({ error: 'Session not found' }), {
+      status: 404,
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+    });
+  }
 
   const header = [
     'Case ID',

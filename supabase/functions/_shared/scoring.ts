@@ -134,11 +134,12 @@ function scoreTask(taskId: string, rawData: unknown, ctx: ScoringContext, max: n
       return safeScore(taskId, rawData, max, data => {
         const d = assertObject(data);
         if (typeof d.score === 'number') {
-          return [item(taskId, Math.max(0, Math.min(1, d.score)), 1)];
+          const score = Math.max(0, Math.min(1, d.score));
+          return score === 1 ? [item(taskId, score, 1)] : [reviewItem(taskId, 1, d)];
         }
         if (typeof d.tapped !== 'number' || typeof d.targetCount !== 'number') throw new Error('Invalid vigilance');
         const score = d.tapped >= d.targetCount - 1 && d.tapped <= d.targetCount + 1 ? 1 : 0;
-        return [item(taskId, score, 1)];
+        return score === 1 ? [item(taskId, score, 1)] : [reviewItem(taskId, 1, d)];
       });
     case 'moca-serial-7s':
       return safeScore(taskId, rawData, max, data => {
@@ -207,7 +208,7 @@ export function scoreSession(results: Record<string, unknown>, ctx: ScoringConte
   const pendingReviewCount = allItems.filter(i => i.needsReview).length;
   const totalRaw = allItems.filter(i => !i.needsReview).reduce((sum, i) => sum + i.score, 0);
   const totalProvisional = pendingReviewCount > 0;
-  const totalAdjusted = Math.min(30, totalRaw + (ctx.educationYears <= config.educationCorrectionThreshold ? 1 : 0));
+  const totalAdjusted = totalRaw;
   const norm = totalProvisional ? null : lookupNorm(ctx.patientAge, ctx.educationYears);
   const normSd = norm ? Number(((totalAdjusted - norm.mean) / norm.sd).toFixed(2)) : null;
   const normPercentile = norm && normSd !== null ? Math.min(100, Math.max(0, Math.round(normalCdf(normSd) * 100))) : null;
@@ -238,7 +239,6 @@ export function ageFromBand(ageBand: string): number {
 }
 
 export function applyManualScores(report: ScoringReport, ctx: ScoringContext, manualScores: Record<string, number>): ScoringReport {
-  const config = getMocaVersionConfig(report.mocaVersion ?? ctx.mocaVersion);
   const domains = report.domains.map(domain => {
     const items = domain.items.map(itemScore => {
       if (!(itemScore.taskId in manualScores)) return itemScore;
@@ -261,7 +261,7 @@ export function applyManualScores(report: ScoringReport, ctx: ScoringContext, ma
   const pendingReviewCount = allItems.filter(itemScore => itemScore.needsReview).length;
   const totalRaw = allItems.filter(itemScore => !itemScore.needsReview).reduce((sum, itemScore) => sum + itemScore.score, 0);
   const totalProvisional = pendingReviewCount > 0;
-  const totalAdjusted = Math.min(30, totalRaw + (ctx.educationYears <= config.educationCorrectionThreshold ? 1 : 0));
+  const totalAdjusted = totalRaw;
   const norm = totalProvisional ? null : lookupNorm(ctx.patientAge, ctx.educationYears);
   const normSd = norm ? Number(((totalAdjusted - norm.mean) / norm.sd).toFixed(2)) : null;
   const normPercentile = norm && normSd !== null ? Math.min(100, Math.max(0, Math.round(normalCdf(normSd) * 100))) : null;

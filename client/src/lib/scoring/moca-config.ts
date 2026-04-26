@@ -19,7 +19,6 @@ export interface MocaScoringConfig {
   targetWords: string[];
   correctAnimalNames: string[];
   fluencyThreshold: number;
-  educationCorrectionThreshold: number;
   stimuliPolicy: 'external-licensed-assets';
 }
 
@@ -67,7 +66,6 @@ function versionConfig(version: MocaVersion): MocaScoringConfig {
     targetWords: ['פנים', 'קטיפה', 'כנסייה', 'חרצית', 'אדום'],
     correctAnimalNames: CORRECT_ANIMAL_NAMES_BY_VERSION[version],
     fluencyThreshold: 11,
-    educationCorrectionThreshold: 12,
     stimuliPolicy: 'external-licensed-assets',
   };
 }

@@ -56,6 +56,52 @@ test.describe('landing test number entry', () => {
     await submit.click();
     await expect(page).toHaveURL(/#\/session\/12345678/);
   });
+
+  test('new local patients see welcome/system-check after valid test-number start', async ({ page }) => {
+    await page.route('**/functions/v1/start-session', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(patientStartPayload('welcome-session', 'welcome-link-token')),
+      });
+    });
+
+    await page.goto('/#/session/11112222');
+
+    await expect(page.getByRole('heading', { name: 'ברוך הבא למבחן MoCA' })).toBeVisible();
+    await expect(page).toHaveURL(/#\/patient\/welcome/);
+  });
+
+  test('returning local patients start a new valid test at the first task', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('moca_patient_onboarding_completed', 'true');
+    });
+    await page.route('**/functions/v1/start-session', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(patientStartPayload('returning-session', 'returning-link-token')),
+      });
+    });
+
+    await page.goto('/#/session/22223333');
+
+    await expect(page.getByRole('heading', { name: /מתח קו בין מספר לאות בסדר עולה/ })).toBeVisible();
+    await expect(page).toHaveURL(/#\/patient\/trail-making/);
+  });
+
+  test('same-device in-progress sessions resume only after the continue button is clicked', async ({ page }) => {
+    await seedAssessmentState(page, '/patient/clock', { startToken: '33334444' });
+
+    await page.goto('/#/session/33334444');
+
+    await expect(page.getByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' })).toBeVisible();
+    await expect(page).toHaveURL(/#\/$/);
+
+    await page.getByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' }).click();
+
+    await expect(page).toHaveURL(/#\/patient\/clock/);
+  });
 });
 
 test.describe('clinician mobile UX', () => {
@@ -105,8 +151,8 @@ test.describe('clinician mobile UX', () => {
   });
 });
 
-async function seedAssessmentState(page: Page, lastPath: string) {
-  await page.addInitScript((path) => {
+async function seedAssessmentState(page: Page, lastPath: string, overrides: Record<string, unknown> = {}) {
+  await page.addInitScript(([path, storedOverrides]) => {
     window.localStorage.setItem('moca_assessment_state', JSON.stringify({
       id: 'ux-session',
       linkToken: 'ux-link-token',
@@ -121,8 +167,20 @@ async function seedAssessmentState(page: Page, lastPath: string) {
       lastPath: path,
       isComplete: false,
       tasks: {},
+      ...storedOverrides,
     }));
-  }, lastPath);
+  }, [lastPath, overrides]);
+}
+
+function patientStartPayload(sessionId: string, linkToken: string) {
+  return {
+    sessionId,
+    linkToken,
+    sessionDate: '2026-04-26T10:00:00.000Z',
+    educationYears: 12,
+    patientAge: 75,
+    mocaVersion: '8.3',
+  };
 }
 
 async function expectNoHorizontalOverflow(page: Page) {

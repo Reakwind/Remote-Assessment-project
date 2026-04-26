@@ -2,7 +2,11 @@ import { useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { useSession } from "../../hooks/useSession";
-import { getAssessmentResumePath, useAssessmentStore } from "../store/AssessmentContext";
+import { hasCompletedPatientOnboarding, useAssessmentStore } from "../store/AssessmentContext";
+
+function getPatientStartPath(): string {
+  return hasCompletedPatientOnboarding() ? '/patient/trail-making' : '/patient/welcome';
+}
 
 export function SessionValidation() {
   const { token } = useParams();
@@ -23,10 +27,10 @@ export function SessionValidation() {
 
     if (canResumeCurrentToken) {
       if (startedTokenRef.current === token) {
-        navigate('/patient/welcome', { replace: true });
+        navigate(getPatientStartPath(), { replace: true });
         return;
       }
-      navigate(getAssessmentResumePath(state.lastPath), { replace: true });
+      navigate('/', { replace: true });
       return;
     }
 
@@ -38,7 +42,7 @@ export function SessionValidation() {
     ) {
       startedTokenRef.current = token;
       startNewAssessment(session.sessionId, session.linkToken, session.scoringContext, session.startToken);
-      navigate('/patient/welcome', { replace: true });
+      navigate(getPatientStartPath(), { replace: true });
     }
   }, [
     session.status,
@@ -50,7 +54,6 @@ export function SessionValidation() {
     navigate,
     token,
     canResumeCurrentToken,
-    state.lastPath,
   ]);
 
   const getErrorMessage = () => {

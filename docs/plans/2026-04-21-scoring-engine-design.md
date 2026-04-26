@@ -34,7 +34,7 @@ interface DomainScore {
 interface ScoringReport {
   sessionId: string;
   totalRaw: number;           // sum of scored items only
-  totalAdjusted: number;      // +1 if educationYears <= 12, max 30
+  totalAdjusted: number;      // equals totalRaw; education is used for norm lookup only
   totalProvisional: boolean;  // true if any needsReview items pending
   educationYears: number;
   normPercentile: number;     // from Lifshitz norms, null if provisional
@@ -95,7 +95,7 @@ Stored in `client/src/data/lifshitz-norms.json`:
 - Each entry: `{ mean: number, sd: number }`
 - z-score = `(totalAdjusted - mean) / sd`
 - Percentile from standard normal CDF (local approximation, no external lib)
-- Education correction: +1 if `educationYears <= 12`, capped at 30
+- Education is used for norm lookup only; no bonus point is added to the MoCA total.
 - Clinician supplies `educationYears` at session creation — never asked of patient
 
 ---

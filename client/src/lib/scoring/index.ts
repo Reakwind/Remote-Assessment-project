@@ -102,8 +102,7 @@ export function scoreSessionWithConfig(
   const totalRaw = allItems.filter(i => !i.needsReview).reduce((s, i) => s + i.score, 0);
   const totalProvisional = pendingReviewCount > 0;
 
-  const educationCorrection = ctx.educationYears <= config.educationCorrectionThreshold ? 1 : 0;
-  const totalAdjusted = Math.min(30, totalRaw + educationCorrection);
+  const totalAdjusted = totalRaw;
 
   const normPercentile = totalProvisional ? null : (() => {
     const norm = lookupNorm(normsData.norms, ctx.patientAge, ctx.educationYears);
