@@ -5,7 +5,7 @@ import { getMocaVersionConfig } from '../_shared/moca-config.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 const SUPPORTED_ASSESSMENTS = new Set(['moca']);

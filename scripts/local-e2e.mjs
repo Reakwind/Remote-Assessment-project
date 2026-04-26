@@ -101,20 +101,15 @@ async function runVersion(version) {
   assert(
     created.status === 200 &&
       created.body?.sessionId &&
-      created.body?.linkToken &&
+      created.body?.linkToken === undefined &&
       /^\d{8}$/.test(created.body?.testNumber ?? '') &&
+      created.body?.sessionUrl?.includes(created.body.testNumber) &&
       created.body?.mocaVersion === version,
     `[${version}] create session`,
     created,
   );
 
-  const { sessionId, linkToken, testNumber } = created.body;
-  const directTokenStart = await request('/functions/v1/start-session', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ token: linkToken }),
-  });
-  assert(directTokenStart.status === 404, `[${version}] internal link token cannot start patient session`, directTokenStart);
+  const { sessionId, testNumber } = created.body;
 
   const started = await request('/functions/v1/start-session', {
     method: 'POST',
@@ -124,11 +119,20 @@ async function runVersion(version) {
   assert(
     started.status === 200 &&
       started.body?.sessionId === sessionId &&
-      started.body?.linkToken === linkToken &&
+      typeof started.body?.linkToken === 'string' &&
+      started.body.linkToken !== testNumber &&
       started.body?.mocaVersion === version,
     `[${version}] start patient session by test number`,
     started,
   );
+  const linkToken = started.body.linkToken;
+
+  const directTokenStart = await request('/functions/v1/start-session', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ token: linkToken }),
+  });
+  assert(directTokenStart.status === 404, `[${version}] internal link token cannot start patient session`, directTokenStart);
 
   const stimuli = await request('/functions/v1/get-stimuli', {
     method: 'POST',
@@ -205,7 +209,11 @@ async function runVersion(version) {
   assert(detail.session.moca_version === version, `[${version}] dashboard preserves MoCA version`, detail.session);
   assert(detail.session.drawings.length === 3, `[${version}] dashboard has 3 drawing review rows`, detail.session.drawings);
   assert(detail.session.scoring_reviews.length >= 1, `[${version}] dashboard has generic scoring review rows`, detail.session.scoring_reviews);
-  assert(detail.session.scoring_reviews.some(row => row.raw_data?.audioSignedUrl), `[${version}] at least one review row has signed audio URL`, detail.session.scoring_reviews);
+  assert(
+    detail.session.audio_evidence_reviews?.some(row => row.raw_data?.audioSignedUrl),
+    `[${version}] at least one audio evidence row has signed audio URL`,
+    detail.session.audio_evidence_reviews,
+  );
 
   for (const review of detail.session.drawings) {
     const score = DRAWING_MAX[review.task_id] ?? 0;

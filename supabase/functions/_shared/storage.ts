@@ -10,6 +10,16 @@ export function browserReachableSignedUrl(signedUrl: string | null | undefined, 
   }
 }
 
+export function sessionScopedObjectPath(storagePath: string | null | undefined, sessionId: string): string | null {
+  if (!storagePath || !sessionId) return null;
+  const parts = storagePath.split('/');
+  if (parts.length !== 2) return null;
+  const [pathSessionId, fileName] = parts;
+  if (pathSessionId !== sessionId) return null;
+  if (!fileName || fileName === '.' || fileName === '..' || fileName.includes('..')) return null;
+  return storagePath;
+}
+
 function browserReachableSupabaseOrigin(req: Request): string {
   const explicitOrigin = normalizeOrigin(readOptionalEnv('SUPABASE_PUBLIC_URL') ?? readOptionalEnv('PUBLIC_SUPABASE_URL'));
   if (explicitOrigin) return explicitOrigin;

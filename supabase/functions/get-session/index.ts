@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { corsResponse, json, methodNotAllowed, requireClinician } from '../_shared/http.ts';
-import { browserReachableSignedUrl } from '../_shared/storage.ts';
+import { browserReachableSignedUrl, sessionScopedObjectPath } from '../_shared/storage.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return corsResponse(req);
@@ -58,20 +58,21 @@ Deno.serve(async (req) => {
   if (error || !session) return json({ error: 'Session not found' }, 404, req);
 
   const drawings = await Promise.all((session.drawing_reviews ?? []).map(async (review: any) => {
-    if (!review.storage_path) return { ...review, signedUrl: null };
+    const storagePath = sessionScopedObjectPath(review.storage_path, session.id);
+    if (!storagePath) return { ...review, signedUrl: null };
     const { data } = await supabase.storage
       .from('drawings')
-      .createSignedUrl(review.storage_path, 60 * 15);
+      .createSignedUrl(storagePath, 60 * 15);
     return { ...review, signedUrl: browserReachableSignedUrl(data?.signedUrl, req) };
   }));
 
   const taskResults = await Promise.all((session.task_results ?? []).map(async (result: any) => {
-    const rawData = addAudioSignedUrl(result.raw_data, await signedAudioUrl(supabase, audioStoragePathFromRaw(result.raw_data), req));
+    const rawData = addAudioSignedUrl(result.raw_data, await signedAudioUrl(supabase, audioStoragePathFromRaw(result.raw_data), session.id, req));
     return { ...result, raw_data: rawData };
   }));
 
   const scoringReviews = await Promise.all((session.scoring_item_reviews ?? []).map(async (review: any) => {
-    const rawData = addAudioSignedUrl(review.raw_data, await signedAudioUrl(supabase, audioStoragePathFromRaw(review.raw_data), req));
+    const rawData = addAudioSignedUrl(review.raw_data, await signedAudioUrl(supabase, audioStoragePathFromRaw(review.raw_data), session.id, req));
     return { ...review, raw_data: rawData };
   }));
   const scoreableScoringReviews = scoringReviews.filter((review: any) => Number(review.max_score ?? 0) > 0);
@@ -105,11 +106,12 @@ Deno.serve(async (req) => {
   }, 200, req);
 });
 
-async function signedAudioUrl(supabase: any, storagePath: string | null | undefined, req: Request): Promise<string | null> {
-  if (!storagePath) return null;
+async function signedAudioUrl(supabase: any, storagePath: string | null | undefined, sessionId: string, req: Request): Promise<string | null> {
+  const scopedPath = sessionScopedObjectPath(storagePath, sessionId);
+  if (!scopedPath) return null;
   const { data } = await supabase.storage
     .from('audio')
-    .createSignedUrl(storagePath, 60 * 15);
+    .createSignedUrl(scopedPath, 60 * 15);
   return browserReachableSignedUrl(data?.signedUrl, req);
 }
 
