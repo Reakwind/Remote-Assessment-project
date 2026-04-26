@@ -12,11 +12,13 @@ Read these first:
 2. [AGENTS.md](AGENTS.md)
 3. [JOURNEY.md](JOURNEY.md)
 4. [CONTEXT.md](CONTEXT.md)
-5. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-6. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-7. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+5. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
+6. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
+7. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
+8. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
 
 `JOURNEY.md` is the bird's-eye patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
+`docs/DEVELOPMENT_PROCESS.md` defines the provider-neutral development workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
 
 ## Required GitHub Workflow
 
@@ -32,6 +34,10 @@ Read these first:
 - Delete merged or superseded branches only after confirming they are no longer needed.
 
 Future work proceeds feature by feature: create a branch from current `origin/main`, review the change, open a PR, and merge only after explicit user approval.
+
+## Development Process
+
+Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full development workflow. Build feature slices around stable app contracts, keep Supabase-specific code isolated behind auth/database/storage/function/notification boundaries, and treat local Supabase E2E as the backend confidence check until hosted preview environments are intentionally configured and trusted.
 
 ## MVP Scope
 
@@ -76,6 +82,7 @@ Full browser/Supabase E2E is a required local pre-merge check for backend, sessi
 - `supabase/` - active migrations and Edge Functions.
 - `scripts/` - local automation and E2E verification.
 - `JOURNEY.md` - patient/clinician browser + backend journey playbook.
+- `docs/DEVELOPMENT_PROCESS.md` - branch, PR, verification, and provider-neutral backend process.
 - `docs/LOCAL_E2E_VERIFICATION.md` - local end-to-end test instructions.
 - `docs/STIMULI_ASSET_RUNBOOK.md` - private licensed stimulus upload and validation instructions.
 - `docs/SUPABASE_RECONCILIATION.md` - hosted Supabase drift/reconciliation runbook.

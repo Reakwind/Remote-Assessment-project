@@ -1,0 +1,69 @@
+# Development Process
+
+This project uses Supabase as the current MVP runtime. The product architecture is the Remote Check app contract: clinician/session/patient/review/scoring workflows, API payloads, persisted evidence, and verification expectations. Keep platform-specific code isolated so Supabase can be replaced later without rewriting the product.
+
+## Core Rules
+
+- Start every change from latest `origin/main`.
+- Work on a feature branch, preferably `codex/<short-scope>`.
+- Keep each branch focused on one feature, bug fix, or cleanup.
+- Open a PR into `main` for every repo change.
+- Record verification performed, skipped checks, risks, and follow-up work in the PR.
+- Merge only after explicit user approval for that PR.
+
+## Feature Slice
+
+Build features as complete vertical slices:
+
+- Browser journey: clinician or patient screens, states, errors, and copy.
+- App contract: request/response shapes, validation, status transitions, and permissions.
+- Persistence: records, storage paths, audit events, and retryable outcomes.
+- Review/scoring: deterministic scoring, manual review state, and finalization rules.
+- Verification: unit tests, browser checks, local Supabase E2E when the flow touches backend behavior.
+- Documentation: update `JOURNEY.md` when user-facing journey, backend journey, status, review, scoring, notification, or export behavior changes.
+
+## Provider Boundaries
+
+Use Supabase directly where MVP speed matters, and keep usage behind stable app boundaries:
+
+- Auth: clinician identity, session lookup, and permission checks.
+- Database: repository-style reads/writes for cases, sessions, results, reports, reviews, audits, and notifications.
+- Storage: private object paths, upload/download, signed URLs, content types, and retention rules.
+- Functions/API: Edge Function handlers expose app-level contracts such as `create-session`, `start-session`, `save-audio`, `complete-session`, and review updates.
+- Notifications: email/SMS/transcription providers sit behind swappable service functions.
+
+Client code should depend on app concepts rather than database details. Shared scoring, validation, task mapping, and report logic should remain provider-independent whenever practical.
+
+## Verification Tiers
+
+Use the smallest check set that covers the risk:
+
+- Docs-only: link/search verification is enough.
+- Frontend-only: unit tests, lint, build, and targeted browser checks.
+- Backend/session/storage/review/scoring changes: unit tests, lint, build, Deno checks, local Supabase functions, and local browser/Supabase E2E.
+- Hosted Supabase work: follow `docs/SUPABASE_RECONCILIATION.md`, inspect drift first, get explicit approval before remote-changing commands, and record rollback notes for destructive actions.
+
+GitHub CI is the stable baseline. Local Supabase E2E is the required backend confidence check until hosted preview environments are intentionally configured and trusted.
+
+## Platform Portability
+
+When adding backend behavior, define the app contract first:
+
+- Name the user action and lifecycle transition.
+- Specify the request, response, and error cases.
+- Decide what data is stored and what is returned to the browser.
+- Keep private credentials, bearer tokens, storage object paths, and signed URLs scoped to the smallest necessary surface.
+- Put deterministic domain logic in shared modules instead of embedding it in platform glue.
+- Keep provider assumptions visible in docs or code names when they are unavoidable.
+
+## Review Checklist
+
+Before asking to merge:
+
+- The branch is current with `origin/main`.
+- The diff is focused and understandable.
+- The app journey still matches `JOURNEY.md`.
+- Patient data handling follows the MVP privacy guardrails.
+- Scoring remains deterministic/manual according to the active manual.
+- Supabase-specific changes are isolated and documented.
+- Verification results and skipped checks are listed in the PR.

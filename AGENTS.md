@@ -10,11 +10,13 @@ Canonical files:
 2. [AGENTS.md](AGENTS.md)
 3. [JOURNEY.md](JOURNEY.md)
 4. [CONTEXT.md](CONTEXT.md)
-5. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-6. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-7. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+5. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
+6. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
+7. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
+8. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
 
 `JOURNEY.md` is the patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
+`docs/DEVELOPMENT_PROCESS.md` is the provider-neutral engineering workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
 
 ## Required GitHub Workflow
 
@@ -36,6 +38,15 @@ Every agent must use GitHub branch-based version control for all repo changes. T
 - List verification performed and skipped checks in the PR and final handoff.
 
 Generated local artifacts stay out of Git: `.env.local`, `.playwright-mcp/`, `client/test-results/`, `client/playwright-report/`, `node_modules/`, and `dist/`.
+
+## Development Process
+
+Read [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) before backend, platform, storage, auth, notification, session-flow, or verification changes.
+
+- Build features as vertical slices: browser journey, app contract, persistence, review/scoring, verification, and docs.
+- Keep Supabase-specific work behind auth, database, storage, Edge Function/API, and notification boundaries.
+- Put deterministic scoring, validation, task mapping, and report logic in provider-independent shared modules when practical.
+- Use local Supabase E2E as the backend confidence check until hosted preview environments are intentionally configured and trusted.
 
 ## Product Guardrails
 
