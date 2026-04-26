@@ -2,6 +2,7 @@
 import { AlertTriangle, CheckCircle2, ChevronRight, ClipboardCheck, Download, FileDown, Mic, Save } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { supabase } from "../../lib/supabase";
+import { DEFAULT_MOCA_VERSION, getMocaVersionConfig } from "../../lib/scoring/moca-config";
 import { clsx } from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DBScoringReport, Session as DBSession, TaskResult } from "../../types/database";
@@ -53,6 +54,16 @@ interface SessionWithPatient extends DBSession {
 
 type RubricState = Record<ReviewTab, Record<string, boolean>>;
 
+interface ScoreBreakdownRow {
+  id: string;
+  domainLabel: string;
+  itemLabel: string;
+  score: number;
+  max: number;
+  status: "scored" | "review";
+  evidence: string | null;
+}
+
 function formatDuration(startIso: string | null | undefined, endIso: string | null | undefined): string {
   if (!startIso || !endIso) return "—";
   const start = new Date(startIso).getTime();
@@ -102,6 +113,44 @@ const DEFAULT_RUBRICS: RubricState = {
   orientation: { day: false, month: false, year: false, dayOfWeek: false, place: false, city: false },
 };
 
+const DOMAIN_LABELS: Record<string, string> = {
+  visuospatial: "מרחבי-חזותי",
+  naming: "שיום",
+  attention: "קשב",
+  language: "שפה",
+  abstraction: "הפשטה",
+  memory: "זכירה מושהית",
+  orientation: "התמצאות",
+};
+
+const ITEM_LABELS: Record<string, string> = {
+  "moca-visuospatial": "מסלול",
+  "moca-cube": "קובייה",
+  "moca-clock": "שעון",
+  "naming.item1": "שיום 1",
+  "naming.item2": "שיום 2",
+  "naming.item3": "שיום 3",
+  "moca-digit-span": "קיבולת זיכרון",
+  "digit-span.forward": "ספרות קדימה",
+  "digit-span.backward": "ספרות אחורה",
+  "moca-vigilance": "קשב לאות א",
+  "moca-serial-7s": "חיסור סדרתי 7",
+  "moca-language": "שפה",
+  "language.rep1": "חזרת משפט 1",
+  "language.rep2": "חזרת משפט 2",
+  "language.fluency": "שטף מילולי",
+  "moca-abstraction": "הפשטה",
+  "abstraction.pair1": "הפשטה 1",
+  "abstraction.pair2": "הפשטה 2",
+  "moca-delayed-recall": "שליפה מושהית",
+  "orientation.date": "התמצאות: יום בחודש",
+  "orientation.month": "התמצאות: חודש",
+  "orientation.year": "התמצאות: שנה",
+  "orientation.day": "התמצאות: יום בשבוע",
+  "orientation.place": "התמצאות: מקום",
+  "orientation.city": "התמצאות: עיר",
+};
+
 function getReportTotal(report: DBScoringReport | null): number | null {
   return report?.total_adjusted ?? report?.total_score ?? null;
 }
@@ -126,6 +175,10 @@ function getDomainRaw(report: DBScoringReport | null, domainId: string): number 
   return typeof domain?.raw === "number" ? domain.raw : null;
 }
 
+function getReportDomains(report: DBScoringReport | null): any[] {
+  return Array.isArray(report?.domains) ? report.domains : [];
+}
+
 function scoreSerial7Rubric(correctCount: number): number {
   if (correctCount >= 4) return 3;
   if (correctCount >= 2) return 2;
@@ -142,6 +195,76 @@ function mergeEvidence(...items: Array<any | null | undefined>): any | null {
 function evidenceNumber(evidence: any, key: string): number | null {
   const value = evidence?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function scoringItemLabel(taskId: string): string {
+  if (ITEM_LABELS[taskId]) return ITEM_LABELS[taskId];
+  if (taskId.startsWith("recall.word")) return `שליפה ${taskId.replace("recall.word", "")}`;
+  return taskId;
+}
+
+function taskResultTypeForItem(taskId: string): string | null {
+  if (taskId.startsWith("naming.")) return "moca-naming";
+  if (taskId.startsWith("digit-span.")) return "moca-digit-span";
+  if (taskId.startsWith("language.")) return "moca-language";
+  if (taskId.startsWith("abstraction.")) return "moca-abstraction";
+  if (taskId.startsWith("recall.")) return "moca-delayed-recall";
+  if (taskId.startsWith("orientation.")) return "moca-orientation-task";
+  return taskId.startsWith("moca-") ? taskId : null;
+}
+
+function namingItemNumber(taskId: string): number | null {
+  const match = /^naming\.item(\d+)$/.exec(taskId);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isInteger(value) && value >= 1 && value <= 3 ? value : null;
+}
+
+function patientNamingAnswer(rawData: any, itemNumber: number): string | null {
+  if (Array.isArray(rawData)) {
+    const value = rawData[itemNumber - 1];
+    return typeof value === "string" ? value : null;
+  }
+  const answers = rawData?.answers;
+  if (!answers || typeof answers !== "object" || Array.isArray(answers)) return null;
+  const direct = answers[`item-${itemNumber}`];
+  if (typeof direct === "string") return direct;
+  const legacyKeys = ["lion", "rhino", "camel"];
+  const legacy = answers[legacyKeys[itemNumber - 1]];
+  return typeof legacy === "string" ? legacy : null;
+}
+
+function expectedNamingAnswer(mocaVersion: string | null | undefined, itemNumber: number): string | null {
+  try {
+    return getMocaVersionConfig(mocaVersion ?? DEFAULT_MOCA_VERSION).correctAnimalNames[itemNumber - 1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function safeEvidenceText(item: any, taskResultsByType: Map<string, TaskResult>, mocaVersion: string | null | undefined): string | null {
+  const taskType = taskResultTypeForItem(item.taskId);
+  const taskRawData = taskType ? taskResultsByType.get(taskType)?.raw_data : null;
+  const itemNumber = namingItemNumber(item.taskId);
+  if (itemNumber) {
+    const answer = patientNamingAnswer(taskRawData, itemNumber);
+    const expected = expectedNamingAnswer(mocaVersion, itemNumber);
+    return [answer ? `תשובת מטופל: ${answer}` : null, expected ? `תשובה צפויה: ${expected}` : null]
+      .filter(Boolean)
+      .join(" · ") || null;
+  }
+
+  const rawData = item.rawData ?? taskRawData;
+  if (item.taskId === "moca-vigilance") {
+    const tapped = evidenceNumber(rawData, "tapped");
+    const targetCount = evidenceNumber(rawData, "targetCount");
+    if (tapped !== null || targetCount !== null) {
+      return `הקשות: ${tapped ?? "—"} · אותיות א: ${targetCount ?? "—"}`;
+    }
+  }
+
+  if (rawData?.audioStoragePath || rawData?.audioSignedUrl) return "הקלטה זמינה בסקירה הקלינית";
+  return null;
 }
 
 function hydrateSavedRubrics(current: RubricState, drawings: DrawingReviewRow[]): RubricState {
@@ -490,6 +613,36 @@ export function ClinicianDashboardDetail() {
     if (nextPendingTab) setActiveTab(nextPendingTab);
   };
 
+  const scoringBreakdown = useMemo<ScoreBreakdownRow[]>(() => {
+    const taskResultsByType = new Map<string, TaskResult>();
+    for (const result of sessionRecord?.task_results ?? []) {
+      if (result.task_type) taskResultsByType.set(result.task_type, result);
+    }
+
+    return getReportDomains(reportRecord).flatMap((domain: any) => {
+      const domainId = typeof domain?.domain === "string" ? domain.domain : "unknown";
+      const domainLabel = DOMAIN_LABELS[domainId] ?? domainId;
+      const items = Array.isArray(domain?.items) ? domain.items : [];
+
+      return items
+        .filter((item: any) => typeof item?.taskId === "string")
+        .map((item: any, index: number) => {
+          const score = typeof item.score === "number" ? item.score : 0;
+          const max = typeof item.max === "number" ? item.max : 0;
+          const status = item.needsReview ? "review" : "scored";
+          return {
+            id: `${domainId}-${item.taskId}-${index}`,
+            domainLabel,
+            itemLabel: scoringItemLabel(item.taskId),
+            score,
+            max,
+            status,
+            evidence: safeEvidenceText(item, taskResultsByType, sessionRecord?.moca_version),
+          };
+        });
+    });
+  }, [reportRecord, sessionRecord?.moca_version, sessionRecord?.task_results]);
+
   const summary = useMemo(() => {
     const pill = (raw: number | null, cap: number): { value: string; color: "warn" | "pass" | "neutral" } => {
       if (raw == null) return { value: "—", color: "neutral" };
@@ -835,6 +988,73 @@ export function ClinicianDashboardDetail() {
           </div>
         ))}
       </div>
+
+      {scoringBreakdown.length > 0 && (
+        <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-extrabold text-black">פירוט ניקוד לפי פריט</h2>
+              <p className="mt-1 text-sm font-bold text-gray-500">
+                הציון השמור בדוח מוצג לפי תחום ופריט. פריטים שדורשים שיקול קליני מופיעים גם בסקירה הקלינית.
+              </p>
+            </div>
+            <div className="rounded-xl bg-gray-50 px-3 py-2 text-sm font-extrabold text-gray-700">
+              {scoringBreakdown.length} פריטים
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-right">
+              <thead className="border-b border-gray-100 text-xs font-extrabold uppercase tracking-wider text-gray-500">
+                <tr>
+                  <th className="px-4 py-3">תחום</th>
+                  <th className="px-4 py-3">פריט</th>
+                  <th className="px-4 py-3">עדות תומכת</th>
+                  <th className="px-4 py-3">ניקוד</th>
+                  <th className="px-4 py-3">מצב</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scoringBreakdown.map((item) => (
+                  <tr key={item.id} className="border-b border-gray-50 last:border-b-0">
+                    <td className="px-4 py-3 text-sm font-extrabold text-gray-900">{item.domainLabel}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-700">{item.itemLabel}</td>
+                    <td className="max-w-sm px-4 py-3 text-sm font-medium text-gray-600">
+                      {item.evidence ?? "—"}
+                    </td>
+                    <td
+                      className={clsx(
+                        "px-4 py-3 text-lg font-extrabold tabular-nums",
+                        item.status === "review"
+                          ? "text-amber-700"
+                          : item.score >= item.max
+                          ? "text-green-700"
+                          : item.score === 0
+                          ? "text-red-700"
+                          : "text-gray-900",
+                      )}
+                    >
+                      {item.score}/{item.max}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={clsx(
+                          "inline-flex rounded-full px-3 py-1 text-xs font-extrabold",
+                          item.status === "review"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-green-100 text-green-800",
+                        )}
+                      >
+                        {item.status === "review" ? "דורש סקירה" : "נוקד לפי כלל"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 mt-12 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">

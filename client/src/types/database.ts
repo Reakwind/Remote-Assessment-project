@@ -13,6 +13,7 @@ export interface Session {
   patient_gender?: 'male' | 'female' | null;
   patient_dominant_hand?: 'right' | 'left' | 'ambidextrous' | null;
   assessment_language?: string | null;
+  moca_version?: string | null;
   access_code?: string | null;
   assessment_type?: string;
   patient_phone?: string | null;

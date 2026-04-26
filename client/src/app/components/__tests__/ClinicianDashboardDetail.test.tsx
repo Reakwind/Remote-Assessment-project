@@ -33,6 +33,7 @@ function sessionPayload(sessionOverrides: Record<string, unknown> = {}) {
       id: 'session-1',
       case_id: 'CASE-1',
       status: 'completed',
+      moca_version: '8.3',
       age_band: '70-74',
       created_at: '2026-04-25T12:00:00.000Z',
       started_at: '2026-04-25T12:05:00.000Z',
@@ -42,7 +43,22 @@ function sessionPayload(sessionOverrides: Record<string, unknown> = {}) {
         case_id: 'CASE-1',
         full_name: 'CASE-1',
       },
-      task_results: [],
+      task_results: [
+        {
+          id: 'task-naming-1',
+          session_id: 'session-1',
+          task_name: 'naming',
+          task_type: 'moca-naming',
+          raw_data: {
+            answers: {
+              'item-1': 'סוס',
+              'item-2': 'נמר',
+              'item-3': 'ברבור',
+            },
+          },
+          submitted_at: '2026-04-25T12:10:00.000Z',
+        },
+      ],
       drawings: [],
       scoring_reviews: [],
       audio_evidence_reviews: [
@@ -69,7 +85,16 @@ function sessionPayload(sessionOverrides: Record<string, unknown> = {}) {
         pending_review_count: 0,
         domains: [
           { domain: 'visuospatial', raw: 5, max: 5, items: [] },
-          { domain: 'naming', raw: 2, max: 3, items: [] },
+          {
+            domain: 'naming',
+            raw: 2,
+            max: 3,
+            items: [
+              { taskId: 'naming.item1', score: 1, max: 1, needsReview: false },
+              { taskId: 'naming.item2', score: 1, max: 1, needsReview: false },
+              { taskId: 'naming.item3', score: 0, max: 1, needsReview: false },
+            ],
+          },
           { domain: 'attention', raw: 6, max: 6, items: [] },
           { domain: 'memory', raw: 5, max: 5, items: [] },
         ],
@@ -155,8 +180,12 @@ describe('ClinicianDashboardDetail', () => {
 
     await screen.findByRole('heading', { name: 'תיק CASE-1' });
     expect(screen.getByText('CSV זמין גם לפני סיום סקירה ויכול לכלול נתונים זמניים.')).toBeInTheDocument();
-    expect(screen.getByText('שיום')).toBeInTheDocument();
+    expect(screen.getAllByText('שיום').length).toBeGreaterThan(0);
     expect(screen.getByText('2/3')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'פירוט ניקוד לפי פריט' })).toBeInTheDocument();
+    expect(screen.getByText('שיום 3')).toBeInTheDocument();
+    expect(screen.getByText('תשובת מטופל: ברבור · תשובה צפויה: ברווז')).toBeInTheDocument();
+    expect(screen.getByText('0/1')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'האזן להקלטת המטופל' })).toBeInTheDocument();
     expect(screen.queryByText(/audioStoragePath/)).not.toBeInTheDocument();
     expect(screen.queryByText(/audioSignedUrl/)).not.toBeInTheDocument();
