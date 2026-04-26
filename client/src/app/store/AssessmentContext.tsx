@@ -1,9 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { ScoringContext } from '../../types/scoring';
 import { edgeFn, edgeHeaders } from '../../lib/supabase';
 import { scoreSession } from '../../lib/scoring';
+import { AudioStore } from './audioStore';
+import {
+  loadAutosaveQueue,
+  queuedSavesForSession,
+  removeQueuedTaskSave,
+  updateQueuedTaskSave,
+  upsertQueuedTaskSave,
+  type QueuedTaskSave,
+} from './autosaveQueue';
 
 // Maps the in-memory task state keys to the moca-prefixed taskIds that the
 // scoring engine expects. Drawing/visuospatial lives under three different
@@ -130,6 +139,44 @@ function shouldDeferBackendSync(taskName: keyof AssessmentState['tasks'], data: 
   return false;
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read audio recording'));
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('Failed to encode audio recording'));
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+function isPendingAudioUpload(rawData: unknown): rawData is {
+  audioId: string;
+  audioContentType?: string;
+  audioUploadPending?: boolean;
+} {
+  if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) return false;
+  const audio = rawData as { audioId?: unknown; audioStoragePath?: unknown; audioUploadPending?: unknown };
+  return (
+    audio.audioUploadPending === true &&
+    typeof audio.audioId === 'string' &&
+    audio.audioId.length > 0 &&
+    typeof audio.audioStoragePath !== 'string'
+  );
+}
+
+function saveStatusFromQueue(item: QueuedTaskSave): TaskSaveStatus {
+  if (item.status === 'error') {
+    return {
+      status: 'error',
+      message: item.lastError ?? 'שמירת התשובה נכשלה. בדוק חיבור ונסה שוב.',
+    };
+  }
+
+  return { status: 'saving' };
+}
+
 interface AssessmentContextType {
   state: AssessmentState;
   startNewAssessment: (sessionId: string, linkToken: string, scoringContext: ScoringContext, startToken?: string | null) => void;
@@ -137,6 +184,7 @@ interface AssessmentContextType {
   updateTaskData: (taskName: keyof AssessmentState['tasks'], data: any, imageBase64?: string) => void;
   setLastPath: (path: string) => void;
   completeAssessment: () => Promise<boolean>;
+  retryFailedSaves: () => void;
   completionStatus: 'idle' | 'submitting' | 'completed' | 'error';
   completionError: string | null;
   taskSaveStatus: Record<string, TaskSaveStatus | undefined>;
@@ -161,12 +209,182 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     state.isComplete ? 'completed' : 'idle',
   );
   const [completionError, setCompletionError] = useState<string | null>(null);
-  const [taskSaveStatus, setTaskSaveStatus] = useState<Record<string, TaskSaveStatus | undefined>>({});
+  const [taskSaveStatus, setTaskSaveStatus] = useState<Record<string, TaskSaveStatus | undefined>>(() => {
+    if (!state.id) return {};
+    return Object.fromEntries(
+      queuedSavesForSession(state.id).map((item) => [item.taskName, saveStatusFromQueue(item)]),
+    );
+  });
+  const flushPromiseRef = useRef<Promise<boolean> | null>(null);
 
   // Keep localStorage perfectly in sync with our React state
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  const syncQueuedTask = useCallback(async (item: QueuedTaskSave): Promise<unknown> => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new Error('אין חיבור רשת זמין. הנתונים נשמרו במכשיר ויישלחו כשיהיה חיבור.');
+    }
+
+    let rawData = item.rawData;
+
+    if (item.imageBase64) {
+      const drawingResponse = await fetch(edgeFn('save-drawing'), {
+        method: 'POST',
+        headers: edgeHeaders(),
+        body: JSON.stringify({
+          sessionId: item.sessionId,
+          linkToken: item.linkToken,
+          taskId: item.taskType,
+          imageBase64: item.imageBase64,
+          strokesData: (rawData as { strokes?: unknown } | null | undefined)?.strokes,
+        }),
+      });
+
+      if (!drawingResponse.ok) {
+        const payload = await drawingResponse.json().catch(() => null);
+        throw new Error(payload?.error || 'Failed to save drawing');
+      }
+
+      const { storagePath } = await drawingResponse.json();
+      rawData = { ...(rawData as object), drawingPath: storagePath };
+    }
+
+    if (isPendingAudioUpload(rawData)) {
+      const audioBlob = await AudioStore.getAudio(rawData.audioId);
+      if (!audioBlob) throw new Error('ההקלטה המקומית לא נמצאה. יש להקליט את התשובה מחדש.');
+
+      const contentType = rawData.audioContentType || audioBlob.type || 'audio/webm';
+      const audioResponse = await fetch(edgeFn('save-audio'), {
+        method: 'POST',
+        headers: edgeHeaders(),
+        body: JSON.stringify({
+          sessionId: item.sessionId,
+          linkToken: item.linkToken,
+          taskType: item.taskType,
+          audioBase64: await blobToDataUrl(audioBlob),
+          contentType,
+        }),
+      });
+
+      if (!audioResponse.ok) {
+        const payload = await audioResponse.json().catch(() => null);
+        throw new Error(payload?.error || 'Failed to save audio');
+      }
+
+      const payload = await audioResponse.json();
+      rawData = {
+        ...(rawData as object),
+        audioId: payload.url ?? payload.storagePath ?? rawData.audioId,
+        audioStoragePath: payload.audioStoragePath ?? payload.storagePath,
+        audioContentType: payload.audioContentType ?? payload.contentType ?? contentType,
+        audioUploadPending: undefined,
+      };
+    }
+
+    const response = await fetch(edgeFn('submit-results'), {
+      method: 'POST',
+      headers: edgeHeaders(),
+      body: JSON.stringify({
+        sessionId: item.sessionId,
+        linkToken: item.linkToken,
+        taskType: item.taskType,
+        rawData,
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.error || 'Failed to save task');
+    }
+
+    return rawData;
+  }, []);
+
+  const flushPendingSaves = useCallback(async (): Promise<boolean> => {
+    if (!state.id) return true;
+    if (flushPromiseRef.current) return flushPromiseRef.current;
+
+    const sessionId = state.id;
+    const flushPromise = (async () => {
+      let allSaved = true;
+      const queue = queuedSavesForSession(sessionId);
+
+      for (const item of queue) {
+        updateQueuedTaskSave(item.id, { status: 'syncing', attempts: item.attempts + 1, lastError: undefined });
+        setTaskSaveStatus((prev) => ({ ...prev, [item.taskName]: { status: 'saving' } }));
+
+        try {
+          const rawData = await syncQueuedTask(item);
+          const removed = removeQueuedTaskSave(item.id, item.version);
+
+          if (removed) {
+            setTaskSaveStatus((prev) => ({ ...prev, [item.taskName]: { status: 'saved' } }));
+            setState((prev) => {
+              if (prev.id !== sessionId) return prev;
+              return {
+                ...prev,
+                tasks: {
+                  ...prev.tasks,
+                  [item.taskName]: rawData,
+                },
+              };
+            });
+          }
+        } catch (err) {
+          allSaved = false;
+          const message = err instanceof Error ? err.message : 'Failed to save task';
+          console.error('Failed to sync queued task data:', err);
+          updateQueuedTaskSave(item.id, {
+            status: 'error',
+            attempts: item.attempts + 1,
+            lastError: message,
+          });
+          setTaskSaveStatus((prev) => ({
+            ...prev,
+            [item.taskName]: { status: 'error', message },
+          }));
+        }
+      }
+
+      return allSaved && queuedSavesForSession(sessionId).length === 0;
+    })();
+
+    flushPromiseRef.current = flushPromise;
+    try {
+      return await flushPromise;
+    } finally {
+      flushPromiseRef.current = null;
+      const hasPending = queuedSavesForSession(sessionId).some((item) => item.status === 'pending');
+      if (hasPending) {
+        window.setTimeout(() => {
+          void flushPendingSaves();
+        }, 0);
+      }
+    }
+  }, [state.id, syncQueuedTask]);
+
+  useEffect(() => {
+    if (!state.id) return;
+    const queued = queuedSavesForSession(state.id);
+    if (queued.length === 0) return;
+    void flushPendingSaves();
+  }, [flushPendingSaves, state.id]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      loadAutosaveQueue()
+        .filter((item) => item.status === 'error')
+        .forEach((item) => {
+          updateQueuedTaskSave(item.id, { status: 'pending', lastError: undefined });
+        });
+      void flushPendingSaves();
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [flushPendingSaves]);
 
   const startNewAssessment = useCallback((sessionId: string, linkToken: string, scoringContext: ScoringContext, startToken?: string | null) => {
     const newState: AssessmentState = {
@@ -202,60 +420,24 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     const taskKey = String(taskName);
     const taskType = TASK_STATE_TO_SCORING_ID[taskName] ?? `moca-${taskName}`;
     setTaskSaveStatus((prev) => ({ ...prev, [taskKey]: { status: 'saving' } }));
+    try {
+      upsertQueuedTaskSave({
+        sessionId: state.id,
+        linkToken: state.linkToken,
+        taskName: taskKey,
+        taskType,
+        rawData: data,
+        imageBase64: imageBase64 || undefined,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to queue task save';
+      console.error('Failed to queue task data:', err);
+      setTaskSaveStatus((prev) => ({ ...prev, [taskKey]: { status: 'error', message } }));
+      return;
+    }
 
-    const syncTask = async () => {
-      try {
-        let rawData = data;
-
-        if (imageBase64 && ['trailMaking', 'cube', 'clock'].includes(taskName)) {
-          const drawingResponse = await fetch(edgeFn('save-drawing'), {
-            method: 'POST',
-            headers: edgeHeaders(),
-            body: JSON.stringify({
-              sessionId: state.id,
-              linkToken: state.linkToken,
-              taskId: taskType,
-              imageBase64,
-              strokesData: data?.strokes,
-            }),
-          });
-
-          if (!drawingResponse.ok) throw new Error('Failed to save drawing');
-          const { storagePath } = await drawingResponse.json();
-          rawData = { ...data, drawingPath: storagePath };
-        }
-
-        const response = await fetch(edgeFn('submit-results'), {
-          method: 'POST',
-          headers: edgeHeaders(),
-          body: JSON.stringify({
-            sessionId: state.id,
-            linkToken: state.linkToken,
-            taskType,
-            rawData,
-          }),
-        });
-
-        if (!response.ok) {
-          const payload = await response.json().catch(() => null);
-          throw new Error(payload?.error || 'Failed to save task');
-        }
-
-        setTaskSaveStatus((prev) => ({ ...prev, [taskKey]: { status: 'saved' } }));
-      } catch (err) {
-        console.error('Failed to sync task data:', err);
-        setTaskSaveStatus((prev) => ({
-          ...prev,
-          [taskKey]: {
-            status: 'error',
-            message: err instanceof Error ? err.message : 'Failed to save task',
-          },
-        }));
-      }
-    };
-
-    void syncTask();
-  }, [state.id, state.linkToken]);
+    void flushPendingSaves();
+  }, [flushPendingSaves, state.id, state.linkToken]);
 
   const setLastPath = useCallback((path: string) => {
     setState((prev) => {
@@ -277,6 +459,16 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       return false;
     }
 
+    setCompletionStatus('submitting');
+    setCompletionError(null);
+
+    const savesFlushed = await flushPendingSaves();
+    if (!savesFlushed) {
+      setCompletionStatus('error');
+      setCompletionError('חלק מהתשובות עדיין לא נשמרו. בדוק חיבור ונסה שוב.');
+      return false;
+    }
+
     const scoringInputs: Record<string, unknown> = {};
     for (const [stateKey, scoringId] of Object.entries(TASK_STATE_TO_SCORING_ID)) {
       const taskData = (state.tasks as Record<string, unknown>)[stateKey];
@@ -292,9 +484,6 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       console.error('scoreSession failed:', err);
       report = undefined;
     }
-
-    setCompletionStatus('submitting');
-    setCompletionError(null);
 
     try {
       const response = await fetch(edgeFn('complete-session'), {
@@ -321,7 +510,16 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       setCompletionError(err instanceof Error ? err.message : 'Failed to complete session');
       return false;
     }
-  }, [state]);
+  }, [flushPendingSaves, state]);
+
+  const retryFailedSaves = useCallback(() => {
+    if (!state.id) return;
+    queuedSavesForSession(state.id).forEach((item) => {
+      updateQueuedTaskSave(item.id, { status: 'pending', lastError: undefined });
+      setTaskSaveStatus((prev) => ({ ...prev, [item.taskName]: { status: 'saving' } }));
+    });
+    void flushPendingSaves();
+  }, [flushPendingSaves, state.id]);
 
   const hasInProgressAssessment = Boolean(
     state.id &&
@@ -338,6 +536,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       updateTaskData,
       setLastPath,
       completeAssessment,
+      retryFailedSaves,
       completionStatus,
       completionError,
       taskSaveStatus,
@@ -350,6 +549,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       updateTaskData,
       setLastPath,
       completeAssessment,
+      retryFailedSaves,
       completionStatus,
       completionError,
       taskSaveStatus,

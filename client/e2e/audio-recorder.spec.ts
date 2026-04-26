@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('review regression: backend audio upload failure is not shown as saved evidence', async ({ page }) => {
+test('review regression: backend audio upload failure is queued for retry before continuing', async ({ page }) => {
   await page.route('**/functions/v1/save-audio', async route => {
     await route.fulfill({
       status: 500,
@@ -59,12 +59,28 @@ test('review regression: backend audio upload failure is not shown as saved evid
   await expect(page.getByRole('button', { name: /עצור הקלטה/ })).toBeVisible();
   await page.getByRole('button', { name: /עצור הקלטה/ }).click();
 
-  await expect(page.getByText('Failed to upload audio')).toBeVisible();
-  await expect(page.getByText(/ההקלטה נשמרה בהצלחה/)).toBeHidden();
+  await expect(page.getByText(/ההקלטה נשמרה בהצלחה/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /נסה שוב לשמור/ })).toBeVisible();
 
-  const storedTask = await page.evaluate(() => {
+  const { storedTask, queuedSaves } = await page.evaluate(() => {
     const stored = window.localStorage.getItem('moca_assessment_state');
-    return stored ? JSON.parse(stored).tasks?.memory ?? null : null;
+    const queue = window.localStorage.getItem('moca_assessment_autosave_queue_v1');
+    return {
+      storedTask: stored ? JSON.parse(stored).tasks?.memory ?? null : null,
+      queuedSaves: queue ? JSON.parse(queue) : [],
+    };
   });
-  expect(storedTask).toBeNull();
+  expect(storedTask).toEqual(expect.objectContaining({
+    audioContentType: 'audio/webm',
+    audioUploadPending: true,
+  }));
+  expect(queuedSaves).toEqual([
+    expect.objectContaining({
+      sessionId: 'audio-upload-failure-session',
+      taskName: 'memory',
+      taskType: 'moca-memory-learning',
+      status: 'error',
+      rawData: expect.objectContaining({ audioUploadPending: true }),
+    }),
+  ]);
 });

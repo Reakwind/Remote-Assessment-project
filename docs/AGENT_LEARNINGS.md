@@ -19,6 +19,7 @@ Evidence:
 Rules:
 
 - Before changing patient start, resume, autosave, completion, or invalid-session behavior, write the explicit states and allowed transitions first.
+- Patient evidence saves should enter the local retry queue before backend sync. Completion must flush queued evidence and stop on save errors so the clinician never reviews a session that the patient browser already knows is missing task, drawing, or audio data.
 - Treat routing, resume, and completion as one lifecycle, not independent fixes.
 - Prefer reducing implicit state spread across components over adding another patch-level conditional.
 

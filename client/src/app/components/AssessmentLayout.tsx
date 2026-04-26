@@ -162,7 +162,7 @@ function taskHasEvidence(taskKey: TaskKey | undefined, tasks: ReturnType<typeof 
 export function AssessmentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { state, setLastPath, taskSaveStatus } = useAssessmentStore();
+  const { state, setLastPath, taskSaveStatus, retryFailedSaves } = useAssessmentStore();
   const mocaVersion = state.scoringContext?.mocaVersion ?? "8.3";
   const [validation, setValidation] = useState<{ path: string; message: string } | null>(null);
   const currentPath = location.pathname.split('/').pop() ?? "patient";
@@ -198,9 +198,10 @@ export function AssessmentLayout() {
       return;
     }
     if (currentSaveStatus?.status === "error") {
+      retryFailedSaves();
       setValidation({
         path: location.pathname,
-        message: "שמירת התשובה נכשלה. בדוק חיבור ונסה שוב לפני המעבר.",
+        message: currentSaveStatus.message ?? "שמירת התשובה נכשלה. בדוק חיבור ונסה שוב לפני המעבר.",
       });
       return;
     }
@@ -316,7 +317,7 @@ export function AssessmentLayout() {
               ) : currentSaveStatus?.status === "error" ? (
                 <>
                   <AlertTriangle className="h-5 w-5" />
-                  <span>שמירה נכשלה</span>
+                  <span>נסה שוב לשמור</span>
                 </>
               ) : (
                 <>

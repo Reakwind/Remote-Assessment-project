@@ -23,6 +23,7 @@ interface AudioRecorderProps {
     audioId: string;
     audioStoragePath?: string;
     audioContentType?: string;
+    audioUploadPending?: boolean;
   }) => void;
 }
 
@@ -124,7 +125,7 @@ export function AudioRecorder({
       audioChunksRef.current = [];
 
       const finishStop = async (
-        audio: { audioId: string; audioStoragePath?: string; audioContentType?: string },
+        audio: { audioId: string; audioStoragePath?: string; audioContentType?: string; audioUploadPending?: boolean },
         blob: Blob,
       ) => {
         clearRecordingTimers();
@@ -137,8 +138,24 @@ export function AudioRecorder({
         stream.getTracks().forEach(track => track.stop());
       };
 
-      const failStop = (message: string, cause?: unknown) => {
+      const queueLocalRecording = async (message: string, blob: Blob, contentType: string, cause?: unknown) => {
         if (cause) console.error("Audio upload failed", cause);
+        clearRecordingTimers();
+        setNotice(message);
+        setIsRecording(false);
+        try {
+          await finishStop({
+            audioId: `audio_${taskId}_${Date.now()}`,
+            audioContentType: contentType,
+            audioUploadPending: true,
+          }, blob);
+        } catch (localSaveError) {
+          failStop("שמירת ההקלטה במכשיר נכשלה. נסה להקליט שוב.", localSaveError);
+        }
+      };
+
+      const failStop = (message: string, cause?: unknown) => {
+        if (cause) console.error("Audio save failed", cause);
         clearRecordingTimers();
         setError(message);
         setIsRecording(false);
@@ -184,7 +201,11 @@ export function AudioRecorder({
               } catch {
                 // Keep localized fallback for non-JSON errors.
               }
-              failStop(message);
+              await queueLocalRecording(
+                `${message} ההקלטה נשמרה במכשיר ותישלח שוב אוטומטית.`,
+                audioBlob,
+                contentType,
+              );
               return;
             }
             const data = await res.json();
@@ -201,10 +222,16 @@ export function AudioRecorder({
             return;
           }
         } catch (e) {
-          failStop("שמירת ההקלטה נכשלה. בדוק חיבור ונסה להקליט שוב.", e);
+          const contentType = audioBlob.type || "audio/webm";
+          await queueLocalRecording(
+            "אין חיבור יציב כרגע. ההקלטה נשמרה במכשיר ותישלח שוב אוטומטית.",
+            audioBlob,
+            contentType,
+            e,
+          );
           return;
         }
-        finishStop(finalAudio, audioBlob);
+        await finishStop(finalAudio, audioBlob);
       };
       
       mediaRecorder.start();

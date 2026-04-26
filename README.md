@@ -46,10 +46,11 @@ Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full deve
 
 - Clinician login, clinical case creation, session creation, dashboard list/detail, drawing/manual review, finalization.
 - Clinician auth uses email/password for MVP.
-- Patient session start by generated test number, Hebrew MoCA flow, autosave, completion.
+- Patient session start by generated test number, Hebrew MoCA flow, retryable autosave, completion.
 - New local patients complete welcome/audio/microphone preflight once; returning local patients start new tests at the first task.
 - Same-device resume is explicit from the home-page continue button for in-progress local state.
 - Supabase persists sessions, task results, drawings, audio evidence, scoring reports, and audit events.
+- Patient task/drawing/audio evidence saves use a local retry queue so refresh or temporary network loss does not immediately discard captured evidence.
 - Server-side scoring is authoritative.
 - Drawings and ambiguous/manual items go to clinician review.
 - Clinician gets an email when a test is completed.
