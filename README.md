@@ -44,12 +44,15 @@ Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full deve
 - Clinician login, clinical case creation, session creation, dashboard list/detail, drawing/manual review, finalization.
 - Clinician auth uses email/password for MVP.
 - Patient session start by generated test number, Hebrew MoCA flow, autosave, completion.
+- New local patients complete welcome/audio/microphone preflight once; returning local patients start new tests at the first task.
+- Same-device resume is explicit from the home-page continue button for in-progress local state.
 - Supabase persists sessions, task results, drawings, audio evidence, scoring reports, and audit events.
 - Server-side scoring is authoritative.
 - Drawings and ambiguous/manual items go to clinician review.
 - Clinician gets an email when a test is completed.
 - Clinician copies the generated test number and sends it to the patient outside the app.
 - Licensed stimuli load from private Storage through versioned manifests and signed URLs.
+- CSV export can include incomplete/provisional data with inline feedback; finalized PDF export remains gated by clinician review.
 
 ## Guardrails
 

@@ -56,17 +56,20 @@ Open the Vite URL in Chrome, then:
 3. Create a case using a pseudonymous case ID plus phone, birth date, gender, language, dominant hand, and education years.
 4. Create a session by choosing assessment, language, and MoCA version.
 5. Copy the generated test number and enter it on the patient home page.
-6. Confirm the patient assessment header displays the selected MoCA version.
-7. Refresh the patient browser during an in-progress session and confirm same-device resume returns to saved progress.
-8. Complete the patient flow enough to confirm task auto-save calls succeed.
-9. Advance past at least one task without entering evidence and confirm it is recorded as requires-review/skipped evidence, not silently ignored.
-10. Finish the assessment and confirm `complete-session` creates a provisional report.
-11. Return home and confirm the completed session is no longer offered as a resumable test.
-12. Return to `/dashboard/{sessionId}`, review drawing rows, save scores, and confirm the report finalizes.
+6. For a first-use local patient browser, confirm the welcome/system-check page appears and requires Hebrew audio plus microphone checks before the first task.
+7. For a returning local patient browser with preflight already completed, confirm a new valid test number starts at the first task.
+8. Refresh the patient browser during an in-progress session, return home, and confirm same-device resume happens only after pressing the continue-test button.
+9. Confirm the patient assessment header displays the selected MoCA version.
+10. Complete the patient flow enough to confirm task auto-save calls succeed.
+11. Advance past at least one task without entering evidence and confirm it is recorded as requires-review/skipped evidence, not silently ignored.
+12. Finish the assessment and confirm the patient sees only the dead-end completion screen saying results are being sent to the referring therapist.
+13. Return home and confirm the completed session is no longer offered as a resumable test.
+14. Return to `/dashboard/{sessionId}`, review drawing rows, save scores, and confirm the report finalizes.
+15. Confirm CSV export works before finalization with inline provisional-data feedback, and PDF export remains unavailable until finalization.
 
 ## Verification Commands
 
-The scripted local E2E flow validates the three local licensed Hebrew MoCA PDF pairs by file path and hash, then exercises the backend clinician-to-patient-to-review flow with generated local fixture answers. It also confirms the backend keeps patient test numbers single-use and that the patient stimulus manifest returns version-scoped private Storage keys for the selected MoCA version. The script does not copy or extract licensed MoCA stimuli into the repository.
+The scripted local E2E flow validates the three local licensed Hebrew MoCA PDF pairs by file path and hash, then exercises the backend clinician-to-patient-to-review flow with generated local fixture answers. It also confirms repeat tests can be ordered for the same case, incomplete/provisional sessions can be exported to CSV, patient test numbers stay single-use, and the patient stimulus manifest returns version-scoped private Storage keys for the selected MoCA version. The script does not copy or extract licensed MoCA stimuli into the repository.
 
 From the repo root, with Supabase and Edge Functions running:
 
@@ -126,10 +129,11 @@ Useful browser checks:
 2. Create or sign in as a clinician.
 3. Create a session and choose a MoCA version.
 4. Enter the generated test number on the patient home page.
-5. Confirm the patient header shows the selected version.
-6. Refresh during a patient task and confirm same-device resume.
-7. Finish and confirm the patient sees only completion.
-8. Return to dashboard detail and complete clinician review.
+5. Confirm first-use local browsers see welcome/system-check, and returning local browsers start at the first task.
+6. Confirm the patient header shows the selected version.
+7. Refresh during a patient task, return home, and confirm same-device resume only after pressing continue.
+8. Finish and confirm the patient sees only the dead-end completion screen.
+9. Return to dashboard detail, confirm CSV inline feedback, and complete clinician review.
 
 The repeatable browser check is:
 

@@ -606,8 +606,10 @@ export function ClinicianDashboardDetail() {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-csv`, {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
+        body: JSON.stringify({ sessionId }),
       });
 
       if (!res.ok) {
@@ -629,12 +631,15 @@ export function ClinicianDashboardDetail() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "moca_export.csv";
+      a.download = `moca_${sessionRecord?.case_id || sessionId}_export.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      setCsvExportMessage({ kind: "success", text: "CSV ירד בהצלחה." });
+      setCsvExportMessage({
+        kind: "success",
+        text: canExportPdf ? "CSV ירד בהצלחה." : "CSV עם נתונים זמניים ירד בהצלחה.",
+      });
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : "ייצוא CSV נכשל.";
@@ -751,6 +756,11 @@ export function ClinicianDashboardDetail() {
               )}
             >
               {csvExportMessage.text}
+            </p>
+          )}
+          {!csvExportMessage && (
+            <p className="max-w-xs text-right text-xs font-bold text-gray-500">
+              CSV זמין גם לפני סיום סקירה ויכול לכלול נתונים זמניים.
             </p>
           )}
         </div>

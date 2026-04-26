@@ -36,7 +36,7 @@ Use this as the compact journey authority. Keep detailed UI, database, and imple
 | `awaiting_review` | Server scoring is provisional because drawings/manual items need clinician review. | `complete-session` | `completed` |
 | `completed` | All review items are scored and final totals/norms can be shown to clinician. | `complete-session` or review update functions | Terminal for MVP |
 
-One-time patient start semantics remain strict. Target resume behavior uses same-device resume for an in-progress session while keeping the original test number single-use for new starts.
+One-time patient start semantics remain strict. Same-device resume is offered from the home page through an explicit continue button for in-progress local state; entering the same consumed test number does not auto-resume.
 
 ## Clinician Journey
 
@@ -48,20 +48,20 @@ One-time patient start semantics remain strict. Target resume behavior uses same
 | Wait for completion | Clinician waits for a completion notification, then opens the dashboard when ready. | `complete-session` attempts clinician completion email, records a `notification_events` outcome, and audits `clinician_completion_email_*`. | Current. Email-first completion ping. |
 | Review session | Clinician opens dashboard detail for completed/awaiting review session and sees stored patient evidence. | `get-session` returns task results, scoring report, drawing reviews, scoring item reviews, signed drawing/audio URLs. | Current. |
 | Score manual items | Clinician scores drawings and any rule-unavailable items from the stored evidence view. | `update-drawing-review` and `update-scoring-review` persist clinician score/notes, recalculate report, write audit events. | Current. |
-| Finalize | Once pending review count reaches 0, session becomes `completed`. | Final report totals and norm lookup become final; PDF/CSV export is available after finalization. | Current. |
+| Finalize | Once pending review count reaches 0, session becomes `completed`. | Final report totals and norm lookup become final; PDF export is available after finalization. CSV export is available before or after finalization and clearly indicates provisional/incomplete data may be included. | Current. |
 
 ## Patient Journey
 
 | Step | Browser behavior | Backend/data behavior | Current vs target |
 |---|---|---|---|
 | Enter test number | Patient enters the clinician-provided test number on the home page. | Browser uses stored same-device session state or calls `start-session` with the test number. | Current target. |
-| Start once | Valid unused test number starts session; reopening the same test number on the same device resumes saved progress. | `start-session` rate-limits repeated failed attempts, records hashed attempt audit rows, resolves `sessions.access_code`, atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410 unless local same-device resume state matches. | Current target. |
-| System check | Patient confirms Hebrew audio output and microphone access before the first task. | Browser uses local device APIs only; no clinical response data is created during preflight. | Current target. |
+| Start once | Valid unused test number starts the session. New local users go through the welcome/system-check screen; returning local users go directly to the first task. | `start-session` rate-limits repeated failed attempts, records hashed attempt audit rows, resolves `sessions.access_code`, atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410 unless local same-device state already owns the session. | Current target. |
+| System check | New local users confirm Hebrew audio output and microphone access before the first task. Returning local users who already completed preflight can skip it. | Browser stores a local onboarding-complete flag; no clinical response data is created during preflight. | Current target. |
 | Complete tasks | Patient progresses through Hebrew MoCA task flow with selected MoCA version visible in the assessment header. Advancing without captured evidence records a skipped/requires-review payload. | Each task result is submitted with canonical `moca-*` task IDs and active client payload shapes, and the session keeps MoCA version context. | Current. |
 | Load stimuli | Patient tasks request the versioned stimulus manifest for the active session and prefer short-lived signed URLs from private Storage. | `get-stimuli` returns version-scoped asset keys and signed URLs for uploaded licensed assets. Missing assets produce an explicit development placeholder state. | Current architecture. Licensed assets remain external. |
 | Draw/audio evidence | Drawing tasks save current strokes/PNG; audio tasks can save audio evidence. | Private Storage paths and stroke data are stored; clinician receives signed URLs only. | Current. External STT transcript evidence is future. |
 | Autosave | Per-task submit/save should survive refresh enough for MVP testing. | `submit-results`, `save-drawing`, and `save-audio` persist evidence during `in_progress`. | Current target. Full offline-first retry queue is future hardening. |
-| Finish | Patient sees a completion screen only; returning home clears completed local resume state. | `complete-session` runs server scoring, creates review rows, sets status, writes audit, records notification outcome, and triggers clinician email. | Current. |
+| Finish | Patient sees a dead-end completion screen only: the test is complete and results are being sent to the referring therapist. | `complete-session` runs server scoring, creates review rows, sets status, writes audit, records notification outcome, and triggers clinician email. | Current. |
 
 ## Backend/System Map
 
@@ -97,13 +97,13 @@ Patient test-number starts also write hashed attempt records for operational rat
 |---|---|---|---|
 | Clinician auth | Email/password Supabase Auth gates the dashboard; old `/clinician/2fa` links redirect out of the removed MFA screen. | Clinician email/password login with backend JWT checks. | MFA, SSO, device policy, and other security hardening are future milestones. |
 | Session creation | Case profile stores birth date, gender, language, dominant hand, phone, and education. Test creation stores assessment, language, version, calculated age/age band, internal session token, and generated patient test number. | Same, with standardized scoring using the session snapshot from the case profile. | Current target. |
-| Patient start | One-time 8-digit test number moves session to `in_progress`; repeated failed starts are rate-limited and audited with hashed fingerprints. Same-device resume uses stored in-progress state and matching session context to reopen saved progress. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
+| Patient start | One-time 8-digit test number moves session to `in_progress`; repeated failed starts are rate-limited and audited with hashed fingerprints. Same-device resume is explicit from the home-page continue button. New local users see welcome/system-check; returning local users start at the first task. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
 | Stimulus delivery | `get-stimuli` returns versioned private Storage paths and signed URLs when licensed assets are uploaded. Patient UI uses explicit development placeholders when assets are missing. | Licensed MoCA assets are uploaded to private Storage by version and task before clinical use, then validated with `scripts/verify-stimuli.mjs`. | Production asset validation should be part of release readiness. |
 | Task persistence | Per-task submit, skipped-task review payloads, drawings, audio evidence. | Reliable autosave for every task; refresh preserves saved progress in normal use. | Full offline retry queue remains future hardening. |
 | Drawing review | Clinician dashboard reads stored drawing/audio evidence, signed URLs, and review rows from `get-session`; score updates persist through review functions. | Clinician rubric scoring from stored evidence. | Rubric UX can be refined for clinical ergonomics. |
 | Rule scoring | Server-side scoring selects an explicit `8.1`, `8.2`, or `8.3` MoCA config and preserves version in the scoring report. | Version-aware deterministic scoring by active test manual. | Some tasks still require more structured payloads and licensed manual validation before clinical use. |
 | Completion notification | Email outcome via Resend when configured; sent/skipped/failed outcome is stored in `notification_events` and audited. | Email-first clinician ping when test is done, with retry-ready failure records. | Dedicated retry worker and production sender monitoring are future hardening. |
-| Dashboard review | Real session list/detail, review updates, finalized PDF export, and completed-session CSV export. | Efficient clinician review, finalization, then export. | Export templates can be refined for clinical formatting. |
+| Dashboard review | Real session list/detail, review updates, finalized PDF export, and CSV export for completed or incomplete/provisional data. | Efficient clinician review, finalization, and clearly labeled exports. | Export templates can be refined for clinical formatting. |
 | Patient start code | Generated test number exists; clinician copies it and sends it outside the app. | Patient enters the test number on the home page and starts once. | SMS/link delivery can be reconsidered after MVP. |
 | STT | Audio evidence storage exists. | External STT creates transcript evidence only. | Vendor/job model and clinician transcript editing are future. |
 
@@ -128,7 +128,7 @@ Patient test-number starts also write hashed attempt records for operational rat
 - 2026-04-25: Same-device patient resume uses locally stored in-progress session state while backend test-number starts stay single-use.
 - 2026-04-25: Patient assessment header shows selected MoCA version and completed sessions clear local resume state after returning home.
 - 2026-04-25: Patient navigation records explicit skipped-task payloads for tasks advanced without captured evidence, so clinician review sees all visited tasks.
-- 2026-04-25: PDF export is available only after clinician finalization; CSV export uses modern report fields for completed sessions.
+- 2026-04-25: PDF export is available only after clinician finalization; CSV export uses modern report fields.
 - 2026-04-25: Clinician dashboard detail review uses backend `get-session` evidence, signed URLs, and review update functions instead of local patient-browser assessment state.
 - 2026-04-25: Patient start consumes links atomically; drawing saves send current strokes with PNG evidence; naming scoring accepts the active client answers object.
 - 2026-04-25: Completion emails write `notification_events` records for sent, skipped, and failed outcomes so notification delivery is observable and retry-ready.
@@ -146,3 +146,4 @@ Patient test-number starts also write hashed attempt records for operational rat
 - 2026-04-25: Audio recordings persist with explicit storage paths in task evidence. Clinician review receives signed audio URLs, including evidence-only audio rows for no-score tasks.
 - 2026-04-26: Patient test-number starts are rate-limited and audited with hashed fingerprints; raw test numbers and IP addresses are not stored in attempt logs.
 - 2026-04-26: Patient flow requires Hebrew audio and microphone preflight before task start; naming feedback is neutral during the test; audio-only speech tasks remain clinician-rubric review until structured transcript evidence exists.
+- 2026-04-26: Welcome/system-check is a local first-use gate only. Resume happens from the explicit home-page continue button; patient completion is a dead-end screen that says results are being sent to the referring therapist. CSV export can include incomplete/provisional data with inline feedback.

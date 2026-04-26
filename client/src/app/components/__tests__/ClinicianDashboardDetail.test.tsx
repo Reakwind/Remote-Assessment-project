@@ -128,9 +128,11 @@ describe('ClinicianDashboardDetail', () => {
     renderDetail();
 
     await screen.findByRole('heading', { name: 'תיק CASE-1' });
+    expect(screen.getByText('CSV זמין גם לפני סיום סקירה ויכול לכלול נתונים זמניים.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'CSV' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('CSV ירד בהצלחה.');
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({ sessionId: 'session-1' });
     expect(createObjectURLMock).toHaveBeenCalled();
     expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:csv-export');
   });

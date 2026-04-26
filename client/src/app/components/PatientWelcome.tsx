@@ -2,6 +2,7 @@ import { useNavigate } from "react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Mic, PenTool, Volume2 } from "lucide-react";
 import { clsx } from "clsx";
+import { markPatientOnboardingComplete } from "../store/AssessmentContext";
 
 type CheckState = "idle" | "checking" | "success" | "error";
 type VoiceState = "checking" | "ready" | "missing" | "unsupported";
@@ -232,7 +233,9 @@ export function PatientWelcome() {
               )}
               <button
                 onClick={() => {
-                  if (canStart) navigate("/patient/trail-making");
+                  if (!canStart) return;
+                  markPatientOnboardingComplete();
+                  navigate("/patient/trail-making");
                 }}
                 disabled={!canStart}
                 className={clsx(

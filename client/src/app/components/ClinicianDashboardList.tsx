@@ -72,6 +72,8 @@ export function ClinicianDashboardList() {
   const [rows, setRows] = useState<PatientRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
+  const [csvExportMessage, setCsvExportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
 
   const loadPatients = useCallback(async () => {
     setLoading(true);
@@ -148,9 +150,14 @@ export function ClinicianDashboardList() {
   });
 
   const handleCsvExport = async () => {
+    if (exportingCsv) return;
+    setExportingCsv(true);
+    setCsvExportMessage(null);
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      alert("יש להתחבר כקלינאי כדי לייצא CSV.");
+      setCsvExportMessage({ kind: "error", text: "יש להתחבר כקלינאי כדי לייצא CSV." });
+      setExportingCsv(false);
       return;
     }
 
@@ -159,9 +166,19 @@ export function ClinicianDashboardList() {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) {
+        let message = "ייצוא CSV נכשל.";
+        try {
+          const payload = await res.json();
+          if (payload?.error) message = payload.error;
+        } catch {
+          // Keep the localized fallback for non-JSON errors.
+        }
+        throw new Error(message);
+      }
 
       const blob = await res.blob();
+      if (blob.size === 0) throw new Error("קובץ ה-CSV שהתקבל ריק.");
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -170,9 +187,12 @@ export function ClinicianDashboardList() {
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
+      setCsvExportMessage({ kind: "success", text: "CSV ירד בהצלחה. הקובץ יכול לכלול נתונים זמניים." });
     } catch (e) {
       console.error(e);
-      alert("ייצוא CSV נכשל.");
+      setCsvExportMessage({ kind: "error", text: e instanceof Error ? e.message : "ייצוא CSV נכשל." });
+    } finally {
+      setExportingCsv(false);
     }
   };
 
@@ -199,9 +219,10 @@ export function ClinicianDashboardList() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr_auto] lg:flex lg:items-center lg:gap-4">
           <button
             onClick={handleCsvExport}
-            className="flex items-center justify-center gap-2 bg-white text-black border border-gray-200 px-5 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors shadow-sm text-base lg:text-lg"
+            disabled={exportingCsv}
+            className="flex items-center justify-center gap-2 bg-white text-black border border-gray-200 px-5 py-3 rounded-xl font-bold hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 transition-colors shadow-sm text-base lg:text-lg"
           >
-            <span>ייצוא CSV</span>
+            <span>{exportingCsv ? "מייצא CSV..." : "ייצוא CSV"}</span>
           </button>
 
           <div className="relative min-w-0">
@@ -223,6 +244,14 @@ export function ClinicianDashboardList() {
             <span>תיק חדש</span>
           </button>
         </div>
+        {csvExportMessage && (
+          <p
+            role={csvExportMessage.kind === "error" ? "alert" : "status"}
+            className={`text-sm font-bold ${csvExportMessage.kind === "error" ? "text-red-700" : "text-green-700"}`}
+          >
+            {csvExportMessage.text}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8 shrink-0">

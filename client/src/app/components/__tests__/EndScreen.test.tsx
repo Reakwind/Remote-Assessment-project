@@ -66,6 +66,7 @@ describe('EndScreen', () => {
     expect(screen.queryByRole('heading', { name: 'המבדק הושלם' })).not.toBeInTheDocument();
 
     await screen.findByRole('heading', { name: 'המבדק הושלם' });
+    expect(screen.getByText('המבדק הושלם והתוצאות נשלחות למטפל המפנה.')).toBeInTheDocument();
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
       expect(stored.isComplete).toBe(true);
