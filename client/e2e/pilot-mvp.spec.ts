@@ -263,13 +263,13 @@ async function runPatientClickThrough(
   }, { linkToken, startedSession: started });
 
   await page.goto('/#/patient/welcome');
-  await expect(page.getByRole('heading', { name: /ברוך הבא למבחן MoCA/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /ברוך הבא למבדק MoCA/ })).toBeVisible();
 
   await page.getByRole('button', { name: /בדיקת שמע בעברית/ }).click();
   await expect(page.getByText(/השמעת ההוראות בעברית עובדת/)).toBeVisible();
   await page.getByRole('button', { name: /בדיקת מיקרופון/ }).click();
   await expect(page.getByText(/המיקרופון זמין/)).toBeVisible();
-  await page.getByRole('button', { name: /התחל מבחן/ }).click();
+  await page.getByRole('button', { name: /התחל מבדק/ }).click();
   await expect(page.getByText(/שלב 1 מתוך/)).toBeVisible();
 
   const completionResponse = page.waitForResponse(resp =>

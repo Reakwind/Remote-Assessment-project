@@ -55,7 +55,7 @@ export function DigitSpanTask() {
         </div>
 
         <div className="text-gray-600 font-medium mb-6 text-lg sm:text-2xl max-w-2xl leading-relaxed">
-          לחץ על התחל הקלטה לפני שאתה עונה, והשאר את ההקלטה פעילה עד שסיימת את שני החלקים.
+          לחץ על התחל הקלטה ועצור רק אחרי שני החלקים. יש לך עד דקה להשלים את המשימה.
         </div>
 
         <AudioRecorder

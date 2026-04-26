@@ -73,8 +73,8 @@ describe('ClinicianDashboardList', () => {
     renderDashboardList();
 
     expect(await screen.findByText('1 תיקים · 1 דורשים סקירה')).toBeInTheDocument();
-    expect(screen.getAllByText('29/30').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('בבדיקה').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('29/30 (זמני)').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('דורש סקירה').length).toBeGreaterThan(0);
     expect(selectMock).toHaveBeenCalledWith(expect.not.stringContaining('full_name'));
     await waitFor(() => expect(screen.queryByText('טוען...')).not.toBeInTheDocument());
   });

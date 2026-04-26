@@ -132,7 +132,7 @@ describe('patient resume state', () => {
       '/session/token-1',
     );
 
-    await screen.findByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' });
+    await screen.findByRole('button', { name: 'המשך מהמקום שעצרת' });
     expect(router.state.location.pathname).toBe('/');
     expect(screen.queryByText('Clock task resumed')).not.toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -151,7 +151,7 @@ describe('patient resume state', () => {
       '/session/12345678',
     );
 
-    await screen.findByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' });
+    await screen.findByRole('button', { name: 'המשך מהמקום שעצרת' });
     expect(router.state.location.pathname).toBe('/');
     expect(screen.queryByText('Clock task resumed')).not.toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -168,7 +168,7 @@ describe('patient resume state', () => {
       '/',
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'המשך את המבחן מאיפה שהפסקת' }));
+    await userEvent.click(screen.getByRole('button', { name: 'המשך מהמקום שעצרת' }));
 
     await screen.findByText('Clock task resumed');
     expect(router.state.location.pathname).toBe('/patient/clock');
@@ -183,13 +183,13 @@ describe('patient resume state', () => {
       '/',
     );
 
-    const input = screen.getByRole('textbox', { name: 'מספר מבחן בן 8 ספרות' });
+    const input = screen.getByRole('textbox', { name: 'מספר מבדק בן 8 ספרות' });
     await userEvent.type(input, '12345678');
 
     expect(input).toHaveValue('1234-5678');
     expect(screen.getByText('המספר מלא. אפשר להתחיל.')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /אישור/ }));
+    await userEvent.click(screen.getByRole('button', { name: /התחל מבדק/ }));
 
     expect(router.state.location.pathname).toBe('/session/12345678');
   });
@@ -199,7 +199,7 @@ describe('patient resume state', () => {
 
     renderWithProvider([{ path: '/', element: <LandingHub /> }], '/');
 
-    expect(screen.queryByText('המשך את המבחן מאיפה שהפסקת')).not.toBeInTheDocument();
+    expect(screen.queryByText('המשך מהמקום שעצרת')).not.toBeInTheDocument();
   });
 
   it('shows the stored MoCA version in the patient assessment header', async () => {

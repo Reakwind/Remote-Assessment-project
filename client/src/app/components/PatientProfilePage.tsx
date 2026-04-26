@@ -14,6 +14,7 @@ import {
 import { clsx } from "clsx";
 import { supabase } from "../../lib/supabase";
 import { OrderAssessmentModal } from "./OrderAssessmentModal";
+import { StatusPill } from "./StatusPill";
 
 interface PatientRecord {
   id: string;
@@ -46,20 +47,6 @@ interface PatientSession {
   scoring_reports: ScoringSummary | ScoringSummary[] | null;
 }
 
-const STATUS_LABELS: Record<PatientSession["status"], string> = {
-  pending: "הוזמן",
-  in_progress: "בתהליך",
-  completed: "הושלם",
-  awaiting_review: "בבדיקה",
-};
-
-const STATUS_COLORS: Record<PatientSession["status"], string> = {
-  pending: "bg-blue-100 text-blue-800",
-  in_progress: "bg-amber-100 text-amber-800",
-  completed: "bg-green-100 text-green-800",
-  awaiting_review: "bg-amber-100 text-amber-800",
-};
-
 function formatDate(iso: string | null): string {
   if (!iso) return "-";
   try {
@@ -73,13 +60,36 @@ function reportScore(report: ScoringSummary | null | undefined): number | null {
   return report?.total_adjusted ?? report?.total_score ?? null;
 }
 
+function reportNeedsReview(report: ScoringSummary | null | undefined): boolean {
+  if (!report) return false;
+  return report.total_provisional ?? report.needs_review ?? false;
+}
+
 function relationArray<T>(value: T | T[] | null | undefined): T[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
 }
 
 function caseLabel(patient: PatientRecord): string {
-  return patient.case_id || patient.full_name;
+  return patient.case_id?.trim() || patient.id.slice(0, 8);
+}
+
+function assessmentLabel(value: string | null): string {
+  if ((value ?? "moca").toLowerCase() === "moca") return "MoCA";
+  return value ?? "—";
+}
+
+function reviewActionLabel(status: PatientSession["status"]): string {
+  if (status === "awaiting_review") return "סקור";
+  if (status === "completed") return "צפה";
+  if (status === "pending") return "העתק מספר";
+  return "פתח";
+}
+
+function scoreLabel(report: ScoringSummary | null | undefined): string {
+  const score = reportScore(report);
+  if (score == null) return "—";
+  return reportNeedsReview(report) ? `${score}/30 (זמני)` : `${score}/30`;
 }
 
 function formatGender(value: PatientRecord["gender"]): string {
@@ -172,8 +182,9 @@ export function PatientProfilePage() {
   }
 
   const completedCount = sessions.filter((s) => s.status === "completed").length;
-  const latestScore = sessions
+  const latestFinalScore = sessions
     .flatMap((s) => relationArray(s.scoring_reports))
+    .filter((report) => !reportNeedsReview(report))
     .map(reportScore)
     .find((score) => score != null);
 
@@ -222,7 +233,7 @@ export function PatientProfilePage() {
             className="inline-flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-md"
           >
             <Stethoscope className="w-5 h-5" />
-            פתיחת מבחן
+            פתח מבדק
           </button>
       </div>
 
@@ -230,17 +241,17 @@ export function PatientProfilePage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <div className="text-xs font-bold text-gray-500 uppercase mb-1">סה"כ מבחנים</div>
+          <div className="text-xs font-bold text-gray-500 mb-1">סה״כ מבדקים</div>
           <div className="text-3xl font-extrabold text-black tabular-nums">{sessions.length}</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <div className="text-xs font-bold text-gray-500 uppercase mb-1">הושלמו</div>
+          <div className="text-xs font-bold text-gray-500 mb-1">הושלמו</div>
           <div className="text-3xl font-extrabold text-black tabular-nums">{completedCount}</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <div className="text-xs font-bold text-gray-500 uppercase mb-1">ציון MoCA אחרון</div>
+          <div className="text-xs font-bold text-gray-500 mb-1">ציון MoCA סופי אחרון</div>
           <div className="text-3xl font-extrabold text-black tabular-nums">
-            {latestScore != null ? `${latestScore}/30` : "—"}
+            {latestFinalScore != null ? `${latestFinalScore}/30` : "—"}
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
@@ -277,20 +288,20 @@ export function PatientProfilePage() {
 
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-xl font-extrabold text-black">היסטוריית מבחנים</h2>
+          <h2 className="text-xl font-extrabold text-black">היסטוריית מבדקים</h2>
           <button
             onClick={() => setOrderOpen(true)}
             className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-700 hover:text-blue-900"
           >
             <Plus className="w-4 h-4" />
-            מבחן חדש
+            מבדק חדש
           </button>
         </div>
 
         {sessions.length === 0 ? (
           <div className="px-6 py-12 text-center text-gray-500">
             <Activity className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-	            עדיין לא נפתחו מבחנים לתיק זה.
+            עדיין לא נפתחו מבדקים לתיק זה. לחץ "מבדק חדש" כדי להתחיל.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -303,34 +314,24 @@ export function PatientProfilePage() {
                 <th className="px-6 py-3">ציון</th>
                 <th className="px-6 py-3">נפתח</th>
                 <th className="px-6 py-3">הושלם</th>
-                <th className="px-6 py-3">קוד</th>
+                <th className="px-6 py-3">מספר</th>
                 <th className="px-6 py-3">סקירה</th>
               </tr>
             </thead>
             <tbody>
-              {sessions.map((s) => {
-                const score = reportScore(relationArray(s.scoring_reports)[0]);
-                return (
-                  <tr
+              {sessions.map((s) => (
+                <tr
                     key={s.id}
                     onClick={() => navigate(`/dashboard/session/${s.id}`)}
                     className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     <td className="px-6 py-4 font-mono text-sm text-gray-700">{s.case_id}</td>
-                    <td className="px-6 py-4 font-bold text-black uppercase">{s.assessment_type ?? "moca"}</td>
+                    <td className="px-6 py-4 font-bold text-black">{assessmentLabel(s.assessment_type)}</td>
                     <td className="px-6 py-4">
-                      <span
-                        className={clsx(
-                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold",
-                          STATUS_COLORS[s.status],
-                        )}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {STATUS_LABELS[s.status]}
-                      </span>
+                      <StatusPill status={s.status} />
                     </td>
                     <td className="px-6 py-4 font-extrabold tabular-nums text-black">
-                      {score != null ? `${score}/30` : "—"}
+                      {scoreLabel(relationArray(s.scoring_reports)[0])}
                     </td>
                     <td className="px-6 py-4 text-gray-600 tabular-nums">{formatDate(s.created_at)}</td>
                     <td className="px-6 py-4 text-gray-600 tabular-nums">{formatDate(s.completed_at)}</td>
@@ -342,7 +343,7 @@ export function PatientProfilePage() {
                             type="button"
                             onClick={(event) => copyAccessCode(event, s.access_code!)}
                             className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-xs font-extrabold text-gray-700 hover:bg-gray-200"
-                            aria-label="העתק מספר מבחן"
+                            aria-label="העתק מספר מבדק"
                           >
                             <Copy className="w-3.5 h-3.5" />
                             {copiedAccessCode === s.access_code ? "הועתק" : "העתק"}
@@ -364,12 +365,11 @@ export function PatientProfilePage() {
                         )}
                       >
                         <FileText className="h-4 w-4" />
-                        {s.status === "awaiting_review" ? "סקור" : "פתח"}
+                        {reviewActionLabel(s.status)}
                       </Link>
                     </td>
                   </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
           </div>

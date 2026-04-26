@@ -89,15 +89,15 @@ const SUBSCORE_CAPS: Record<string, number> = {
 
 const REVIEW_TABS: Array<{ id: ReviewTab; label: string; kind: "drawing" | "manual" }> = [
   { id: "clock", label: "שעון", kind: "drawing" },
-  { id: "cube", label: "קוביה", kind: "drawing" },
-  { id: "trail", label: "מסלול", kind: "drawing" },
-  { id: "memory", label: "זיכרון", kind: "manual" },
+  { id: "cube", label: "קובייה", kind: "drawing" },
+  { id: "trail", label: "חיבור נקודות", kind: "drawing" },
+  { id: "memory", label: "למידת מילים", kind: "manual" },
   { id: "digitSpan", label: "קיבולת זיכרון", kind: "manual" },
   { id: "vigilance", label: "קשב לאות א", kind: "manual" },
-  { id: "serial7", label: "סדרת 7", kind: "manual" },
+  { id: "serial7", label: "חיסור 7", kind: "manual" },
   { id: "language", label: "שפה", kind: "manual" },
   { id: "abstraction", label: "הפשטה", kind: "manual" },
-  { id: "delayedRecall", label: "שליפה", kind: "manual" },
+  { id: "delayedRecall", label: "שליפה מושהית", kind: "manual" },
   { id: "orientation", label: "התמצאות", kind: "manual" },
 ];
 
@@ -121,12 +121,12 @@ const DOMAIN_LABELS: Record<string, string> = {
   attention: "קשב",
   language: "שפה",
   abstraction: "הפשטה",
-  memory: "זכירה מושהית",
+  memory: "שליפה מושהית",
   orientation: "התמצאות",
 };
 
 const ITEM_LABELS: Record<string, string> = {
-  "moca-visuospatial": "מסלול",
+  "moca-visuospatial": "חיבור נקודות",
   "moca-cube": "קובייה",
   "moca-clock": "שעון",
   "naming.item1": "שיום 1",
@@ -455,9 +455,9 @@ export function ClinicianDashboardDetail() {
         max: 1,
         score: rubrics.cube.shape && rubrics.cube.lines && rubrics.cube.parallel ? 1 : 0,
         items: [
-          { id: "shape", label: "תלת מימד", desc: "הצורה היא תלת מימדית" },
+          { id: "shape", label: "תלת מימד", desc: "שלוש פאות גלויות ונקודת מבט אחידה" },
           { id: "lines", label: "כל הקווים מצוירים", desc: "כל הקווים הפנימיים קיימים" },
-          { id: "parallel", label: "קווים מקבילים", desc: "הקווים מקבילים פחות או יותר" },
+          { id: "parallel", label: "קווים מקבילים", desc: "קווים מקבילים, ללא עיוות בולט" },
         ],
       };
     } else if (activeReviewTab === "trail") {
@@ -465,8 +465,8 @@ export function ClinicianDashboardDetail() {
         max: 1,
         score: rubrics.trail.correct && rubrics.trail.noLinesCrossed ? 1 : 0,
         items: [
-          { id: "correct", label: "סדר נכון", desc: "מתח קו מ-1 ל-א, ל-2 וכו' עד ה" },
-          { id: "noLinesCrossed", label: "קווים לא נחתכים", desc: "המסלול לא חותך את עצמו" },
+          { id: "correct", label: "סדר נכון", desc: "הקו עובר 1→א→2→ב→3→ג→4→ד→5→ה במלואו, ללא דילוגים" },
+          { id: "noLinesCrossed", label: "קווים לא נחתכים", desc: "הקו לא חותך את עצמו" },
         ],
       };
     } else if (activeReviewTab === "memory") {
@@ -474,11 +474,11 @@ export function ClinicianDashboardDetail() {
         max: 0,
         score: 0,
         items: [
-          { id: "recall1", label: "פנים", desc: "הנבדק חזר על המילה" },
-          { id: "recall2", label: "קטיפה", desc: "הנבדק חזר על המילה" },
-          { id: "recall3", label: "כנסייה", desc: "הנבדק חזר על המילה" },
-          { id: "recall4", label: "חרצית", desc: "הנבדק חזר על המילה" },
-          { id: "recall5", label: "אדום", desc: "הנבדק חזר על המילה" },
+          { id: "recall1", label: "פנים", desc: "תצפית בלבד: למידת מילים אינה מוסיפה נקודות" },
+          { id: "recall2", label: "קטיפה", desc: "תצפית בלבד: למידת מילים אינה מוסיפה נקודות" },
+          { id: "recall3", label: "כנסייה", desc: "תצפית בלבד: למידת מילים אינה מוסיפה נקודות" },
+          { id: "recall4", label: "חרצית", desc: "תצפית בלבד: למידת מילים אינה מוסיפה נקודות" },
+          { id: "recall5", label: "אדום", desc: "תצפית בלבד: למידת מילים אינה מוסיפה נקודות" },
         ],
       };
     } else if (activeReviewTab === "digitSpan") {
@@ -495,7 +495,7 @@ export function ClinicianDashboardDetail() {
         max: 1,
         score: rubrics.vigilance.correct ? 1 : 0,
         items: [
-          { id: "correct", label: "תגובה לאות א", desc: "הגיב רק כאשר נשמעה האות א, ללא טעויות משמעותיות" },
+          { id: "correct", label: "תגובה לאות א", desc: "עד טעות אחת: פספוס או הקשה שגויה" },
         ],
       };
     } else if (activeReviewTab === "serial7") {
@@ -517,9 +517,9 @@ export function ClinicianDashboardDetail() {
         score:
           (rubrics.language.sentence1 ? 1 : 0) + (rubrics.language.sentence2 ? 1 : 0) + (rubrics.language.fluency ? 1 : 0),
         items: [
-          { id: "sentence1", label: "משפט 1", desc: "חזר על המשפט בדיוק רב" },
-          { id: "sentence2", label: "משפט 2", desc: "חזר על המשפט בדיוק רב" },
-          { id: "fluency", label: "שטף מילולי", desc: "מנה מעל 11 מילים" },
+          { id: "sentence1", label: "משפט 1", desc: "חזר על המשפט במלואו, ללא השמטות או החלפות" },
+          { id: "sentence2", label: "משפט 2", desc: "חזר על המשפט במלואו, ללא השמטות או החלפות" },
+          { id: "fluency", label: "שטף מילולי", desc: "מנה לפחות 11 מילים" },
         ],
       };
     } else if (activeReviewTab === "abstraction") {
@@ -567,7 +567,7 @@ export function ClinicianDashboardDetail() {
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      alert("יש להתחבר כקלינאי כדי לשמור ניקוד.");
+      setSaveMessage("יש להתחבר מחדש כקלינאי כדי לשמור ניקוד.");
       return;
     }
 
@@ -600,7 +600,7 @@ export function ClinicianDashboardDetail() {
     setSavingReview(false);
 
     if (!res.ok) {
-      let message = "שמירת הניקוד נכשלה.";
+      let message = "שמירת הניקוד נכשלה. נסה שוב או רענן את הדף.";
       try {
         const payload = await res.json();
         if (payload?.error) message = payload.error;
@@ -663,7 +663,7 @@ export function ClinicianDashboardDetail() {
       { label: "סך הכל MoCA", ...totalPill },
       { label: "מרחבי-חזותי", ...pill(getDomainRaw(reportRecord, "visuospatial"), SUBSCORE_CAPS.visuospatial) },
       { label: "שיום", ...pill(getDomainRaw(reportRecord, "naming"), SUBSCORE_CAPS.naming) },
-      { label: "זכירה מושהית", ...pill(getDomainRaw(reportRecord, "memory"), SUBSCORE_CAPS.delayedRecall) },
+      { label: "שליפה מושהית", ...pill(getDomainRaw(reportRecord, "memory"), SUBSCORE_CAPS.delayedRecall) },
       { label: "קשב", ...pill(getDomainRaw(reportRecord, "attention"), SUBSCORE_CAPS.attention) },
       {
         label: "משך זמן",
@@ -680,7 +680,7 @@ export function ClinicianDashboardDetail() {
           <ClipboardCheck className="mb-4 h-10 w-10 text-gray-400" />
           <h3 className="text-xl font-extrabold text-black">אין פריט סקירה למשימה הזו</h3>
           <p className="mt-2 max-w-md text-sm font-bold text-gray-500">
-            פריטי סקירה ועדויות קוליות נוצרים אחרי שהמטופל מסיים את המבחן.
+            פריטי סקירה ועדויות קוליות נוצרים אחרי שהמטופל מסיים את המבדק.
           </p>
         </div>
       );
@@ -757,13 +757,13 @@ export function ClinicianDashboardDetail() {
   const handlePdfExport = async () => {
     if (!sessionId) return;
     if (sessionRecord?.status !== "completed" || getReportNeedsReview(reportRecord) || getPendingReviewCount(reportRecord) > 0) {
-      alert("ניתן לייצא PDF לאחר השלמת הסקירה הקלינית.");
+      setCsvExportMessage({ kind: "error", text: "ניתן לייצא PDF לאחר השלמת הסקירה הקלינית." });
       return;
     }
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      alert("יש להתחבר כקלינאי כדי לייצא דוח.");
+      setCsvExportMessage({ kind: "error", text: "יש להתחבר מחדש כקלינאי כדי לייצא דוח." });
       return;
     }
 
@@ -777,14 +777,14 @@ export function ClinicianDashboardDetail() {
     });
 
     if (!res.ok) {
-      let message = "ייצוא PDF נכשל.";
+      let message = "ייצוא PDF נכשל. נסה שוב או רענן את הדף.";
       try {
         const payload = await res.json();
         if (payload?.error) message = payload.error;
       } catch {
         // Keep the localized fallback for non-JSON errors.
       }
-      alert(message);
+      setCsvExportMessage({ kind: "error", text: message });
       return;
     }
 
@@ -858,7 +858,7 @@ export function ClinicianDashboardDetail() {
 
   const breadcrumbTo = patient ? `/dashboard/patient/${patient.id}` : "/dashboard";
   const patientCaseLabel = patient?.case_id ?? sessionRecord?.case_id ?? null;
-  const breadcrumbLabel = patientCaseLabel ? `תיקים / ${patientCaseLabel} / מבחן` : "תיקים / מבחן";
+  const breadcrumbLabel = patientCaseLabel ? `תיקים / ${patientCaseLabel} / מבדק` : "תיקים / מבדק";
   const reportNeedsReview = getReportNeedsReview(reportRecord);
   const canExportPdf =
     sessionRecord?.status === "completed" && !reportNeedsReview && getPendingReviewCount(reportRecord) === 0;
@@ -931,7 +931,7 @@ export function ClinicianDashboardDetail() {
               )}
             >
               <FileDown className="w-5 h-5" />
-              <span>PDF</span>
+              <span>ייצוא PDF</span>
             </button>
             <button
               onClick={() => setCsvConfirmOpen(true)}
@@ -942,7 +942,7 @@ export function ClinicianDashboardDetail() {
               )}
             >
               <Download className="w-5 h-5" />
-              <span>{exportingCsv ? "מייצא..." : "CSV"}</span>
+              <span>{exportingCsv ? "מייצא..." : "ייצוא CSV"}</span>
             </button>
           </div>
           {csvExportMessage && (
@@ -989,7 +989,7 @@ export function ClinicianDashboardDetail() {
             <div>
               <h2 className="text-xl font-extrabold text-black">פירוט ניקוד לפי פריט</h2>
               <p className="mt-1 text-sm font-bold text-gray-500">
-                הציון השמור בדוח מוצג לפי תחום ופריט. פריטים שדורשים שיקול קליני מופיעים גם בסקירה הקלינית.
+                ניקוד נוכחי לפי תחום ופריט. פריטים הדורשים שיקול קליני מופיעים גם בסקירה למטה.
               </p>
             </div>
             <div className="rounded-xl bg-gray-50 px-3 py-2 text-sm font-extrabold text-gray-700">
@@ -1003,7 +1003,7 @@ export function ClinicianDashboardDetail() {
                 <tr>
                   <th className="px-4 py-3">תחום</th>
                   <th className="px-4 py-3">פריט</th>
-                  <th className="px-4 py-3">עדות תומכת</th>
+                  <th className="px-4 py-3">עדות / תשובה צפויה</th>
                   <th className="px-4 py-3">ניקוד</th>
                   <th className="px-4 py-3">מצב</th>
                 </tr>
@@ -1039,7 +1039,7 @@ export function ClinicianDashboardDetail() {
                             : "bg-green-100 text-green-800",
                         )}
                       >
-                        {item.status === "review" ? "דורש סקירה" : "נוקד לפי כלל"}
+                        {item.status === "review" ? "דורש סקירה" : "נוקד אוטומטית"}
                       </span>
                     </td>
                   </tr>
@@ -1231,7 +1231,7 @@ export function ClinicianDashboardDetail() {
       </div>
 
       <div className="mt-12 bg-white rounded-xl p-6 border border-gray-200">
-        <h3 className="text-xl font-bold mb-4">יומן אירועים (Audit Log)</h3>
+        <h3 className="text-xl font-bold mb-4">יומן אירועים</h3>
         <div className="text-sm font-mono text-gray-500 max-h-64 overflow-y-auto space-y-2">
           {auditLogs.length === 0 ? (
             <div className="text-gray-400">אין אירועים להצגה.</div>
@@ -1242,7 +1242,7 @@ export function ClinicianDashboardDetail() {
                   <span className="font-bold">{new Date(log.created_at).toLocaleString()}</span> -
                   <span className="text-blue-600 ml-2">{log.event_type}</span>
                 </div>
-                <div className="text-xs text-gray-400">{log.actor_id ? "מטפל" : "מטופל"}</div>
+                <div className="text-xs text-gray-400">{log.actor_id ? "קלינאי" : "מטופל"}</div>
               </div>
             ))
           )}

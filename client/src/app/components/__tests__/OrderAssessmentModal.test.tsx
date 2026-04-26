@@ -55,10 +55,10 @@ describe('OrderAssessmentModal', () => {
       />,
     );
 
-    expect(screen.getByText('יש להשלים פרטי רקע לפני פתיחת מבחן:')).toBeInTheDocument();
+    expect(screen.getByText('יש להשלים פרטי רקע לפני פתיחת מבדק:')).toBeInTheDocument();
     expect(screen.getByText(/טלפון/)).toBeInTheDocument();
     expect(screen.getByText(/תאריך לידה/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'צור מספר מבחן' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'צור מספר מבדק' })).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -71,9 +71,9 @@ describe('OrderAssessmentModal', () => {
 
     render(<OrderAssessmentModal open onClose={vi.fn()} patient={completePatient} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'צור מספר מבחן' }));
+    await userEvent.click(screen.getByRole('button', { name: 'צור מספר מבדק' }));
 
-    await waitFor(() => expect(screen.getByText('המבחן נוצר בהצלחה.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('המבדק נוצר בהצלחה.')).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/functions/v1/create-session'),
       expect.objectContaining({

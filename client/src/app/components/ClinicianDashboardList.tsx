@@ -16,6 +16,7 @@ interface PatientRow {
   completed: number;
   lastActive: string | null;
   latestScore: number | null;
+  latestScoreProvisional: boolean;
   needsReview: boolean;
   status: "new" | "in_progress" | "review" | "completed";
 }
@@ -54,6 +55,11 @@ function reportScore(report: ScoringSummary | null | undefined): number | null {
 function reportNeedsReview(report: ScoringSummary | null | undefined): boolean {
   if (!report) return false;
   return report.total_provisional ?? report.needs_review ?? false;
+}
+
+function scoreLabel(score: number | null, provisional: boolean): string {
+  if (score == null) return "—";
+  return provisional ? `${score}/30 (זמני)` : `${score}/30`;
 }
 
 function deriveStatus(sessionValue: PatientWithSessions["sessions"]): PatientRow["status"] {
@@ -114,12 +120,16 @@ export function ClinicianDashboardList() {
         const sessions = relationArray(p.sessions);
         const completed = sessions.filter((s) => s.status === "completed").length;
         const latestSession = latestOf(sessions, (s) => s.created_at);
-        const latestScore =
-          sessions
-            .flatMap((s) => relationArray(s.scoring_reports))
-            .map(reportScore)
-            .filter((score): score is number => score != null)
-            .sort((a, b) => b - a)[0] ?? null;
+        const reports = sessions.flatMap((s) => relationArray(s.scoring_reports));
+        const finalScore = reports
+          .filter((report) => !reportNeedsReview(report))
+          .map(reportScore)
+          .find((score): score is number => score != null) ?? null;
+        const provisionalScore = reports
+          .filter(reportNeedsReview)
+          .map(reportScore)
+          .find((score): score is number => score != null) ?? null;
+        const latestScore = finalScore ?? provisionalScore;
         const needsReview = sessions.some((s) => s.status === "awaiting_review" || relationArray(s.scoring_reports).some(reportNeedsReview));
         return {
           id: p.id,
@@ -129,6 +139,7 @@ export function ClinicianDashboardList() {
           completed,
           lastActive: latestSession ?? p.created_at,
           latestScore,
+          latestScoreProvisional: finalScore == null && provisionalScore != null,
           needsReview,
           status: deriveStatus(sessions),
         };
@@ -214,7 +225,10 @@ export function ClinicianDashboardList() {
   const reviewCount = rows.filter((r) => r.status === "review").length;
   const completedCount = rows.filter((r) => r.status === "completed").length;
   const avgScore = (() => {
-    const scores = rows.map((r) => r.latestScore).filter((v): v is number => v != null);
+    const scores = rows
+      .filter((r) => !r.latestScoreProvisional)
+      .map((r) => r.latestScore)
+      .filter((v): v is number => v != null);
     if (scores.length === 0) return "—";
     return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
   })();
@@ -271,9 +285,9 @@ export function ClinicianDashboardList() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8 shrink-0">
         {[
           { label: "סה״כ תיקים", value: String(totalCases), delta: "רשומים" },
-          { label: "ציון MoCA ממוצע", value: avgScore, delta: "מבחנים עם ציון" },
-          { label: "בדיקות הושלמו", value: String(completedCount), delta: "תיקים שהושלמו" },
-          { label: "ממתינים לבדיקה", value: String(reviewCount), delta: "דורשים סקירה", warn: true },
+          { label: "ציון MoCA ממוצע", value: avgScore, delta: "מבדקים סופיים" },
+          { label: "מבדקים הושלמו", value: String(completedCount), delta: "תיקים שהושלמו" },
+          { label: "ממתינים לסקירה", value: String(reviewCount), delta: "דורשים סקירה", warn: true },
         ].map((stat, i) => (
           <div key={i} className="bg-white border border-gray-200 p-5 lg:p-6 rounded-2xl shadow-sm">
             <div className="mb-2 text-sm font-bold text-gray-600">{stat.label}</div>
@@ -295,7 +309,7 @@ export function ClinicianDashboardList() {
         <div className="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm font-bold shrink-0">
           <div className="hidden md:flex text-right px-6 py-4">
             <div className="w-5/12 font-bold">מזהה תיק</div>
-            <div className="w-1/12 font-bold">מבחנים</div>
+            <div className="w-1/12 font-bold">מבדקים</div>
             <div className="w-2/12 font-bold">פעילות אחרונה</div>
             <div className="w-2/12 font-bold">סטטוס</div>
             <div className="w-1/12 font-bold">ציון</div>
@@ -337,13 +351,13 @@ export function ClinicianDashboardList() {
 
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <div className="font-bold text-gray-500">מבחנים</div>
+                  <div className="font-bold text-gray-500">מבדקים</div>
                   <div className="text-gray-900 tabular-nums">{p.tests}</div>
                 </div>
                 <div>
                   <div className="font-bold text-gray-500">ציון</div>
                   <div className="font-extrabold text-black tabular-nums">
-                    {p.latestScore != null ? `${p.latestScore}/30` : "—"}
+                    {scoreLabel(p.latestScore, p.latestScoreProvisional)}
                   </div>
                 </div>
                 <div>
@@ -413,7 +427,7 @@ export function ClinicianDashboardList() {
                     <StatusPill status={p.status} />
                   </div>
                   <div className="w-1/12 font-extrabold text-xl text-black tabular-nums">
-                    {p.latestScore != null ? `${p.latestScore}/30` : "—"}
+                    {scoreLabel(p.latestScore, p.latestScoreProvisional)}
                   </div>
                   <div className="w-1/12 text-left flex justify-end">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center bg-transparent group-hover:bg-white border border-transparent group-hover:border-gray-200 group-hover:shadow-sm transition-all text-gray-400">

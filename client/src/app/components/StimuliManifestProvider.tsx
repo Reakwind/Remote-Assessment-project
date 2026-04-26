@@ -119,7 +119,7 @@ export function StimulusReadinessBanner() {
       <div className="mx-auto flex max-w-[1100px] items-center gap-3 text-sm font-semibold">
         <AlertTriangle className="h-5 w-5 shrink-0" />
         <span>
-          גרסת פיתוח: חסרים נכסי מבחן מורשים. מוצגים מצייני מקום לא קליניים.
+          גרסת פיתוח: חסרים נכסי מבדק מורשים. מוצגים מצייני מקום לא קליניים.
         </span>
       </div>
     </div>

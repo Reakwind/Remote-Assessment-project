@@ -104,6 +104,25 @@ Required verification:
 - Deno type checks use only existing function entrypoints.
 - Browser/local E2E exercises the canonical endpoint.
 
+### 6. Treat Hebrew clinical copy as product behavior
+
+Evidence:
+
+- The 2026-04-26 UX/copy audit found task-label drift, status-label drift, provisional scores shown as final, and patient task instructions that could leak answers or promise unavailable cues.
+
+Rules:
+
+- Read `docs/HEBREW_TERMINOLOGY.md` before changing patient or clinician UI copy.
+- Use `StatusPill` for lifecycle labels instead of local status maps.
+- Do not render patient `full_name` as a fallback identity; use case ID or a safe record/session identifier.
+- Patient-facing task copy must not reveal expected answers, target counts, or unavailable flows.
+- Label provisional scores or show only final scores.
+
+Required verification:
+
+- Update affected text assertions in component tests.
+- Search touched surfaces for avoided terms listed in `docs/HEBREW_TERMINOLOGY.md`.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:
