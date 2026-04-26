@@ -41,7 +41,7 @@ export function scoreDigitSpan(data: { forward: { isCorrect: boolean }; backward
 }
 
 export function scoreVigilance(data: { score: number }): ItemScore[] {
-  return [item('moca-vigilance', data.score, 1)];
+  return [item('moca-vigilance', Math.max(0, Math.min(1, data.score)), 1)];
 }
 
 export function scoreSerial7s(data: { isCorrect: boolean }[]): ItemScore[] {

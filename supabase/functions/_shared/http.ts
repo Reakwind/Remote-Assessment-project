@@ -30,10 +30,10 @@ export const legacyCorsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
 };
 
-export function json(body: unknown, status = 200, req?: Request): Response {
+export function json(body: unknown, status = 200, req?: Request, extraHeaders: HeadersInit = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), ...Object.fromEntries(new Headers(extraHeaders)), 'Content-Type': 'application/json' },
   });
 }
 

@@ -1,12 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { writeAuditEvent } from '../_shared/audit.ts';
+import { corsResponse, json as jsonResponse } from '../_shared/http.ts';
 import { getMocaVersionConfig } from '../_shared/moca-config.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const SUPPORTED_ASSESSMENTS = new Set(['moca']);
 const SUPPORTED_LANGUAGES = new Set(['he']);
@@ -42,8 +37,9 @@ interface CreateSessionBody {
 }
 
 Deno.serve(async (req) => {
+  const json = (body: unknown, status = 200) => jsonResponse(body, status, req);
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return corsResponse(req);
   }
   if (req.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405);
@@ -264,11 +260,4 @@ async function generateUniqueTestNumber(supabase: any): Promise<string> {
   }
 
   throw new Error('Failed to generate unique test number');
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
 }

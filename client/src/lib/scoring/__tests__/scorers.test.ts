@@ -106,6 +106,11 @@ describe('scoreVigilance', () => {
   it('max is 1', () => {
     expect(scoreVigilance({ score: 1 })[0].max).toBe(1);
   });
+
+  it('clamps score to item bounds', () => {
+    expect(scoreVigilance({ score: 3 })[0].score).toBe(1);
+    expect(scoreVigilance({ score: -2 })[0].score).toBe(0);
+  });
 });
 
 describe('scoreSerial7s', () => {

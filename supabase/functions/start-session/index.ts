@@ -1,19 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { writeAuditEvent } from '../_shared/audit.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsResponse, json as jsonResponse } from '../_shared/http.ts';
+import {
+  buildStartAttemptFingerprint,
+  checkStartRateLimit,
+  recordStartAttempt,
+} from '../_shared/start-rate-limit.ts';
 
 interface StartSessionBody {
   token: string;
 }
 
 Deno.serve(async (req) => {
+  const json = (body: unknown, status = 200, headers?: HeadersInit) => jsonResponse(body, status, req, headers);
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return corsResponse(req);
   }
   if (req.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405);
@@ -28,12 +29,32 @@ Deno.serve(async (req) => {
 
   const token = body.token?.trim();
   if (!token) return json({ error: 'Missing test number' }, 400);
-  if (!/^\d{8}$/.test(token)) return json({ error: 'Invalid test number' }, 404);
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  );
+  const supabase = supabaseClient();
+  const fingerprint = await buildStartAttemptFingerprint(req, token);
+  const rateLimit = await checkStartRateLimit(supabase, fingerprint);
+  if (!rateLimit.allowed) {
+    await recordStartAttempt(supabase, {
+      fingerprint,
+      success: false,
+      failureReason: rateLimit.reason,
+      metadata: {
+        retryAfterSeconds: rateLimit.retryAfterSeconds,
+        ipFailures: rateLimit.ipFailures,
+        codeFailures: rateLimit.codeFailures,
+      },
+    });
+    return json(
+      { error: 'Too many start attempts. Please try again later.' },
+      429,
+      rateLimit.retryAfterSeconds ? { 'Retry-After': String(rateLimit.retryAfterSeconds) } : undefined,
+    );
+  }
+
+  if (!/^\d{8}$/.test(token)) {
+    await recordStartAttempt(supabase, { fingerprint, success: false, failureReason: 'invalid_format' });
+    return json({ error: 'Invalid test number' }, 404);
+  }
 
   const { data: session, error } = await supabase
     .from('sessions')
@@ -43,11 +64,18 @@ Deno.serve(async (req) => {
     .single();
 
   if (error || !session) {
+    await recordStartAttempt(supabase, { fingerprint, success: false, failureReason: 'invalid_test_number' });
     return json({ error: 'Invalid test number' }, 404);
   }
 
   // Enforce single-use
   if (session.link_used_at) {
+    await recordStartAttempt(supabase, {
+      fingerprint,
+      success: false,
+      failureReason: 'test_number_already_used',
+      sessionId: session.id,
+    });
     return json({ error: 'Test number already used' }, 410);
   }
 
@@ -69,6 +97,12 @@ Deno.serve(async (req) => {
       return json({ error: 'Failed to start session' }, 500);
     }
     if (!startedSession) {
+      await recordStartAttempt(supabase, {
+        fingerprint,
+        success: false,
+        failureReason: 'test_number_already_used',
+        sessionId: session.id,
+      });
       return json({ error: 'Test number already used' }, 410);
     }
 
@@ -80,22 +114,29 @@ Deno.serve(async (req) => {
     });
   }
 
+  await recordStartAttempt(supabase, {
+    fingerprint,
+    success: true,
+    sessionId: session.id,
+    metadata: { mocaVersion: session.moca_version },
+  });
+
   return json({
-    status:         'ready',
-    sessionId:      session.id,
-    linkToken:      session.link_token,
-	    ageBand:        session.age_band,
-	    educationYears: session.education_years,
-	    patientAge:     session.patient_age_years,
-	    mocaVersion:    session.moca_version,
-	    language:       session.assessment_language,
-	    sessionDate:    new Date().toISOString(),
-	  });
+    status: 'ready',
+    sessionId: session.id,
+    linkToken: session.link_token,
+    ageBand: session.age_band,
+    educationYears: session.education_years,
+    patientAge: session.patient_age_years,
+    mocaVersion: session.moca_version,
+    language: session.assessment_language,
+    sessionDate: new Date().toISOString(),
+  });
 });
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+function supabaseClient() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  );
 }

@@ -6,23 +6,19 @@ import {
   formatScore,
   normalizeExportReport,
 } from '../_shared/export-report.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders, corsResponse } from '../_shared/http.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return corsResponse(req);
   }
 
   if (req.method !== 'POST' && req.method !== 'GET') {
-    return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+    return new Response('Method not allowed', { status: 405, headers: corsHeaders(req) });
   }
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+  if (!authHeader) return new Response('Unauthorized', { status: 401, headers: corsHeaders(req) });
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -32,7 +28,7 @@ Deno.serve(async (req) => {
   const token = authHeader.replace('Bearer ', '');
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   
-  if (authError || !user) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+  if (authError || !user) return new Response('Unauthorized', { status: 401, headers: corsHeaders(req) });
 
   const { data: sessions, error: dbError } = await supabase
     .from('sessions')
@@ -62,7 +58,7 @@ Deno.serve(async (req) => {
     .eq('clinician_id', user.id)
     .eq('status', 'completed');
 
-  if (dbError) return new Response('Database error', { status: 500, headers: corsHeaders });
+  if (dbError) return new Response('Database error', { status: 500, headers: corsHeaders(req) });
 
   const header = [
     'Case ID',
@@ -107,7 +103,7 @@ Deno.serve(async (req) => {
 
   return new Response(csv, {
     headers: {
-      ...corsHeaders,
+      ...corsHeaders(req),
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': 'attachment; filename="moca_export.csv"',
     },

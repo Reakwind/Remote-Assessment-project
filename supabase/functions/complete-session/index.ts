@@ -192,7 +192,34 @@ Deno.serve(async (req) => {
       metadata: { ...notification },
     });
   } catch (notificationError) {
+    const failedNotification = {
+      channel: 'email' as const,
+      provider: 'resend' as const,
+      status: 'failed' as const,
+      reason: notificationError instanceof Error ? notificationError.message : 'Unknown notification error',
+    };
     console.error('Clinician completion email notification failed:', notificationError);
+
+    try {
+      await recordNotificationOutcome(supabase, {
+        sessionId: session.id,
+        notificationType: 'clinician_completion_email',
+        result: failedNotification,
+      });
+    } catch (recordError) {
+      console.error('Clinician completion notification failure record failed:', recordError);
+    }
+
+    try {
+      await writeAuditEvent(supabase, {
+        eventType: 'clinician_completion_email_failed',
+        sessionId: session.id,
+        actorType: 'system',
+        metadata: { ...failedNotification },
+      });
+    } catch (auditError) {
+      console.error('Clinician completion notification failure audit failed:', auditError);
+    }
   }
 
   return json({ ok: true, scoringReport: report }, 200, req);

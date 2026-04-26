@@ -7,27 +7,23 @@ import {
   getFinalizedExportBlockReason,
   normalizeExportReport,
 } from '../_shared/export-report.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders, corsResponse } from '../_shared/http.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return corsResponse(req);
   }
 
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders(req) });
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+  if (!authHeader) return new Response('Unauthorized', { status: 401, headers: corsHeaders(req) });
 
   let body: { sessionId: string };
   try {
     body = await req.json();
   } catch {
-    return new Response('Invalid JSON', { status: 400, headers: corsHeaders });
+    return new Response('Invalid JSON', { status: 400, headers: corsHeaders(req) });
   }
 
   const supabase = createClient(
@@ -36,7 +32,7 @@ Deno.serve(async (req) => {
   );
 
   const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-  if (authError || !user) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+  if (authError || !user) return new Response('Unauthorized', { status: 401, headers: corsHeaders(req) });
 
   const { data: session } = await supabase
     .from('sessions')
@@ -50,14 +46,14 @@ Deno.serve(async (req) => {
     .eq('clinician_id', user.id)
     .single();
 
-  if (!session) return new Response('Session not found', { status: 404, headers: corsHeaders });
+  if (!session) return new Response('Session not found', { status: 404, headers: corsHeaders(req) });
 
   const report = Array.isArray(session.scoring_reports) ? session.scoring_reports[0] : session.scoring_reports;
   const blockReason = getFinalizedExportBlockReason(session, report);
   if (blockReason) {
     return new Response(JSON.stringify({ error: blockReason }), {
       status: blockReason === 'Session not found' || blockReason === 'Scoring report not found' ? 404 : 409,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -139,7 +135,7 @@ Deno.serve(async (req) => {
 
   return new Response(pdfOutput, {
     headers: {
-      ...corsHeaders,
+      ...corsHeaders(req),
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="report_${sanitizeFilename(session.case_id)}.pdf"`,
     },

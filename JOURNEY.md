@@ -55,7 +55,7 @@ One-time patient start semantics remain strict. Target resume behavior uses same
 | Step | Browser behavior | Backend/data behavior | Current vs target |
 |---|---|---|---|
 | Enter test number | Patient enters the clinician-provided test number on the home page. | Browser uses stored same-device session state or calls `start-session` with the test number. | Current target. |
-| Start once | Valid unused test number starts session; reopening the same test number on the same device resumes saved progress. | `start-session` resolves `sessions.access_code`, atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410 unless local same-device resume state matches. | Current target. |
+| Start once | Valid unused test number starts session; reopening the same test number on the same device resumes saved progress. | `start-session` rate-limits repeated failed attempts, records hashed attempt audit rows, resolves `sessions.access_code`, atomically sets `link_used_at`, `started_at`, `status='in_progress'`; second start attempts return 410 unless local same-device resume state matches. | Current target. |
 | Complete tasks | Patient progresses through Hebrew MoCA task flow with selected MoCA version visible in the assessment header. Advancing without captured evidence records a skipped/requires-review payload. | Each task result is submitted with canonical `moca-*` task IDs and active client payload shapes, and the session keeps MoCA version context. | Current. |
 | Load stimuli | Patient tasks request the versioned stimulus manifest for the active session and prefer short-lived signed URLs from private Storage. | `get-stimuli` returns version-scoped asset keys and signed URLs for uploaded licensed assets. Missing assets produce an explicit development placeholder state. | Current architecture. Licensed assets remain external. |
 | Draw/audio evidence | Drawing tasks save current strokes/PNG; audio tasks can save audio evidence. | Private Storage paths and stroke data are stored; clinician receives signed URLs only. | Current. External STT transcript evidence is future. |
@@ -67,7 +67,7 @@ One-time patient start semantics remain strict. Target resume behavior uses same
 | Function | Caller | Purpose |
 |---|---|---|
 | `create-session` | Clinician | Create pending session, internal session token, and patient-facing test number. |
-| `start-session` | Patient | Validate one-time 8-digit test number and return scoring context plus internal session token for post-start saves. |
+| `start-session` | Patient | Rate-limit and validate one-time 8-digit test number, then return scoring context plus internal session token for post-start saves. |
 | `get-stimuli` | Patient | Return the active MoCA version's private stimulus manifest with short-lived signed URLs. |
 | `submit-results` / `submit-task` | Patient | Idempotently persist task result payloads. |
 | `save-drawing` | Patient | Store drawing strokes and optional PNG in private storage/review row. |
@@ -78,6 +78,7 @@ One-time patient start semantics remain strict. Target resume behavior uses same
 | `update-scoring-review` | Clinician | Persist clinician score for non-drawing manual review items and recalculate final report. |
 
 Storage buckets are private. Patient-facing stimulus access and clinician-facing review access use short-lived signed URLs. Audit events are part of the journey and should exist for create, start, stimulus manifest request, task/audio/drawing save, completion, review updates, and notification outcome. Completion emails also create a `notification_events` row so sent, skipped, and failed outcomes are observable and retry-ready.
+Patient test-number starts also write hashed attempt records for operational rate limiting without storing raw test numbers or IP addresses.
 
 ## Scoring Journey
 
@@ -94,7 +95,7 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 |---|---|---|---|
 | Clinician auth | Email/password Supabase Auth gates the dashboard; old `/clinician/2fa` links redirect out of the removed MFA screen. | Clinician email/password login with backend JWT checks. | MFA, SSO, device policy, and other security hardening are future milestones. |
 | Session creation | Case profile stores birth date, gender, language, dominant hand, phone, and education. Test creation stores assessment, language, version, calculated age/age band, internal session token, and generated patient test number. | Same, with standardized scoring using the session snapshot from the case profile. | Current target. |
-| Patient start | One-time 8-digit test number moves session to `in_progress`; same-device resume uses stored in-progress state and matching session context to reopen saved progress. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
+| Patient start | One-time 8-digit test number moves session to `in_progress`; repeated failed starts are rate-limited and audited with hashed fingerprints. Same-device resume uses stored in-progress state and matching session context to reopen saved progress. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
 | Stimulus delivery | `get-stimuli` returns versioned private Storage paths and signed URLs when licensed assets are uploaded. Patient UI uses explicit development placeholders when assets are missing. | Licensed MoCA assets are uploaded to private Storage by version and task before clinical use, then validated with `scripts/verify-stimuli.mjs`. | Production asset validation should be part of release readiness. |
 | Task persistence | Per-task submit, skipped-task review payloads, drawings, audio evidence. | Reliable autosave for every task; refresh preserves saved progress in normal use. | Full offline retry queue remains future hardening. |
 | Drawing review | Clinician dashboard reads stored drawing/audio evidence, signed URLs, and review rows from `get-session`; score updates persist through review functions. | Clinician rubric scoring from stored evidence. | Rubric UX can be refined for clinical ergonomics. |
@@ -141,3 +142,4 @@ Storage buckets are private. Patient-facing stimulus access and clinician-facing
 - 2026-04-25: Patient starts require the generated 8-digit test number; internal link tokens are used only after start for patient save/complete calls.
 - 2026-04-25: Naming items are version-specific for MoCA 8.1, 8.2, and 8.3. Licensed visual stimuli are extracted from local licensed PDFs into private Storage with `scripts/upload-stimuli-from-pdfs.mjs`; extracted assets stay out of Git.
 - 2026-04-25: Audio recordings persist with explicit storage paths in task evidence. Clinician review receives signed audio URLs, including evidence-only audio rows for no-score tasks.
+- 2026-04-26: Patient test-number starts are rate-limited and audited with hashed fingerprints; raw test numbers and IP addresses are not stored in attempt logs.
