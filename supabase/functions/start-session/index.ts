@@ -34,16 +34,8 @@ Deno.serve(async (req) => {
   const fingerprint = await buildStartAttemptFingerprint(req, token);
   const rateLimit = await checkStartRateLimit(supabase, fingerprint);
   if (!rateLimit.allowed) {
-    await recordStartAttempt(supabase, {
-      fingerprint,
-      success: false,
-      failureReason: rateLimit.reason,
-      metadata: {
-        retryAfterSeconds: rateLimit.retryAfterSeconds,
-        ipFailures: rateLimit.ipFailures,
-        codeFailures: rateLimit.codeFailures,
-      },
-    });
+    // Avoid extending the active rate-limit window with more failed rows for
+    // retries that are already blocked.
     return json(
       { error: 'Too many start attempts. Please try again later.' },
       429,
