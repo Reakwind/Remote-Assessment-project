@@ -256,7 +256,7 @@ export function AssessmentLayout() {
       {!isEndScreen && (
         <>
         <footer
-          className="sticky bottom-0 z-20 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-4 shadow-[0_-8px_20px_rgba(15,23,42,0.04)] sm:px-6 lg:px-10 lg:py-5"
+          className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-4 shadow-[0_-8px_20px_rgba(15,23,42,0.04)] sm:px-6 lg:px-10 lg:py-5"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
           <button

@@ -44,7 +44,7 @@ test.describe('landing test number entry', () => {
     await page.reload();
 
     const input = page.getByPlaceholder(/הזן מספר מבדק/);
-    const submit = page.getByRole('button', { name: /התחל מבדק/ });
+    const submit = page.getByRole('button', { name: /התחלת המבדק/ });
 
     await expect(submit).toBeDisabled();
     await input.fill('1234567');
@@ -68,13 +68,13 @@ test.describe('landing test number entry', () => {
 
     await page.goto('/#/session/11112222');
 
-    await expect(page.getByRole('heading', { name: 'ברוך הבא למבדק MoCA' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ברוך הבא להערכה קוגניטיבית' })).toBeVisible();
     await expect(page).toHaveURL(/#\/patient\/welcome/);
   });
 
   test('returning local patients start a new valid test at the first task', async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem('moca_patient_onboarding_completed', 'true');
+      window.localStorage.setItem('moca_patient_onboarding_completed', 'returning-session');
     });
     await page.route('**/functions/v1/start-session', async (route) => {
       await route.fulfill({

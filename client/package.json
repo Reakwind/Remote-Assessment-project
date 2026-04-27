@@ -22,6 +22,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "e2e:browser": "playwright test",
+    "e2e:patient-pwa": "E2E_EXPECT_PATIENT_SURFACE=1 E2E_APP_URL=http://127.0.0.1:4173 playwright test patient-flow.spec.ts",
     "prepare": "husky"
   },
   "dependencies": {

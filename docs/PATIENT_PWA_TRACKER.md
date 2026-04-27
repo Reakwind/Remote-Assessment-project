@@ -29,7 +29,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | UX hardening: preflight + drawing | Codex | Done | Preflight and drawing tasks fit tablet/phone viewports and drawing is stable with finger/stylus. | `codex/patient-tablet-drawing` |
 | UX hardening: audio/speech tasks | Codex | Done | Generated Hebrew speech and audio capture work on tablet/phone viewports. | `codex/patient-audio-speech` |
 | UX hardening: simple input tasks | Codex | Done | Naming task fits phone/tablet viewports with local item progress, guarded next-item navigation, and answer revisit controls. | `codex/patient-simple-inputs` |
-| Pilot readiness | Both | Not Started | Shared staging, all enabled licensed visual stimuli, iPad/tablet install, and phone fallback checks pass. | TBD |
+| Pilot readiness | Both | Blocked | Automated readiness gates exist; shared hosted staging, licensed stimuli verification, iPad/tablet install, and phone fallback checks still need external execution. | `codex/patient-pilot-readiness` |
 
 ## Current Shell Scope
 
@@ -45,8 +45,21 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Use generated Hebrew speech for memory words; do not require licensed memory MP3 files.
 - Clear local session evidence after successful completion.
 - Expire abandoned same-device resume state after 6 hours.
+- Use `docs/PATIENT_PWA_PILOT_READINESS.md` for the final staging, licensed-stimuli, installed-PWA, and phone fallback gates before clinical pilot use.
 
 ## Latest Verification
+
+2026-04-27 Codex pilot-readiness verification:
+
+- `cd client && npm run e2e:browser`
+- `cd client && npm run e2e:patient-pwa` against `npm run preview:patient -- --host 127.0.0.1 --port 4173`
+- `cd client && npm test -- --reporter=dot`
+- `cd client && npm run lint`
+- `cd client && npm run build -- --debug`
+- `cd client && npm run build:patient`
+- `cd client && npm run build:surfaces`
+- `cd client && npm run verify:surface-builds`
+- `node --check scripts/verify-surface-builds.mjs`
 
 2026-04-27 Codex deploy split verification:
 

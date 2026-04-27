@@ -13,17 +13,19 @@ Read these first:
 3. [JOURNEY.md](JOURNEY.md)
 4. [docs/PATIENT_PWA_ARCHITECTURE.md](docs/PATIENT_PWA_ARCHITECTURE.md)
 5. [docs/PATIENT_PWA_DEPLOYMENT.md](docs/PATIENT_PWA_DEPLOYMENT.md)
-6. [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md)
-7. [CONTEXT.md](CONTEXT.md)
-8. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
-9. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
-10. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-11. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-12. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+6. [docs/PATIENT_PWA_PILOT_READINESS.md](docs/PATIENT_PWA_PILOT_READINESS.md)
+7. [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md)
+8. [CONTEXT.md](CONTEXT.md)
+9. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
+10. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
+11. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
+12. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
+13. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
 
 `JOURNEY.md` is the bird's-eye patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
 `docs/PATIENT_PWA_ARCHITECTURE.md` is the patient/clinician surface authority. The selected direction is clinician website plus tablet/phone-first patient PWA.
 `docs/PATIENT_PWA_DEPLOYMENT.md` is the patient/clinician frontend deployment split authority.
+`docs/PATIENT_PWA_PILOT_READINESS.md` is the clinical-pilot readiness checklist for staging, licensed stimuli, installed-PWA, and phone fallback checks.
 `docs/PATIENT_PWA_TRACKER.md` is the shared patient PWA implementation tracker. Update it when PWA milestone status, ownership, or acceptance checks change.
 `docs/HEBREW_TERMINOLOGY.md` is the Hebrew UI terminology authority. Use it before changing patient or clinician copy.
 `docs/DEVELOPMENT_PROCESS.md` defines the provider-neutral development workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
@@ -100,6 +102,7 @@ Full browser/Supabase E2E is a required local pre-merge check for backend, sessi
 - `JOURNEY.md` - patient/clinician browser + backend journey playbook.
 - `docs/PATIENT_PWA_ARCHITECTURE.md` - clinician website + patient PWA deployment and UX boundary.
 - `docs/PATIENT_PWA_DEPLOYMENT.md` - patient and clinician frontend build outputs, host rules, and cache guidance.
+- `docs/PATIENT_PWA_PILOT_READINESS.md` - final readiness gates for staging, licensed stimuli, installed PWA, and phone fallback.
 - `docs/PATIENT_PWA_TRACKER.md` - shared patient PWA milestone tracker.
 - `docs/AGENT_LEARNINGS.md` - durable lessons from repeated fixes, review findings, and verification gaps.
 - `docs/DEVELOPMENT_PROCESS.md` - branch, PR, verification, and provider-neutral backend process.
