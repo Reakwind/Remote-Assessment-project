@@ -1,13 +1,14 @@
 # Project Context: Remote Neuropsychological Assessment (Hebrew MoCA)
 
 ## 1. Vision & Purpose
-A remote, web-based platform for cognitive assessment of the 60+ population in Israel. Current `main` is the Pilot MVP baseline.
+A remote assessment platform for cognitive assessment of the 60+ population in Israel. Current `main` is the Pilot MVP baseline.
 - **Initial Goal:** Complete digital implementation of the Hebrew MoCA (Montreal Cognitive Assessment).
+- **Surface Direction:** Clinician work remains a website; patient assessment is moving to a tablet/phone-first PWA for touch/stylus workflows.
 - **Flexibility:** Modular "Playlist Engine" (JSON-driven) with future i18n support for Arabic/Russian/English versions. `react-i18next` is not wired into the current MVP client.
 - **Accessibility:** Minimalist, high-contrast Hebrew interface (RTL) with a computer orientation module.
 
 ## 2. Technical Stack
-- **Frontend:** React, TypeScript, Vite, Tailwind/Radix UI, RTL Hebrew UI.
+- **Frontend:** React, TypeScript, Vite, Tailwind/Radix UI, RTL Hebrew UI. Clinician website and patient PWA should remain explicit surfaces.
 - **Drawing:** HTML5 Canvas for Trail Making and Clock Drawing.
 - **Backend:** Supabase (Auth, PostgreSQL) - targeting AWS/Google Israel Region.
 - **Data Architecture:** 
@@ -40,3 +41,4 @@ A remote, web-based platform for cognitive assessment of the 60+ population in I
 - New work starts from latest `origin/main` on a feature branch.
 - Changes are reviewed through GitHub PRs and merge only after explicit user approval.
 - `JOURNEY.md` must be updated when patient, clinician, backend, scoring, notification, or review behavior changes.
+- `docs/PATIENT_PWA_ARCHITECTURE.md` must be updated when patient PWA installability, deployment split, tablet/phone UX, service-worker caching, or clinician/patient surface boundaries change.

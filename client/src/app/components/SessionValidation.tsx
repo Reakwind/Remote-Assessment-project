@@ -4,8 +4,8 @@ import { Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { useSession } from "../../hooks/useSession";
 import { hasCompletedPatientOnboarding, useAssessmentStore } from "../store/AssessmentContext";
 
-function getPatientStartPath(): string {
-  return hasCompletedPatientOnboarding() ? '/patient/trail-making' : '/patient/welcome';
+function getPatientStartPath(sessionId?: string | null): string {
+  return hasCompletedPatientOnboarding(sessionId) ? '/patient/trail-making' : '/patient/welcome';
 }
 
 export function SessionValidation() {
@@ -27,7 +27,7 @@ export function SessionValidation() {
 
     if (canResumeCurrentToken) {
       if (startedTokenRef.current === token) {
-        navigate(getPatientStartPath(), { replace: true });
+        navigate(getPatientStartPath(state.id), { replace: true });
         return;
       }
       navigate('/', { replace: true });
@@ -42,7 +42,7 @@ export function SessionValidation() {
     ) {
       startedTokenRef.current = token;
       startNewAssessment(session.sessionId, session.linkToken, session.scoringContext, session.startToken);
-      navigate(getPatientStartPath(), { replace: true });
+      navigate(getPatientStartPath(session.sessionId), { replace: true });
     }
   }, [
     session.status,
@@ -54,12 +54,14 @@ export function SessionValidation() {
     navigate,
     token,
     canResumeCurrentToken,
+    state.id,
   ]);
 
   const getErrorMessage = () => {
-    if (session.status === 'already_used') return "מספר המבדק כבר שומש. אנא פנה לקלינאי למספר חדש.";
-    if (session.status === 'invalid') return "מספר המבדק אינו תקין. המספר שהזנת אינו קיים במערכת.";
-    if (session.status === 'error') return "אירעה שגיאה בתקשורת עם השרת. אנא נסה שוב מאוחר יותר.";
+    if (session.status === 'already_used' || session.status === 'invalid') {
+      return "לא ניתן להתחיל את המבדק במספר שהוזן. בדוק את המספר או פנה לקלינאי.";
+    }
+    if (session.status === 'error') return "אירעה שגיאה בתקשורת עם השרת. פנה לקלינאי אם הבעיה נמשכת.";
     return null;
   };
 
@@ -77,7 +79,7 @@ export function SessionValidation() {
               <AlertTriangle className="w-10 h-10" />
             </div>
             <h1 className="text-3xl font-extrabold text-black mb-4">
-              מספר מבדק אינו תקין
+              לא ניתן להתחיל את המבדק
             </h1>
             <p className="text-xl text-gray-600 mb-8">{error}</p>
             

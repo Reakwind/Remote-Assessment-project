@@ -33,6 +33,7 @@ function storedAssessment(overrides: Record<string, unknown> = {}) {
     },
     lastPath: '/patient/clock',
     isComplete: false,
+    localStartedAt: new Date().toISOString(),
     tasks: {},
     ...overrides,
   };
@@ -90,7 +91,7 @@ describe('patient resume state', () => {
   });
 
   it('opens a fresh valid test number at the first task after local onboarding is complete', async () => {
-    localStorage.setItem(ONBOARDING_KEY, 'true');
+    localStorage.setItem(ONBOARDING_KEY, 'session-returning');
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -189,7 +190,7 @@ describe('patient resume state', () => {
     expect(input).toHaveValue('1234-5678');
     expect(screen.getByText('המספר מלא. אפשר להתחיל.')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /התחל מבדק/ }));
+    await userEvent.click(screen.getByRole('button', { name: /התחלת המבדק/ }));
 
     expect(router.state.location.pathname).toBe('/session/12345678');
   });
@@ -200,6 +201,20 @@ describe('patient resume state', () => {
     renderWithProvider([{ path: '/', element: <LandingHub /> }], '/');
 
     expect(screen.queryByText('המשך מהמקום שעצרת')).not.toBeInTheDocument();
+  });
+
+  it('expires abandoned same-device resume state after six hours', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-25T19:00:01Z'));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storedAssessment({
+      localStartedAt: '2026-04-25T12:00:00.000Z',
+    })));
+
+    renderWithProvider([{ path: '/', element: <LandingHub /> }], '/');
+
+    expect(screen.queryByText('המשך מהמקום שעצרת')).not.toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    vi.useRealTimers();
   });
 
   it('shows the stored MoCA version in the patient assessment header', async () => {

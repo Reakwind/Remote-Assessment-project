@@ -32,7 +32,7 @@ export function EndScreen() {
           </h2>
         </div>
         <ListenButton
-          text={isCompleted ? "המבדק הושלם והתוצאות נשלחות למטפל המפנה." : "אנא המתן, הנתונים נשמרים."}
+          text={isCompleted ? "המבדק הושלם. אפשר לסגור את האפליקציה. הקלינאי יבדוק את התוצאות." : "אנא המתן, הנתונים נשמרים."}
           size="lg"
         />
       </div>
@@ -49,7 +49,7 @@ export function EndScreen() {
                 תודה רבה!
               </div>
               <span className="text-xl text-gray-600 font-medium">
-                המבדק הושלם והתוצאות נשלחות למטפל המפנה.
+                אפשר לסגור את האפליקציה. הקלינאי יבדוק את התוצאות ויצור קשר במידת הצורך.
               </span>
             </div>
           )}

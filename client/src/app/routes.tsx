@@ -22,6 +22,7 @@ import { PatientWelcome } from "./components/PatientWelcome";
 import { SessionValidation } from "./components/SessionValidation";
 import { ClinicianAuthPage } from "./components/auth/ClinicianAuthPage";
 import { ClinicianProtectedRoute } from "./components/auth/ClinicianProtectedRoute";
+import { isPatientSurface } from "./surface";
 
 export const router = createHashRouter([
   {
@@ -58,7 +59,7 @@ export const router = createHashRouter([
   },
   {
     path: "/dashboard",
-    element: <ClinicianProtectedRoute />,
+    element: isPatientSurface ? <Navigate to="/" replace /> : <ClinicianProtectedRoute />,
     children: [
       {
         element: <ClinicianDashboardLayout />,
@@ -72,10 +73,10 @@ export const router = createHashRouter([
   },
   {
     path: "/clinician/auth",
-    element: <ClinicianAuthPage />,
+    element: isPatientSurface ? <Navigate to="/" replace /> : <ClinicianAuthPage />,
   },
   {
     path: "/clinician/2fa",
-    element: <Navigate to="/dashboard" replace />,
+    element: <Navigate to={isPatientSurface ? "/" : "/dashboard"} replace />,
   },
 ]);

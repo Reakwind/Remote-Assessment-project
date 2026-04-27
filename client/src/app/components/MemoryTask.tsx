@@ -1,15 +1,12 @@
 import { ListenButton } from "./ListenButton";
 import { AudioRecorder } from "./AudioRecorder";
 import { useAssessmentStore } from "../store/AssessmentContext";
-import { DevStimulusNotice, useStimuliManifest } from "./StimuliManifestProvider";
 
-const DEV_MEMORY_WORDS = ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"];
+const MEMORY_WORDS = ["פנים", "קטיפה", "כנסייה", "חרצית", "אדום"];
 
 export function MemoryTask() {
   const { state, updateTaskData } = useAssessmentStore();
-  const { getAsset } = useStimuliManifest();
   const savedData = state.tasks.memory || { audioId: null };
-  const wordListAudio = getAsset("moca-memory-learning", "word-list-audio");
 
   const handleRecordingComplete = (audio: {
     audioId: string;
@@ -30,7 +27,7 @@ export function MemoryTask() {
         </div>
         <ListenButton 
           text="אקריא לך כעת רשימת מילים שעליך לזכור. הקשב היטב וכשאסיים, חזור על כל המילים שאתה זוכר, באיזה סדר שתרצה." 
-          pacedItems={wordListAudio?.signedUrl ? undefined : DEV_MEMORY_WORDS}
+          pacedItems={MEMORY_WORDS}
           size="lg" 
         />
       </div>
@@ -42,18 +39,6 @@ export function MemoryTask() {
           תתבקש לחזור עליהן שוב בסוף המבדק.
         </div>
 
-        {wordListAudio?.signedUrl ? (
-          <audio
-            controls
-            src={wordListAudio.signedUrl}
-            className="mb-8 w-full max-w-md"
-          >
-            הקלטת המילים אינה נתמכת בדפדפן זה.
-          </audio>
-        ) : (
-          <DevStimulusNotice className="mb-8 max-w-md" />
-        )}
-        
         <AudioRecorder 
           taskId="memory" 
           initialAudioId={savedData.audioId}

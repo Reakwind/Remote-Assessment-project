@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef, useEffect, useState } from "react";
 import { clsx } from "clsx";
+import { isPatientSurface } from "../surface";
 
 export function BaseCanvas({ 
   width = 800, 
@@ -168,6 +169,13 @@ export function BaseCanvas({
 
   return (
     <div className="flex flex-col items-center gap-4 w-full min-w-0">
+      {isPatientSurface && (
+        <div className="w-full rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-right text-sm font-bold text-blue-950 md:hidden">
+          אם אתה משתמש בטלפון, מומלץ לסובב את המכשיר לרוחב לפני הציור.
+        </div>
+      )}
+
+      {!isPatientSurface && (
       <div className="flex justify-between items-center w-full px-1 sm:px-2">
         <div className="flex items-center gap-2">
           <input 
@@ -182,6 +190,7 @@ export function BaseCanvas({
           </label>
         </div>
       </div>
+      )}
 
       <div
         className="relative w-full border-2 border-gray-200 rounded-xl overflow-hidden shadow-sm touch-none bg-white focus-within:ring-4 focus-within:ring-blue-600 focus-within:ring-opacity-50 transition-all"

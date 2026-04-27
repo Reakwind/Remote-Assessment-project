@@ -123,6 +123,28 @@ Required verification:
 - Update affected text assertions in component tests.
 - Search touched surfaces for avoided terms listed in `docs/HEBREW_TERMINOLOGY.md`.
 
+### 7. Treat the patient side as a PWA surface
+
+Evidence:
+
+- The 2026-04-27 product direction decision selected a split surface model: clinician website plus tablet/phone-first patient PWA.
+- Patient QA showed the desktop-browser framing worked against the assessment experience, especially where drawing/touch/stylus use should feel closer to pen and paper.
+- `docs/PATIENT_PWA_ARCHITECTURE.md` is now the authority for patient PWA deployment, caching, and surface boundaries.
+
+Rules:
+
+- Do not treat patient routes as a generic desktop website. Patient UX should be tablet/phone-first and optimized for focused touch/stylus assessment.
+- Keep clinician review, scoring, export, and case management as website workflows unless a separate product decision changes that.
+- Before changing patient installability, service-worker behavior, deployment split, mobile/tablet layout, or drawing UX, read `docs/PATIENT_PWA_ARCHITECTURE.md`.
+- Cache only static app-shell assets in the PWA. Do not cache patient evidence, PHI, Supabase API responses, signed URLs, or exports.
+
+Required verification:
+
+- Phone portrait viewport check.
+- Tablet portrait and landscape viewport checks.
+- Installed PWA/home-screen mode check before clinical pilot.
+- Local Supabase E2E when patient start, save, complete, storage, review, scoring, or export contracts are touched.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:

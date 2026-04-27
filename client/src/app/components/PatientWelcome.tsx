@@ -2,7 +2,7 @@ import { useNavigate } from "react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Mic, PenTool, Volume2 } from "lucide-react";
 import { clsx } from "clsx";
-import { markPatientOnboardingComplete } from "../store/AssessmentContext";
+import { markPatientOnboardingComplete, useAssessmentStore } from "../store/AssessmentContext";
 
 type CheckState = "idle" | "checking" | "success" | "error";
 type VoiceState = "checking" | "ready" | "missing" | "unsupported";
@@ -18,11 +18,13 @@ function findHebrewVoice() {
 
 export function PatientWelcome() {
   const navigate = useNavigate();
+  const { state } = useAssessmentStore();
   const [voiceState, setVoiceState] = useState<VoiceState>(() => hasSpeechSupport() ? "checking" : "unsupported");
   const [audioCheck, setAudioCheck] = useState<CheckState>("idle");
   const [micCheck, setMicCheck] = useState<CheckState>("idle");
   const [audioMessage, setAudioMessage] = useState<string | null>(null);
   const [micMessage, setMicMessage] = useState<string | null>(null);
+  const [readinessAccepted, setReadinessAccepted] = useState(false);
 
   useEffect(() => {
     if (!hasSpeechSupport()) return;
@@ -50,18 +52,20 @@ export function PatientWelcome() {
   }, []);
 
   const canRunAudioTest = voiceState === "ready";
-  const canStart = audioCheck === "success" && micCheck === "success";
+  const checksComplete = audioCheck === "success" && micCheck === "success";
+  const canStart = checksComplete && readinessAccepted;
   const startHelp = useMemo(() => {
     if (canStart) return "המערכת מוכנה להתחלת המבדק.";
-    if (voiceState === "missing" || voiceState === "unsupported") return "יש צורך בהשמעת הוראות בעברית לפני התחלת המבדק.";
+    if (voiceState === "missing" || voiceState === "unsupported") return "לא ניתן להפעיל השמעת עברית במכשיר זה. פנה לקלינאי.";
     if (audioCheck !== "success") return "יש להשלים בדיקת שמע בעברית.";
-    return "יש להשלים בדיקת מיקרופון.";
-  }, [audioCheck, canStart, voiceState]);
+    if (micCheck !== "success") return "יש להשלים בדיקת מיקרופון.";
+    return "יש לאשר שהמקום שקט ושניתנו הנחיות התחלה.";
+  }, [audioCheck, canStart, micCheck, voiceState]);
 
   const handleAudioTest = () => {
     if (!canRunAudioTest) {
       setAudioCheck("error");
-      setAudioMessage("לא נמצא קול עברי בדפדפן. יש להשתמש בדפדפן או מכשיר עם תמיכה בעברית.");
+      setAudioMessage("לא נמצא קול עברי בדפדפן. פנה לקלינאי כדי להחליף דפדפן או מכשיר.");
       return;
     }
 
@@ -81,7 +85,7 @@ export function PatientWelcome() {
 
     const timeoutId = window.setTimeout(() => {
       setAudioCheck("error");
-      setAudioMessage("לא התקבל אישור שהשמעת הטקסט הסתיימה. נסה שוב או החלף דפדפן.");
+      setAudioMessage("לא התקבל אישור שהשמעת הטקסט הסתיימה. נסה שוב או פנה לקלינאי.");
       window.speechSynthesis.cancel();
     }, 8000);
 
@@ -93,7 +97,7 @@ export function PatientWelcome() {
     utterance.onerror = () => {
       window.clearTimeout(timeoutId);
       setAudioCheck("error");
-      setAudioMessage("השמעת הטקסט נכשלה. נסה שוב או החלף דפדפן.");
+      setAudioMessage("השמעת הטקסט נכשלה. נסה שוב או פנה לקלינאי.");
     };
 
     window.speechSynthesis.cancel();
@@ -107,14 +111,35 @@ export function PatientWelcome() {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("mediaDevices unavailable");
       }
+      if (typeof MediaRecorder === "undefined") {
+        throw new Error("MediaRecorder unavailable");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const recorder = new MediaRecorder(stream);
+          const timeoutId = window.setTimeout(() => {
+            if (recorder.state !== "inactive") recorder.stop();
+          }, 1000);
+          recorder.onerror = () => {
+            window.clearTimeout(timeoutId);
+            reject(new Error("microphone recording failed"));
+          };
+          recorder.onstop = () => {
+            window.clearTimeout(timeoutId);
+            resolve();
+          };
+          recorder.start();
+        });
+      } finally {
+        stream.getTracks().forEach((track) => track.stop());
+      }
       setMicCheck("success");
       setMicMessage("המיקרופון זמין להקלטת תשובות.");
     } catch (error) {
       console.error("Microphone preflight failed:", error);
       setMicCheck("error");
-      setMicMessage("לא ניתן לגשת למיקרופון. יש לאשר הרשאת מיקרופון בדפדפן לפני התחלת המבדק.");
+      setMicMessage("לא ניתן לגשת למיקרופון או להקליט בדיקה קצרה. אשר הרשאת מיקרופון או פנה לקלינאי.");
     }
   };
 
@@ -128,7 +153,7 @@ export function PatientWelcome() {
           <div className="w-10 h-10 bg-black text-white rounded-lg flex items-center justify-center text-sm">
             RC
           </div>
-          Remote Check - MoCA
+          הערכה קוגניטיבית
         </h1>
       </div>
 
@@ -136,7 +161,7 @@ export function PatientWelcome() {
         <div className="max-w-2xl w-full bg-white rounded-3xl border border-gray-200 shadow-lg overflow-hidden">
           <div className="p-10 border-b border-gray-100">
             <h2 className="text-4xl font-extrabold text-black mb-6">
-              ברוך הבא למבדק MoCA
+              ברוך הבא להערכה קוגניטיבית
             </h2>
             <div className="space-y-4 text-2xl text-gray-700">
               <p>המבדק כולל 12 משימות קצרות.</p>
@@ -149,8 +174,9 @@ export function PatientWelcome() {
               </h3>
               <ul className="space-y-3 text-lg text-blue-800">
                 <li>• מצא מקום שקט ללא הסחות דעת</li>
-                <li>• השתמש בעכבר או מסך מגע כדי לצייר</li>
+                <li>• ניתן להשתמש באצבע או בעט מגע כדי לצייר</li>
                 <li>• הקשב להוראות בקפידה בכל משימה</li>
+                <li>• אפשר לקבל עזרה בתפעול המכשיר בלבד, לא בתשובות</li>
               </ul>
             </div>
           </div>
@@ -224,6 +250,20 @@ export function PatientWelcome() {
               </div>
             </div>
 
+            {checksComplete && (
+              <label className="mt-6 flex cursor-pointer items-start gap-4 rounded-xl border border-gray-200 bg-white p-4 text-right">
+                <input
+                  type="checkbox"
+                  checked={readinessAccepted}
+                  onChange={(event) => setReadinessAccepted(event.target.checked)}
+                  className="mt-1 h-6 w-6 shrink-0 accent-black"
+                />
+                <span className="text-base sm:text-lg font-bold leading-relaxed text-gray-900">
+                  אני במקום שקט, מוכן להתחיל את המבדק, וקיבלתי הנחיה מהקלינאי או מאיש התמיכה. עזרה מותרת רק בתפעול המכשיר, לא בתשובות.
+                </span>
+              </label>
+            )}
+
             <div className="mt-10">
               {!canStart && (
                 <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-right text-sm font-bold text-amber-900">
@@ -234,7 +274,7 @@ export function PatientWelcome() {
               <button
                 onClick={() => {
                   if (!canStart) return;
-                  markPatientOnboardingComplete();
+                  markPatientOnboardingComplete(state.id);
                   navigate("/patient/trail-making");
                 }}
                 disabled={!canStart}
@@ -243,7 +283,7 @@ export function PatientWelcome() {
                   canStart ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed",
                 )}
               >
-                התחל מבדק
+                התחלת המבדק
                 <ArrowLeft className="w-8 h-8" />
               </button>
             </div>

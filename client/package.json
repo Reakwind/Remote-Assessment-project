@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:patient": "VITE_APP_SURFACE=patient VITE_DEPLOY_ENV=local vite",
+    "dev:clinician": "VITE_APP_SURFACE=clinician VITE_DEPLOY_ENV=local vite",
     "build": "tsc -b && vite build",
+    "build:patient": "VITE_APP_SURFACE=patient VITE_DEPLOY_ENV=production tsc -b && VITE_APP_SURFACE=patient VITE_DEPLOY_ENV=production vite build",
+    "build:patient:staging": "VITE_APP_SURFACE=patient VITE_DEPLOY_ENV=staging tsc -b && VITE_APP_SURFACE=patient VITE_DEPLOY_ENV=staging vite build",
+    "build:clinician": "VITE_APP_SURFACE=clinician VITE_DEPLOY_ENV=production tsc -b && VITE_APP_SURFACE=clinician VITE_DEPLOY_ENV=production vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

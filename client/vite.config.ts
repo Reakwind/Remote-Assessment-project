@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -15,32 +15,60 @@ function figmaAssetResolver() {
   };
 }
 
-export default defineConfig({
-  build: {
-    rolldownOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return;
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router/')) {
-            return 'react-vendor';
-          }
-          if (id.includes('/@radix-ui/') || id.includes('/lucide-react/') || id.includes('/recharts/')) {
-            return 'ui-vendor';
-          }
-          return 'vendor';
+function patientPwaHead(surface: string) {
+  return {
+    name: 'patient-pwa-head',
+    transformIndexHtml(html: string) {
+      if (surface !== 'patient') return html;
+
+      return {
+        html: html.replace('<title>Remote Check</title>', '<title>Remote Assessment</title>'),
+        tags: [
+          { tag: 'link', attrs: { rel: 'manifest', href: '/patient.webmanifest' }, injectTo: 'head' },
+          { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/patient-icon-192.png' }, injectTo: 'head' },
+          { tag: 'meta', attrs: { name: 'theme-color', content: '#111827' }, injectTo: 'head' },
+          { tag: 'meta', attrs: { name: 'mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
+          { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
+          { tag: 'meta', attrs: { name: 'apple-mobile-web-app-title', content: 'Assessment' }, injectTo: 'head' },
+          { tag: 'meta', attrs: { name: 'apple-mobile-web-app-status-bar-style', content: 'default' }, injectTo: 'head' },
+        ],
+      };
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const surface = env.VITE_APP_SURFACE ?? 'combined';
+
+  return {
+    build: {
+      rolldownOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router/')) {
+              return 'react-vendor';
+            }
+            if (id.includes('/@radix-ui/') || id.includes('/lucide-react/') || id.includes('/recharts/')) {
+              return 'ui-vendor';
+            }
+            return 'vendor';
+          },
         },
       },
     },
-  },
-  plugins: [
-    tailwindcss(),
-    figmaAssetResolver(),
-    react(),
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+    plugins: [
+      patientPwaHead(surface),
+      tailwindcss(),
+      figmaAssetResolver(),
+      react(),
+    ],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
     },
-  },
-  assetsInclude: ['**/*.svg', '**/*.csv'],
+    assetsInclude: ['**/*.svg', '**/*.csv'],
+  };
 });

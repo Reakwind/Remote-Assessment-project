@@ -6,6 +6,7 @@ import { edgeFn, edgeHeaders } from '../../lib/supabase';
 import { scoreSession } from '../../lib/scoring';
 import { AudioStore } from './audioStore';
 import {
+  clearAutosaveQueueForSession,
   loadAutosaveQueue,
   queuedSavesForSession,
   removeQueuedTaskSave,
@@ -40,6 +41,7 @@ export interface AssessmentState {
   scoringContext: ScoringContext | null;
   lastPath: string;
   isComplete: boolean;
+  localStartedAt: string | null;
   tasks: {
     trailMaking?: any;
     cube?: any;
@@ -68,23 +70,27 @@ const DEFAULT_STATE: AssessmentState = {
   scoringContext: null,
   lastPath: '/patient/welcome',
   isComplete: false,
+  localStartedAt: null,
   tasks: {},
 };
 
 const STORAGE_KEY = 'moca_assessment_state';
 const PATIENT_ONBOARDING_KEY = 'moca_patient_onboarding_completed';
+const LOCAL_RESUME_EXPIRY_MS = 6 * 60 * 60 * 1000;
 
-export function hasCompletedPatientOnboarding(): boolean {
+export function hasCompletedPatientOnboarding(sessionId?: string | null): boolean {
   try {
-    return localStorage.getItem(PATIENT_ONBOARDING_KEY) === 'true';
+    const value = localStorage.getItem(PATIENT_ONBOARDING_KEY);
+    if (!sessionId) return value === 'true';
+    return value === sessionId;
   } catch {
     return false;
   }
 }
 
-export function markPatientOnboardingComplete(): void {
+export function markPatientOnboardingComplete(sessionId?: string | null): void {
   try {
-    localStorage.setItem(PATIENT_ONBOARDING_KEY, 'true');
+    localStorage.setItem(PATIENT_ONBOARDING_KEY, sessionId || 'true');
   } catch {
     // If storage is unavailable, keep the current session flow working.
   }
@@ -124,8 +130,39 @@ function normalizeStoredAssessmentState(value: unknown): AssessmentState {
     scoringContext: candidate.scoringContext,
     lastPath,
     isComplete: Boolean(candidate.isComplete),
+    localStartedAt: typeof candidate.localStartedAt === 'string' ? candidate.localStartedAt : null,
     tasks,
   };
+}
+
+function isStoredAssessmentExpired(state: AssessmentState): boolean {
+  if (!state.id || state.isComplete || !state.localStartedAt) return false;
+  const startedAt = Date.parse(state.localStartedAt);
+  return Number.isFinite(startedAt) && Date.now() - startedAt > LOCAL_RESUME_EXPIRY_MS;
+}
+
+function localAudioIds(state: AssessmentState): string[] {
+  return Object.values(state.tasks).flatMap((taskData) => {
+    if (!taskData || typeof taskData !== 'object' || Array.isArray(taskData)) return [];
+    const audioId = (taskData as { audioId?: unknown }).audioId;
+    return typeof audioId === 'string' && audioId.length > 0 && !audioId.startsWith('http') ? [audioId] : [];
+  });
+}
+
+function cleanupLocalSessionArtifacts(state: AssessmentState): void {
+  try {
+    if (state.id) clearAutosaveQueueForSession(state.id);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PATIENT_ONBOARDING_KEY);
+  } catch {
+    // Storage cleanup is best-effort; backend completion remains authoritative.
+  }
+
+  for (const audioId of localAudioIds(state)) {
+    AudioStore.deleteAudio(audioId).catch((error) => {
+      console.error('Failed to clear local audio evidence:', error);
+    });
+  }
 }
 
 function shouldDeferBackendSync(taskName: keyof AssessmentState['tasks'], data: any): boolean {
@@ -198,7 +235,12 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return normalizeStoredAssessmentState(JSON.parse(saved));
+        const normalized = normalizeStoredAssessmentState(JSON.parse(saved));
+        if (isStoredAssessmentExpired(normalized)) {
+          cleanupLocalSessionArtifacts(normalized);
+          return DEFAULT_STATE;
+        }
+        return normalized;
       }
     } catch (e) {
       console.error('Failed to load assessment state from local storage', e);
@@ -219,6 +261,10 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
 
   // Keep localStorage perfectly in sync with our React state
   useEffect(() => {
+    if (!state.id) {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
@@ -393,6 +439,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       linkToken,
       startToken: startToken ?? linkToken,
       scoringContext,
+      localStartedAt: new Date().toISOString(),
     };
     setState(newState);
     setTaskSaveStatus({});
@@ -501,7 +548,8 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
         throw new Error(payload?.error || 'Failed to complete session');
       }
 
-      setState((prev) => prev.id === state.id ? { ...prev, isComplete: true } : prev);
+      cleanupLocalSessionArtifacts(state);
+      setState(DEFAULT_STATE);
       setCompletionStatus('completed');
       return true;
     } catch (err) {

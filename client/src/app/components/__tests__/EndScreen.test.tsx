@@ -29,6 +29,7 @@ function storedAssessment() {
     },
     lastPath: '/patient/end',
     isComplete: false,
+    localStartedAt: new Date().toISOString(),
     tasks: {
       naming: { answers: { 'item-1': 'סוס', 'item-2': 'נמר', 'item-3': 'ברווז' } },
     },
@@ -66,10 +67,9 @@ describe('EndScreen', () => {
     expect(screen.queryByRole('heading', { name: 'המבדק הושלם' })).not.toBeInTheDocument();
 
     await screen.findByRole('heading', { name: 'המבדק הושלם' });
-    expect(screen.getByText('המבדק הושלם והתוצאות נשלחות למטפל המפנה.')).toBeInTheDocument();
+    expect(screen.getByText('אפשר לסגור את האפליקציה. הקלינאי יבדוק את התוצאות ויצור קשר במידת הצורך.')).toBeInTheDocument();
     await waitFor(() => {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
-      expect(stored.isComplete).toBe(true);
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     });
   });
 
@@ -81,14 +81,13 @@ describe('EndScreen', () => {
     renderEndScreen();
 
     await screen.findByText('השמירה לא הושלמה');
-    let stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
     expect(stored.isComplete).toBe(false);
 
     await userEvent.click(screen.getByRole('button', { name: 'נסה שוב' }));
 
     await screen.findByRole('heading', { name: 'המבדק הושלם' });
-    stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
-    expect(stored.isComplete).toBe(true);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

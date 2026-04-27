@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Remote Assessment</title>
+  <desc id="desc">Neutral patient PWA icon with assessment initials.</desc>
+  <rect width="512" height="512" rx="112" fill="#111827"/>
+  <rect x="72" y="72" width="368" height="368" rx="80" fill="#f9fafb"/>
+  <path d="M151 174h210M151 256h210M151 338h144" fill="none" stroke="#111827" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="360" cy="338" r="26" fill="#0f766e"/>
+  <path d="m346 338 10 10 22-26" fill="none" stroke="#f9fafb" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
