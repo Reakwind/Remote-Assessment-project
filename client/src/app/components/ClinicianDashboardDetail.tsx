@@ -77,6 +77,43 @@ function formatDuration(startIso: string | null | undefined, endIso: string | nu
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
+function formatDeviceContextDetails(context: Record<string, unknown> | null | undefined): Array<{ label: string; value: string }> {
+  if (!context || typeof context !== "object") return [];
+  const details = [
+    { label: "מצב", value: context.standalone === true ? "PWA מותקן" : context.standalone === false ? "דפדפן" : null },
+    { label: "פלטפורמה", value: stringValue(context.platform) },
+    { label: "שפה", value: stringValue(context.language) },
+    { label: "תצוגה", value: sizeValue(context.viewportWidth, context.viewportHeight) },
+    { label: "מסך", value: sizeValue(context.screenWidth, context.screenHeight) },
+    { label: "קלט", value: inputValue(context) },
+  ];
+
+  return details.filter((detail): detail is { label: string; value: string } => Boolean(detail.value));
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function sizeValue(width: unknown, height: unknown): string | null {
+  const normalizedWidth = numberValue(width);
+  const normalizedHeight = numberValue(height);
+  if (normalizedWidth === null || normalizedHeight === null) return null;
+  return `${Math.round(normalizedWidth)}x${Math.round(normalizedHeight)}`;
+}
+
+function inputValue(context: Record<string, unknown>): string | null {
+  const touchPoints = numberValue(context.touchPoints);
+  const pointer = stringValue(context.pointer);
+  if (touchPoints !== null && pointer) return `${pointer}, ${touchPoints} נקודות מגע`;
+  if (touchPoints !== null) return `${touchPoints} נקודות מגע`;
+  return pointer;
+}
+
 const SUBSCORE_CAPS: Record<string, number> = {
   visuospatial: 5,
   naming: 3,
@@ -672,6 +709,10 @@ export function ClinicianDashboardDetail() {
       },
     ];
   }, [reportRecord, sessionRecord]);
+  const deviceContextDetails = useMemo(
+    () => formatDeviceContextDetails(sessionRecord?.device_context),
+    [sessionRecord?.device_context],
+  );
 
   const renderTaskContent = () => {
     if (!currentReview) {
@@ -982,6 +1023,25 @@ export function ClinicianDashboardDetail() {
           </div>
         ))}
       </div>
+
+      {deviceContextDetails.length > 0 && (
+        <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-extrabold text-black">מכשיר המטופל</h2>
+            <span className="rounded-xl bg-gray-50 px-3 py-2 text-xs font-extrabold text-gray-600">
+              נשמר בתחילת המבדק
+            </span>
+          </div>
+          <dl className="grid grid-cols-2 gap-4 text-right sm:grid-cols-3 lg:grid-cols-6">
+            {deviceContextDetails.map((detail) => (
+              <div key={detail.label} className="min-w-0 rounded-xl bg-gray-50 p-3">
+                <dt className="mb-1 text-xs font-bold text-gray-500">{detail.label}</dt>
+                <dd className="truncate text-sm font-extrabold text-black" title={detail.value}>{detail.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       {scoringBreakdown.length > 0 && (
         <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">

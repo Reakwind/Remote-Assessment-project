@@ -7,6 +7,7 @@ import type {
 
 interface StartSessionBody {
   token: string;
+  deviceContext?: unknown;
 }
 
 interface StartSessionRecord {
@@ -67,8 +68,9 @@ export async function handleStartSession(
     return json({ error: "Invalid JSON" }, 400);
   }
 
-  const token = body.token?.trim();
+  const token = typeof body.token === "string" ? body.token.trim() : "";
   if (!token) return json({ error: "Missing test number" }, 400);
+  const deviceContext = normalizeDeviceContext(body.deviceContext);
 
   const supabase = deps.createSupabaseClient();
   const fingerprint = await deps.buildStartAttemptFingerprint(req, token);
@@ -146,6 +148,7 @@ export async function handleStartSession(
         started_at: deps.now(),
         link_used_at: deps.now(),
         status: "in_progress",
+        device_context: deviceContext,
       })
       .eq("id", session.id)
       .eq("status", "pending")
@@ -170,7 +173,7 @@ export async function handleStartSession(
       eventType: "session_started",
       sessionId: session.id,
       actorType: "patient",
-      metadata: { mocaVersion: session.moca_version },
+      metadata: { mocaVersion: session.moca_version, deviceContext },
     });
   }
 
@@ -192,4 +195,59 @@ export async function handleStartSession(
     language: session.assessment_language,
     sessionDate: deps.now(),
   });
+}
+
+function normalizeDeviceContext(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const input = raw as Record<string, unknown>;
+  const normalized: Record<string, unknown> = {};
+
+  setString(normalized, "userAgent", input.userAgent, 300);
+  setString(normalized, "platform", input.platform, 80);
+  setString(normalized, "language", input.language, 32);
+  setString(normalized, "pointer", input.pointer, 16);
+  setString(normalized, "hover", input.hover, 16);
+  setStringArray(normalized, "languages", input.languages, 5, 32);
+  setInteger(normalized, "screenWidth", input.screenWidth, 10000);
+  setInteger(normalized, "screenHeight", input.screenHeight, 10000);
+  setInteger(normalized, "viewportWidth", input.viewportWidth, 10000);
+  setInteger(normalized, "viewportHeight", input.viewportHeight, 10000);
+  setInteger(normalized, "touchPoints", input.touchPoints, 20);
+  setNumber(normalized, "devicePixelRatio", input.devicePixelRatio, 10);
+  if (typeof input.standalone === "boolean") normalized.standalone = input.standalone;
+
+  return normalized;
+}
+
+function setString(target: Record<string, unknown>, key: string, value: unknown, maxLength: number) {
+  if (typeof value !== "string") return;
+  const trimmed = value.trim();
+  if (trimmed) target[key] = trimmed.slice(0, maxLength);
+}
+
+function setStringArray(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+  maxItems: number,
+  maxLength: number,
+) {
+  if (!Array.isArray(value)) return;
+  const items = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().slice(0, maxLength))
+    .filter(Boolean)
+    .slice(0, maxItems);
+  if (items.length > 0) target[key] = items;
+}
+
+function setInteger(target: Record<string, unknown>, key: string, value: unknown, max: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return;
+  const integer = Math.round(value);
+  if (integer >= 0 && integer <= max) target[key] = integer;
+}
+
+function setNumber(target: Record<string, unknown>, key: string, value: unknown, max: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return;
+  if (value >= 0 && value <= max) target[key] = Math.round(value * 100) / 100;
 }

@@ -1,6 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.1';
 import {
+  formatDeviceContextScreen,
+  formatDeviceContextSummary,
+  formatDeviceContextUserAgent,
+  formatDeviceContextViewport,
   formatDomainSummary,
   formatMaybeDate,
   formatScore,
@@ -90,15 +94,18 @@ Deno.serve(async (req) => {
   doc.text(`Education Years: ${session.education_years ?? 'N/A'}`, 20, 70);
   doc.text(`Completed Date: ${formatMaybeDate(reportDate)}`, 20, 80);
   doc.text(`Finalized Date: ${formatMaybeDate(normalizedReport?.finalizedAt)}`, 20, 90);
+  doc.text(`Patient Device: ${formatDeviceContextSummary(session.device_context)}`, 20, 100);
+  doc.text(`Viewport: ${formatDeviceContextViewport(session.device_context)} | Screen: ${formatDeviceContextScreen(session.device_context)}`, 20, 110);
+  doc.text(`User Agent: ${formatDeviceContextUserAgent(session.device_context).slice(0, 120)}`, 20, 120);
 
-  doc.text(`Total Raw: ${formatScore(normalizedReport?.totalRaw)}/30`, 20, 110);
-  doc.text(`Total Adjusted: ${formatScore(normalizedReport?.totalAdjusted)}/30`, 20, 120);
-  doc.text(`Norm Percentile: ${normalizedReport?.normPercentile ?? 'N/A'}%`, 20, 130);
-  doc.text(`Norm SD: ${normalizedReport?.normSd ?? 'N/A'}`, 20, 140);
-  doc.text(`Pending Review Count: ${normalizedReport?.pendingReviewCount ?? 'N/A'}`, 20, 150);
-  doc.text('Review Status: Finalized by clinician', 20, 160);
+  doc.text(`Total Raw: ${formatScore(normalizedReport?.totalRaw)}/30`, 20, 140);
+  doc.text(`Total Adjusted: ${formatScore(normalizedReport?.totalAdjusted)}/30`, 20, 150);
+  doc.text(`Norm Percentile: ${normalizedReport?.normPercentile ?? 'N/A'}%`, 20, 160);
+  doc.text(`Norm SD: ${normalizedReport?.normSd ?? 'N/A'}`, 20, 170);
+  doc.text(`Pending Review Count: ${normalizedReport?.pendingReviewCount ?? 'N/A'}`, 20, 180);
+  doc.text('Review Status: Finalized by clinician', 20, 190);
 
-  let y = 180;
+  let y = 210;
   doc.setFontSize(16);
   doc.text('Domain Scores', 20, y);
   y += 10;

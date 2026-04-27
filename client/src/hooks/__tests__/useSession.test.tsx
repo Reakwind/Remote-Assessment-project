@@ -55,7 +55,7 @@ describe('useSession', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('sends only the patient-facing test number to start-session', async () => {
+  it('sends the patient-facing test number and device context to start-session', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
@@ -77,7 +77,17 @@ describe('useSession', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ apikey: 'anon-key' }),
-        body: JSON.stringify({ token: '12345678' }),
+        body: expect.any(String),
+      }),
+    );
+    expect(JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string)).toEqual(
+      expect.objectContaining({
+        token: '12345678',
+        deviceContext: expect.objectContaining({
+          userAgent: expect.any(String),
+          viewportWidth: expect.any(Number),
+          viewportHeight: expect.any(Number),
+        }),
       }),
     );
   });

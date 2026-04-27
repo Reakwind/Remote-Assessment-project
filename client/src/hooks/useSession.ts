@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { edgeFn, edgeHeaders } from '../lib/supabase';
+import { buildDeviceContext } from '../lib/deviceContext';
 import type { ScoringContext } from '../types/scoring';
 
 export type SessionStatus =
@@ -60,7 +61,7 @@ export function useSession(
     fetch(edgeFn('start-session'), {
       method: 'POST',
       headers: edgeHeaders(),
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, deviceContext: buildDeviceContext() }),
     })
       .then(async (res) => {
         if (res.status === 410) {

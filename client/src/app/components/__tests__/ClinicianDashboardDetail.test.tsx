@@ -38,6 +38,17 @@ function sessionPayload(sessionOverrides: Record<string, unknown> = {}) {
       created_at: '2026-04-25T12:00:00.000Z',
       started_at: '2026-04-25T12:05:00.000Z',
       completed_at: '2026-04-25T12:25:00.000Z',
+      device_context: {
+        platform: 'iPad',
+        language: 'he-IL',
+        viewportWidth: 768,
+        viewportHeight: 1024,
+        screenWidth: 820,
+        screenHeight: 1180,
+        touchPoints: 5,
+        standalone: true,
+        pointer: 'coarse',
+      },
       patients: {
         id: 'patient-1',
         case_id: 'CASE-1',
@@ -180,6 +191,9 @@ describe('ClinicianDashboardDetail', () => {
 
     await screen.findByRole('heading', { name: 'תיק CASE-1' });
     expect(screen.getByText('CSV זמין גם לפני סיום סקירה ויכול לכלול נתונים זמניים.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'מכשיר המטופל' })).toBeInTheDocument();
+    expect(screen.getByText('PWA מותקן')).toBeInTheDocument();
+    expect(screen.getByText('768x1024')).toBeInTheDocument();
     expect(screen.getAllByText('שיום').length).toBeGreaterThan(0);
     expect(screen.getByText('2/3')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'פירוט ניקוד לפי פריט' })).toBeInTheDocument();
