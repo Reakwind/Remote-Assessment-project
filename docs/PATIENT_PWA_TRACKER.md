@@ -24,7 +24,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | PR #80 review | User | Not Started | PR #80 checks are green and the branch is reviewed before merge. | #80 |
 | PWA shell | Codex | Done | Patient manifest, icons, metadata, manual service worker, surface flags, route gating, staging banner, and offline screen pass targeted checks. | #80 |
 | Real device shell QA | User | Not Started | Installed PWA tested on iPad/tablet and phone fallback. | TBD |
-| Deploy split | Codex | Done | Patient and clinician builds emit separate output directories; patient subdomain deploy instructions exist; clinician stays on current host without patient PWA assets. | Pending PR |
+| Deploy split | Codex | Done | Patient and clinician builds emit separate output directories; patient subdomain deploy instructions exist; clinician stays on current host without patient PWA assets. | #82 |
 | Device context | Codex | Not Started | Session metadata captures concise device context and clinician detail/PDF/CSV display it. | TBD |
 | UX hardening: preflight + drawing | Codex | Not Started | Preflight and drawing tasks fit tablet/phone viewports and drawing is stable with finger/stylus. | TBD |
 | UX hardening: audio/speech tasks | Codex | Not Started | Generated Hebrew speech and audio capture work on tablet/phone viewports. | TBD |
