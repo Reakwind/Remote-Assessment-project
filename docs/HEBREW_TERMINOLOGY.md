@@ -28,6 +28,19 @@ This file is the canonical Hebrew UI terminology guide for the Pilot MVP. Use it
 
 Use `StatusPill` for status display instead of local status dictionaries.
 
+## Device Context Labels
+
+| Concept | Canonical Hebrew |
+|---|---|
+| Patient device | מכשיר המטופל |
+| Device type | סוג מכשיר |
+| Phone | טלפון |
+| Tablet | טאבלט |
+| Desktop computer | מחשב |
+| Orientation | כיוון |
+| Portrait | לאורך |
+| Landscape | לרוחב |
+
 ## Task Labels
 
 | Task | Patient label | Clinician label |

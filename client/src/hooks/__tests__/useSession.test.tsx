@@ -87,6 +87,8 @@ describe('useSession', () => {
           userAgent: expect.any(String),
           viewportWidth: expect.any(Number),
           viewportHeight: expect.any(Number),
+          formFactor: 'desktop',
+          orientation: 'landscape',
         }),
       }),
     );

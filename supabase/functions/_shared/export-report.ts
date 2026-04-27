@@ -25,6 +25,8 @@ export interface NormalizedDeviceContext {
   standalone: boolean | null;
   pointer: string | null;
   hover: string | null;
+  formFactor: string | null;
+  orientation: string | null;
   userAgent: string | null;
 }
 
@@ -116,6 +118,8 @@ export function normalizeDeviceContext(value: unknown): NormalizedDeviceContext 
     standalone: typeof row.standalone === 'boolean' ? row.standalone : null,
     pointer: stringOrNull(row.pointer),
     hover: stringOrNull(row.hover),
+    formFactor: stringOrNull(row.formFactor),
+    orientation: stringOrNull(row.orientation),
     userAgent: stringOrNull(row.userAgent),
   };
 }
@@ -124,6 +128,8 @@ export function formatDeviceContextSummary(value: unknown): string {
   const context = normalizeDeviceContext(value);
   const parts = [
     context.standalone === true ? 'PWA installed' : context.standalone === false ? 'Browser' : null,
+    formatFormFactor(context.formFactor),
+    formatOrientation(context.orientation),
     context.platform,
     context.pointer ? `Pointer ${context.pointer}` : null,
     context.touchPoints !== null ? `${context.touchPoints} touch points` : null,
@@ -182,6 +188,19 @@ function numberOrNull(value: unknown): number | null {
 
 function stringOrNull(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function formatFormFactor(value: string | null): string | null {
+  if (value === 'phone') return 'Phone';
+  if (value === 'tablet') return 'Tablet';
+  if (value === 'desktop') return 'Desktop';
+  return null;
+}
+
+function formatOrientation(value: string | null): string | null {
+  if (value === 'portrait') return 'Portrait';
+  if (value === 'landscape') return 'Landscape';
+  return null;
 }
 
 function formatSize(width: unknown, height: unknown): string {

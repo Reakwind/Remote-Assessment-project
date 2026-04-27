@@ -207,6 +207,15 @@ function normalizeDeviceContext(raw: unknown): Record<string, unknown> {
   setString(normalized, "language", input.language, 32);
   setString(normalized, "pointer", input.pointer, 16);
   setString(normalized, "hover", input.hover, 16);
+  setStringChoice(normalized, "formFactor", input.formFactor, [
+    "phone",
+    "tablet",
+    "desktop",
+  ]);
+  setStringChoice(normalized, "orientation", input.orientation, [
+    "portrait",
+    "landscape",
+  ]);
   setStringArray(normalized, "languages", input.languages, 5, 32);
   setInteger(normalized, "screenWidth", input.screenWidth, 10000);
   setInteger(normalized, "screenHeight", input.screenHeight, 10000);
@@ -223,6 +232,17 @@ function setString(target: Record<string, unknown>, key: string, value: unknown,
   if (typeof value !== "string") return;
   const trimmed = value.trim();
   if (trimmed) target[key] = trimmed.slice(0, maxLength);
+}
+
+function setStringChoice(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+  choices: readonly string[],
+) {
+  if (typeof value !== "string") return;
+  const trimmed = value.trim();
+  if (choices.includes(trimmed)) target[key] = trimmed;
 }
 
 function setStringArray(

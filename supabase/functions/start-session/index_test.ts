@@ -161,6 +161,8 @@ Deno.test("handleStartSession stores normalized patient device context on start"
           standalone: true,
           pointer: "coarse",
           hover: "none",
+          formFactor: "tablet",
+          orientation: "portrait",
           ignored: "not stored",
         },
       }),
@@ -191,6 +193,8 @@ Deno.test("handleStartSession stores normalized patient device context on start"
   assertEquals(deviceContext.viewportWidth, 768);
   assertEquals(deviceContext.devicePixelRatio, 2.22);
   assertEquals(deviceContext.standalone, true);
+  assertEquals(deviceContext.formFactor, "tablet");
+  assertEquals(deviceContext.orientation, "portrait");
   assertEquals(Array.isArray(deviceContext.languages), true);
   assertEquals((deviceContext.languages as string[]).length, 5);
   assertEquals(typeof deviceContext.ignored, "undefined");

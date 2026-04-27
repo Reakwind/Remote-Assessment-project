@@ -47,10 +47,19 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Clear local session evidence after successful completion.
 - Expire abandoned same-device resume state after 6 hours.
 - Preserve the local preflight-complete flag when session evidence is cleared, so returning local patients can start future tests at the first task.
+- Capture explicit device type and orientation at patient start so phone/tablet fallback use is visible in clinician detail, PDF, and CSV exports.
 - Show home-screen guidance on patient entry unless the PWA is already running in standalone mode.
 - Use `docs/PATIENT_PWA_PILOT_READINESS.md` for the final staging, licensed-stimuli, installed-PWA, and phone fallback gates before clinical pilot use.
 
 ## Latest Verification
+
+2026-04-27 Codex device-classification verification:
+
+- `cd client && npm test -- useSession ClinicianDashboardDetail`
+- `deno check --frozen supabase/functions/start-session/index.ts supabase/functions/get-session/index.ts supabase/functions/export-csv/index.ts supabase/functions/export-pdf/index.ts`
+- `deno test --allow-env --cached-only supabase/functions/_shared/export-report.test.ts supabase/functions/start-session/index_test.ts`
+- `cd client && npm run lint`
+- `cd client && npm run build -- --debug`
 
 2026-04-27 Codex onboarding-once verification:
 
