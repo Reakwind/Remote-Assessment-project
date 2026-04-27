@@ -37,6 +37,7 @@ Preferred MVP deployment:
 | Supabase backend | current Supabase project | Shared app contract, persistence, storage, auth, functions. |
 
 Both frontends may initially build from the same React app, but deployment config should make the surface boundary explicit.
+Use `docs/PATIENT_PWA_DEPLOYMENT.md` for the concrete build commands, output directories, host fallback rules, and cache headers.
 
 Minimum patient PWA route set:
 

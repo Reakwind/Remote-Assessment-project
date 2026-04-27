@@ -44,7 +44,7 @@ The product has two frontend surfaces:
 - Clinician website: authenticated dashboard for case/session management, review, scoring, finalization, and exports.
 - Patient PWA: tablet/phone-first assessment app for test-number start, system check, drawing/audio/task evidence, autosave, and completion.
 
-Read `docs/PATIENT_PWA_ARCHITECTURE.md` before changing patient routes, installability, service-worker behavior, deployment targets, mobile/tablet layout, drawing UX, or cache policy.
+Read `docs/PATIENT_PWA_ARCHITECTURE.md` before changing patient routes, installability, service-worker behavior, deployment targets, mobile/tablet layout, drawing UX, or cache policy. Read `docs/PATIENT_PWA_DEPLOYMENT.md` before changing surface build scripts, deployment output directories, host fallback rules, or patient PWA cache headers.
 
 Rules:
 

@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import path from 'path';
+import { rm } from 'fs/promises';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -37,12 +38,37 @@ function patientPwaHead(surface: string) {
   };
 }
 
+function surfacePublicAssets(surface: string, outDir: string) {
+  const patientOnlyFiles = [
+    'patient.webmanifest',
+    'patient-sw.js',
+    'patient-icon.svg',
+    'patient-icon-192.png',
+    'patient-icon-512.png',
+  ];
+
+  return {
+    name: 'surface-public-assets',
+    async closeBundle() {
+      if (surface === 'patient') return;
+
+      await Promise.all(
+        patientOnlyFiles.map((filename) =>
+          rm(path.resolve(__dirname, outDir, filename), { force: true }),
+        ),
+      );
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const surface = env.VITE_APP_SURFACE ?? 'combined';
+  const outDir = env.VITE_BUILD_OUT_DIR ?? 'dist';
 
   return {
     build: {
+      outDir,
       rolldownOptions: {
         output: {
           manualChunks(id) {
@@ -60,6 +86,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       patientPwaHead(surface),
+      surfacePublicAssets(surface, outDir),
       tailwindcss(),
       figmaAssetResolver(),
       react(),
