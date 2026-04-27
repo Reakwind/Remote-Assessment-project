@@ -1,12 +1,19 @@
 import { Link, useNavigate } from "react-router";
-import { Lock, ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { Lock, ArrowLeft, Smartphone } from "lucide-react";
+import { useEffect, useState } from "react";
 import { getAssessmentResumePath, useAssessmentStore } from "../store/AssessmentContext";
 import { isPatientSurface } from "../surface";
+
+function isStandalonePwa() {
+  if (typeof window === "undefined") return false;
+  const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia?.("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true;
+}
 
 export function LandingHub() {
   const navigate = useNavigate();
   const [token, setToken] = useState("");
+  const [isStandalone, setIsStandalone] = useState(() => isPatientSurface && isStandalonePwa());
   const { hasInProgressAssessment, state } = useAssessmentStore();
   const normalizedToken = token.replace(/\D/g, "");
   const formattedToken = normalizedToken.length > 4
@@ -26,6 +33,17 @@ export function LandingHub() {
   const handleResume = () => {
     navigate(getAssessmentResumePath(state.lastPath));
   };
+
+  useEffect(() => {
+    if (!isPatientSurface) return;
+
+    const displayModeQuery = window.matchMedia?.("(display-mode: standalone)");
+    if (!displayModeQuery) return;
+
+    const handleDisplayModeChange = () => setIsStandalone(isStandalonePwa());
+    displayModeQuery.addEventListener("change", handleDisplayModeChange);
+    return () => displayModeQuery.removeEventListener("change", handleDisplayModeChange);
+  }, []);
 
   return (
     <div
@@ -115,6 +133,26 @@ export function LandingHub() {
               >
                 המשך מהמקום שעצרת
               </button>
+            </div>
+          )}
+
+          {isPatientSurface && (
+            <div className="mx-auto mt-3 max-w-md rounded-2xl border border-gray-200 bg-gray-50 p-3 text-right">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-gray-900 ring-1 ring-gray-200">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-extrabold text-gray-950">
+                    {isStandalone ? "נפתח ממסך הבית" : "מומלץ לפתוח ממסך הבית"}
+                  </p>
+                  <p className="mt-1 text-xs font-medium leading-relaxed text-gray-700">
+                    {isStandalone
+                      ? "המשך את כל המבדק באותה אפליקציה מותקנת."
+                      : "ב-iPad או בטלפון, הוסף את האפליקציה למסך הבית לפני התחלת המבדק."}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

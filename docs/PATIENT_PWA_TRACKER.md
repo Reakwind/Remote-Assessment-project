@@ -23,6 +23,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | PR #80 baseline | Codex | Done | Tracker exists and is linked from architecture docs. | #80 |
 | PR #80 review | User | Not Started | PR #80 checks are green and the branch is reviewed before merge. | #80 |
 | PWA shell | Codex | Done | Patient manifest, icons, metadata, manual service worker, surface flags, route gating, staging banner, and offline screen pass targeted checks. | #80 |
+| Install guidance | Codex | Done | Patient surface gives tablet/phone home-screen guidance without exposing clinician navigation. | `codex/patient-install-guidance` |
 | Real device shell QA | User | Not Started | Installed PWA tested on iPad/tablet and phone fallback. | TBD |
 | Deploy split | Codex | Done | Patient and clinician builds emit separate output directories; patient subdomain deploy instructions exist; clinician stays on current host without patient PWA assets. | `codex/patient-pwa-deploy-split-current` |
 | Device context | Codex | Done | Session metadata captures concise device context and clinician detail/PDF/CSV display it. | `codex/patient-device-context` |
@@ -45,9 +46,18 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Use generated Hebrew speech for memory words; do not require licensed memory MP3 files.
 - Clear local session evidence after successful completion.
 - Expire abandoned same-device resume state after 6 hours.
+- Show home-screen guidance on patient entry unless the PWA is already running in standalone mode.
 - Use `docs/PATIENT_PWA_PILOT_READINESS.md` for the final staging, licensed-stimuli, installed-PWA, and phone fallback gates before clinical pilot use.
 
 ## Latest Verification
+
+2026-04-27 Codex install-guidance verification:
+
+- `cd client && npm test -- PatientResume`
+- `cd client && npm run build:patient`
+- `cd client && npm run e2e:patient-pwa` against `npm run preview:patient -- --host 127.0.0.1 --port 4173`
+- `cd client && npm run lint`
+- `cd client && npm run build -- --debug`
 
 2026-04-27 Codex pilot-readiness verification:
 

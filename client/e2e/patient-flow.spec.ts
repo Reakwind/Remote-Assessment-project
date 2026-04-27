@@ -20,6 +20,7 @@ test.describe('patient PWA deploy preview', () => {
 
     await expect(page).toHaveTitle('Remote Assessment');
     await expect(page.getByRole('heading', { name: 'הערכה קוגניטיבית' })).toBeVisible();
+    await expect(page.getByText('מומלץ לפתוח ממסך הבית')).toBeVisible();
 
     const manifest = await page.request.get('/patient.webmanifest');
     expect(manifest.ok()).toBe(true);
