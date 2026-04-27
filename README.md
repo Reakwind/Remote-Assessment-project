@@ -11,15 +11,17 @@ Read these first:
 1. [README.md](README.md)
 2. [AGENTS.md](AGENTS.md)
 3. [JOURNEY.md](JOURNEY.md)
-4. [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md)
-5. [CONTEXT.md](CONTEXT.md)
-6. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
-7. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
-8. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-9. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-10. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+4. [docs/PATIENT_PWA_ARCHITECTURE.md](docs/PATIENT_PWA_ARCHITECTURE.md)
+5. [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md)
+6. [CONTEXT.md](CONTEXT.md)
+7. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
+8. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
+9. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
+10. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
+11. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
 
 `JOURNEY.md` is the bird's-eye patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
+`docs/PATIENT_PWA_ARCHITECTURE.md` is the patient/clinician surface authority. The selected direction is clinician website plus tablet/phone-first patient PWA.
 `docs/HEBREW_TERMINOLOGY.md` is the Hebrew UI terminology authority. Use it before changing patient or clinician copy.
 `docs/DEVELOPMENT_PROCESS.md` defines the provider-neutral development workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
 `docs/AGENT_LEARNINGS.md` captures durable lessons from recent PRs and reviews so future agents can inherit them directly from the repo.
@@ -46,6 +48,7 @@ Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full deve
 
 ## MVP Scope
 
+- Clinician work is a website; patient work is a tablet/phone-first PWA. Do not design the patient journey as a desktop website.
 - Clinician login, clinical case creation, session creation, dashboard list/detail, drawing/manual review, finalization.
 - Clinician auth uses email/password for MVP.
 - Patient session start by generated test number, Hebrew MoCA flow, retryable autosave, completion.
@@ -92,6 +95,7 @@ Full browser/Supabase E2E is a required local pre-merge check for backend, sessi
 - `supabase/` - active migrations and Edge Functions.
 - `scripts/` - local automation and E2E verification.
 - `JOURNEY.md` - patient/clinician browser + backend journey playbook.
+- `docs/PATIENT_PWA_ARCHITECTURE.md` - clinician website + patient PWA deployment and UX boundary.
 - `docs/AGENT_LEARNINGS.md` - durable lessons from repeated fixes, review findings, and verification gaps.
 - `docs/DEVELOPMENT_PROCESS.md` - branch, PR, verification, and provider-neutral backend process.
 - `docs/LOCAL_E2E_VERIFICATION.md` - local end-to-end test instructions.

@@ -17,7 +17,7 @@ This project uses Supabase as the current MVP runtime. The product architecture 
 
 Build features as complete vertical slices:
 
-- Browser journey: clinician or patient screens, states, errors, and copy.
+- Surface journey: clinician website or patient PWA screens, states, errors, and copy.
 - App contract: request/response shapes, validation, status transitions, and permissions.
 - Persistence: records, storage paths, audit events, and retryable outcomes.
 - Review/scoring: deterministic scoring, manual review state, and finalization rules.
@@ -36,6 +36,23 @@ Use Supabase directly where MVP speed matters, and keep usage behind stable app 
 - Notifications: email/SMS/transcription providers sit behind swappable service functions.
 
 Client code should depend on app concepts rather than database details. Shared scoring, validation, task mapping, and report logic should remain provider-independent whenever practical.
+
+## Surface Boundaries
+
+The product has two frontend surfaces:
+
+- Clinician website: authenticated dashboard for case/session management, review, scoring, finalization, and exports.
+- Patient PWA: tablet/phone-first assessment app for test-number start, system check, drawing/audio/task evidence, autosave, and completion.
+
+Read `docs/PATIENT_PWA_ARCHITECTURE.md` before changing patient routes, installability, service-worker behavior, deployment targets, mobile/tablet layout, drawing UX, or cache policy.
+
+Rules:
+
+- Do not redesign patient tasks as desktop website pages.
+- Do not expose clinician navigation inside the installed patient PWA.
+- Keep PWA caching to static app-shell assets unless a later architecture decision explicitly approves more.
+- Keep patient PHI, task evidence, Supabase API responses, signed URLs, PDF exports, and CSV exports out of service-worker caches.
+- Verify patient changes in phone and tablet viewports, and in installed PWA/home-screen mode before clinical pilot.
 
 ## Verification Tiers
 

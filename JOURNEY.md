@@ -6,6 +6,7 @@ Use this as the compact journey authority. Keep detailed UI, database, and imple
 
 ## MVP Guardrails
 
+- Clinician work is a website; patient work is a tablet/phone-first PWA. Use `docs/PATIENT_PWA_ARCHITECTURE.md` before changing patient surfaces, deployment, installability, or PWA caching.
 - Use a pseudonymous case ID instead of patient names or national IDs.
 - Require the clinical background fields needed for interpretation before ordering a test: phone, date of birth, gender, language, dominant hand, and education years.
 - Use clinician email/password auth for MVP.
@@ -22,10 +23,18 @@ Use this as the compact journey authority. Keep detailed UI, database, and imple
 
 | Actor | Role in journey | Browser/backend access |
 |---|---|---|
-| Clinician | Creates sessions, reviews evidence, enters manual scores, finalizes report. | Authenticated dashboard and clinician-only Edge Functions. |
-| Patient | Enters test number, completes tasks, submits raw evidence, sees completion only. | Test-number start route, then token-scoped patient Edge Functions. |
+| Clinician | Creates sessions, reviews evidence, enters manual scores, finalizes report. | Authenticated website dashboard and clinician-only Edge Functions. |
+| Patient | Enters test number, completes tasks, submits raw evidence, sees completion only. | Tablet/phone-first patient PWA, test-number start route, then token-scoped patient Edge Functions. |
 | System/backend | Validates tokens, persists raw data, scores deterministic items, prepares review rows, sends completion email, records notification outcomes, audits events. | Supabase Postgres, Storage, Auth, Edge Functions. |
 | Offline support contact | May help with device basics outside the app. | Offline contact only; the app journey is clinician and patient. |
+
+## Surface Model
+
+| Surface | Current target | Journey rule |
+|---|---|---|
+| Clinician website | Authenticated web dashboard for case creation, review, scoring, finalization, and export. | Optimize for information-dense clinician work. Do not make this a patient PWA surface. |
+| Patient PWA | Installable tablet/phone-first app for test-number entry, system check, tasks, drawing/audio evidence, autosave, and completion. | Optimize for focused touch/stylus assessment. Do not treat this as a desktop website. |
+| Shared backend | Supabase app contract for both surfaces during MVP. | Keep contracts explicit and do not duplicate clinical logic across surfaces. |
 
 ## Lifecycle
 
@@ -99,6 +108,7 @@ Patient test-number starts also write hashed attempt records for operational rat
 | Clinician auth | Email/password Supabase Auth gates the dashboard; old `/clinician/2fa` links redirect out of the removed MFA screen. | Clinician email/password login with backend JWT checks. | MFA, SSO, device policy, and other security hardening are future milestones. |
 | Session creation | Case profile requires birth date, gender, language, dominant hand, phone, and education before test ordering. Test creation stores assessment, language, version, calculated exact age/age band, internal session token, and generated patient test number. | Same, with standardized scoring using the session snapshot from the case profile. | Current target. |
 | Patient start | One-time 8-digit test number moves session to `in_progress`; repeated failed starts are rate-limited and audited with hashed fingerprints. Same-device resume is explicit from the home-page continue button. New local users see welcome/system-check; returning local users start at the first task. | Same, with stale local state filtered out of resume controls. | Resume copy and refresh recovery can be refined. |
+| Patient PWA delivery | Patient flow currently runs in the web app and is being moved toward a separate installable tablet/phone PWA deployment. | Separate patient PWA deployment from the clinician website, with static app-shell caching only and no cached clinical evidence/API responses. | Manifest, service worker, deploy split, installed-mode QA, and tablet-first task hardening remain to be implemented. |
 | Stimulus delivery | `get-stimuli` returns versioned private Storage paths and signed URLs when licensed assets are uploaded. Patient UI uses explicit development placeholders when assets are missing. | Licensed MoCA assets are uploaded to private Storage by version and task before clinical use, then validated with `scripts/verify-stimuli.mjs`. | Production asset validation should be part of release readiness. |
 | Task persistence | Per-task submit, skipped-task review payloads, drawings, audio evidence, and local retry queue for failed patient saves. | Reliable autosave for every task; refresh preserves saved progress in normal use and completion waits for queued evidence to sync. | Cross-device resume and long-term offline reconciliation are future hardening. |
 | Drawing review | Clinician dashboard reads stored drawing/audio evidence, signed URLs, and review rows from `get-session`; score updates persist through review functions. | Clinician rubric scoring from stored evidence. | Rubric UX can be refined for clinical ergonomics. |
@@ -153,3 +163,4 @@ Patient test-number starts also write hashed attempt records for operational rat
 - 2026-04-26: Education years remain clinical context for norm lookup, but MoCA totals no longer receive an added education bonus point.
 - 2026-04-26: Clinician session detail shows item-level score breakdown from `scoring_reports.domains`, including safe patient answer evidence for deterministic naming items.
 - 2026-04-26: Patient task, drawing, and audio evidence saves use a same-device retry queue. The patient can retry failed saves, queued saves resume after refresh/online events, and completion waits for queued evidence before finalizing.
+- 2026-04-27: Product direction changed to a split surface model: clinician remains a website, while patient assessment becomes a separate tablet/phone-first PWA deployment from the same repo and shared Supabase backend.
