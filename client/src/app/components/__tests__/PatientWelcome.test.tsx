@@ -117,6 +117,7 @@ describe('PatientWelcome', () => {
     const router = renderWelcome();
 
     expect(screen.getByRole('button', { name: /התחלת המבדק/ })).toBeDisabled();
+    expect(screen.getByText(/בטלפון מומלץ לסובב לרוחב לפני הציור/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /בדיקת שמע בעברית/ }));
     await waitFor(() => expect(screen.getByText('השמעת ההוראות בעברית עובדת.')).toBeInTheDocument());

@@ -26,7 +26,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | Real device shell QA | User | Not Started | Installed PWA tested on iPad/tablet and phone fallback. | TBD |
 | Deploy split | Codex | Not Started | Patient subdomain build/deploy instructions exist; clinician stays on current host. | TBD |
 | Device context | Codex | Not Started | Session metadata captures concise device context and clinician detail/PDF/CSV display it. | TBD |
-| UX hardening: preflight + drawing | Codex | Not Started | Preflight and drawing tasks fit tablet/phone viewports and drawing is stable with finger/stylus. | TBD |
+| UX hardening: preflight + drawing | Codex | Done | Preflight and drawing tasks fit tablet/phone viewports and drawing is stable with finger/stylus. | `codex/patient-tablet-drawing` |
 | UX hardening: audio/speech tasks | Codex | Not Started | Generated Hebrew speech and audio capture work on tablet/phone viewports. | TBD |
 | UX hardening: simple input tasks | Codex | Not Started | Remaining patient tasks fit main action and guarded navigation without desktop-web assumptions. | TBD |
 | Pilot readiness | Both | Not Started | Shared staging, all enabled licensed visual stimuli, iPad/tablet install, and phone fallback checks pass. | TBD |
@@ -46,6 +46,15 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Expire abandoned same-device resume state after 6 hours.
 
 ## Latest Verification
+
+2026-04-27 Codex preflight + drawing verification:
+
+- `cd client && npm test`
+- `cd client && npm run lint`
+- `cd client && npm run build`
+- Patient-surface browser smoke with `npm run dev:patient -- --host 127.0.0.1`
+- Phone viewport checks at 390x844 for `/patient/welcome`, `/patient/trail-making`, and `/patient/clock`
+- Tablet landscape viewport checks at 1024x768 for `/patient/cube` and `/patient/clock`
 
 2026-04-27 Codex shell verification:
 

@@ -23,12 +23,12 @@ export function TrailMakingTask() {
 
   return (
     <div className="flex flex-col h-full max-w-5xl mx-auto w-full min-w-0">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start mb-6 sm:mb-10">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <div className="text-gray-500 font-bold uppercase tracking-wider text-xs sm:text-sm mb-2 sm:mb-3">
             1. חיבור נקודות
           </div>
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-black leading-tight">
+          <h2 className="text-2xl font-extrabold leading-tight text-black sm:text-3xl">
             מתח קו בין מספר לאות בסדר עולה
           </h2>
           <p className="text-gray-600 font-medium mt-2 text-base sm:text-xl leading-relaxed">
@@ -38,7 +38,7 @@ export function TrailMakingTask() {
         <ListenButton text="מתח קו בין מספר לאות בסדר עולה. התחל בספרה אחת, עבור לאות א, אחר כך לספרה שתיים, לאות ב וכן הלאה. סיים בנקודת הסיום." size="lg" />
       </div>
 
-      <div className="bg-gray-50 p-3 sm:p-6 rounded-2xl border border-gray-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden min-w-0">
+      <div className="relative flex min-w-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-gray-50 p-3 sm:rounded-2xl sm:p-6">
         {!isLoading && !trailTemplate?.signedUrl && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
             <div className="flex w-full max-w-[600px] flex-col items-center gap-4 opacity-70 px-3">
@@ -51,8 +51,8 @@ export function TrailMakingTask() {
         )}
 
         <BaseCanvas 
-          width={760}
-          height={520}
+          width={660}
+          height={400}
           backgroundImageUrl={trailTemplate?.signedUrl}
           backgroundPadding={24}
           initialStrokes={savedData.strokes}

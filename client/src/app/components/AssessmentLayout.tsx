@@ -215,9 +215,9 @@ export function AssessmentLayout() {
 
   return (
     <StimuliManifestProvider>
-      <div dir="rtl" className="min-h-screen flex flex-col bg-white text-black font-['Heebo',sans-serif]">
+      <div dir="rtl" className="flex min-h-[100dvh] flex-col overflow-x-hidden bg-white text-black font-['Heebo',sans-serif]">
       {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10 lg:py-5 border-b border-gray-200 bg-white z-10">
+      <header className="z-10 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:gap-4 sm:px-6 lg:px-10">
         <div className="flex min-w-0 items-center gap-3">
           <div className="w-10 h-10 shrink-0 bg-black rounded-lg flex items-center justify-center text-white font-bold text-xl">
             RC
@@ -248,17 +248,20 @@ export function AssessmentLayout() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-[1100px] mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-12 flex flex-col min-w-0">
+      <main className="mx-auto flex w-full max-w-[1100px] min-w-0 flex-1 flex-col px-3 py-4 sm:px-6 sm:py-6 lg:px-10 lg:py-6">
         <Outlet />
       </main>
 
       {/* Footer */}
       {!isEndScreen && (
         <>
-        <footer className="bg-white border-t border-gray-200 px-4 py-4 sm:px-6 lg:px-10 lg:py-5 flex flex-wrap items-center justify-between gap-3">
+        <footer
+          className="sticky bottom-0 z-20 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-4 shadow-[0_-8px_20px_rgba(15,23,42,0.04)] sm:px-6 lg:px-10 lg:py-5"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
           <button
             onClick={() => navigate(currentStepConfig.prev)}
-            className="flex items-center justify-center gap-2 min-h-14 sm:min-h-[80px] px-4 sm:px-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-black font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
+            className="flex items-center justify-center gap-2 min-h-14 sm:min-h-16 px-4 sm:px-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-black font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
           >
             <ArrowRight className="w-6 h-6" />
             <span>חזרה</span>
@@ -307,7 +310,7 @@ export function AssessmentLayout() {
               onClick={handleNext}
               aria-disabled={!canContinue}
               aria-describedby={continueStateId}
-              className="flex items-center justify-center gap-2 min-h-14 sm:min-h-[80px] px-5 sm:px-10 rounded-lg bg-black hover:bg-gray-900 text-white font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
+              className="flex items-center justify-center gap-2 min-h-14 sm:min-h-16 px-5 sm:px-10 rounded-lg bg-black hover:bg-gray-900 text-white font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
             >
               {currentSaveStatus?.status === "saving" ? (
                 <>

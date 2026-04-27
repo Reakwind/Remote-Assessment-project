@@ -1,16 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef, useEffect, useState } from "react";
 import { clsx } from "clsx";
+import { RotateCcw, Trash2 } from "lucide-react";
 import { isPatientSurface } from "../surface";
+
+const EMPTY_STROKES: any[][] = [];
 
 export function BaseCanvas({ 
   width = 800, 
   height = 500, 
   onDrawChange,
   onSave,
-  initialStrokes = [],
+  initialStrokes = EMPTY_STROKES,
   backgroundImageUrl,
   backgroundPadding = 0,
+  showStylusOnlyToggle = false,
 }: { 
   width?: number; 
   height?: number;
@@ -19,10 +23,12 @@ export function BaseCanvas({
   initialStrokes?: any[][];
   backgroundImageUrl?: string | null;
   backgroundPadding?: number;
+  showStylusOnlyToggle?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
   const [strokes, setStrokes] = useState<any[][]>(initialStrokes);
+  const strokesRef = useRef<any[][]>(initialStrokes);
   const currentStrokeRef = useRef<any[]>([]);
   const [stylusOnly, setStylusOnly] = useState(false);
 
@@ -69,6 +75,7 @@ export function BaseCanvas({
   }, [width, height, initialStrokes, backgroundImageUrl, backgroundPadding]);
 
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
     if (stylusOnly && e.pointerType === "touch") return;
     
     const canvas = canvasRef.current;
@@ -76,8 +83,11 @@ export function BaseCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Use setPointerCapture to ensure dragging outside canvas continues drawing
-    canvas.setPointerCapture(e.pointerId);
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      // Some test/browser contexts can reject capture; drawing still works in-canvas.
+    }
 
     const point = getLogicalPoint(e);
     if (!point) return;
@@ -92,39 +102,44 @@ export function BaseCanvas({
   };
 
   const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
     if (!isDrawingRef.current) return;
     if (stylusOnly && e.pointerType === "touch") return;
 
-    // Use requestAnimationFrame to optimize heavy drawing events
+    const point = getLogicalPoint(e);
+    if (!point) return;
+    const { x, y } = point;
+    const newPoint = { x, y, time: Date.now(), pressure: e.pressure || 0.5, pointerType: e.pointerType };
+
     requestAnimationFrame(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const point = getLogicalPoint(e);
-      if (!point) return;
-      const { x, y } = point;
-
       ctx.lineTo(x, y);
       ctx.stroke();
-      
-      const newPoint = { x, y, time: Date.now(), pressure: e.pressure || 0.5, pointerType: e.pointerType };
       currentStrokeRef.current.push(newPoint);
     });
   };
 
   const stopDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
     
     const canvas = canvasRef.current;
     if (canvas) {
-      canvas.releasePointerCapture(e.pointerId);
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch {
+        // Pointer capture may already be gone after cancellation/lost capture.
+      }
     }
     
     if (currentStrokeRef.current.length > 0) {
-      const newStrokes = [...strokes, currentStrokeRef.current];
+      const newStrokes = [...strokesRef.current, currentStrokeRef.current];
+      strokesRef.current = newStrokes;
       setStrokes(newStrokes);
       if (onDrawChange) onDrawChange(newStrokes);
       if (onSave && canvas) onSave(canvas.toDataURL(), newStrokes);
@@ -143,6 +158,7 @@ export function BaseCanvas({
     redrawCanvas(ctx, width, height, [], backgroundImageUrl, backgroundPadding).catch((error) => {
       console.error("Failed to clear canvas background:", error);
     });
+    strokesRef.current = [];
     setStrokes([]);
     if (onDrawChange) onDrawChange([]);
     if (onSave) onSave("", []);
@@ -151,7 +167,8 @@ export function BaseCanvas({
   const handleUndo = () => {
     if (strokes.length === 0) return;
     
-    const newStrokes = strokes.slice(0, -1);
+    const newStrokes = strokesRef.current.slice(0, -1);
+    strokesRef.current = newStrokes;
     setStrokes(newStrokes);
     if (onDrawChange) onDrawChange(newStrokes);
     
@@ -170,12 +187,12 @@ export function BaseCanvas({
   return (
     <div className="flex flex-col items-center gap-4 w-full min-w-0">
       {isPatientSurface && (
-        <div className="w-full rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-right text-sm font-bold text-blue-950 md:hidden">
+        <div className="w-full rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-right text-sm font-bold leading-relaxed text-blue-950 md:hidden">
           אם אתה משתמש בטלפון, מומלץ לסובב את המכשיר לרוחב לפני הציור.
         </div>
       )}
 
-      {!isPatientSurface && (
+      {showStylusOnlyToggle && (
       <div className="flex justify-between items-center w-full px-1 sm:px-2">
         <div className="flex items-center gap-2">
           <input 
@@ -193,7 +210,7 @@ export function BaseCanvas({
       )}
 
       <div
-        className="relative w-full border-2 border-gray-200 rounded-xl overflow-hidden shadow-sm touch-none bg-white focus-within:ring-4 focus-within:ring-blue-600 focus-within:ring-opacity-50 transition-all"
+        className="relative w-full select-none overflow-hidden overscroll-contain rounded-xl border-2 border-gray-200 bg-white shadow-sm touch-none transition-all focus-within:ring-4 focus-within:ring-blue-600 focus-within:ring-opacity-50"
         style={{ maxWidth: `${width}px` }}
       >
         <canvas
@@ -202,12 +219,21 @@ export function BaseCanvas({
           role="img"
           aria-label="אזור לציור"
           tabIndex={0}
-          className="block w-full max-w-full outline-none"
-          style={{ aspectRatio: `${width} / ${height}`, height: "auto", cursor: "crosshair" }}
+          className="block w-full max-w-full outline-none touch-none"
+          style={{
+            aspectRatio: `${width} / ${height}`,
+            height: "auto",
+            cursor: "crosshair",
+            touchAction: "none",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+          }}
           onPointerDown={startDrawing}
           onPointerMove={draw}
           onPointerUp={stopDrawing}
-          onPointerOut={stopDrawing}
+          onPointerCancel={stopDrawing}
+          onLostPointerCapture={stopDrawing}
+          onContextMenu={(event) => event.preventDefault()}
         />
       </div>
       
@@ -222,7 +248,8 @@ export function BaseCanvas({
               : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50 active:bg-gray-100"
           )}
         >
-          בטל פעולה (Undo)
+          <RotateCcw className="h-5 w-5" />
+          <span>בטל פעולה</span>
         </button>
         <button 
           onClick={handleClear}
@@ -234,7 +261,8 @@ export function BaseCanvas({
               : "border-gray-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-200 active:bg-red-100"
           )}
         >
-          נקה הכל (Clear)
+          <Trash2 className="h-5 w-5" />
+          <span>נקה הכל</span>
         </button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BaseCanvas } from "../BaseCanvas";
 
@@ -66,6 +67,34 @@ describe("BaseCanvas", () => {
     expect(onDrawChange).toHaveBeenCalledWith([[expect.objectContaining({ x: 10, y: 20 })]]);
     expect(onSave).toHaveBeenCalledWith("data:image/png;base64,test", [
       [expect.objectContaining({ x: 10, y: 20 })],
+    ]);
+  });
+
+  it("keeps touch scrolling disabled on the drawing surface", () => {
+    mockCanvasContext();
+    render(<BaseCanvas />);
+
+    const canvas = screen.getByRole("img", { name: "אזור לציור" }) as HTMLCanvasElement;
+
+    expect(canvas).toHaveClass("touch-none");
+    expect(canvas).toHaveStyle({ touchAction: "none" });
+  });
+
+  it("saves the partial stroke when the pointer is cancelled", () => {
+    const onSave = vi.fn();
+    const onDrawChange = vi.fn();
+    mockCanvasContext();
+    render(<BaseCanvas onDrawChange={onDrawChange} onSave={onSave} />);
+
+    const canvas = screen.getByRole("img", { name: "אזור לציור" }) as HTMLCanvasElement;
+    mockCanvasElement(canvas);
+
+    fireEvent.pointerDown(canvas, { pointerId: 1, pointerType: "touch", clientX: 10, clientY: 20, pressure: 0.5 });
+    fireEvent.pointerCancel(canvas, { pointerId: 1, pointerType: "touch", clientX: 20, clientY: 30, pressure: 0.5 });
+
+    expect(onDrawChange).toHaveBeenCalledWith([[expect.objectContaining({ pointerType: "touch" })]]);
+    expect(onSave).toHaveBeenCalledWith("data:image/png;base64,test", [
+      [expect.objectContaining({ pointerType: "touch" })],
     ]);
   });
 

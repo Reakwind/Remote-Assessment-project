@@ -146,33 +146,33 @@ export function PatientWelcome() {
   return (
     <div
       dir="rtl"
-      className="min-h-screen bg-gray-50 flex flex-col font-['Heebo',sans-serif]"
+      className="flex min-h-[100dvh] flex-col bg-gray-50 font-['Heebo',sans-serif]"
     >
-      <div className="bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-black flex items-center gap-3">
-          <div className="w-10 h-10 bg-black text-white rounded-lg flex items-center justify-center text-sm">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:p-6">
+        <h1 className="flex items-center gap-3 text-xl font-bold text-black sm:text-2xl">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-black text-sm text-white">
             RC
           </div>
           הערכה קוגניטיבית
         </h1>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="max-w-2xl w-full bg-white rounded-3xl border border-gray-200 shadow-lg overflow-hidden">
-          <div className="p-10 border-b border-gray-100">
-            <h2 className="text-4xl font-extrabold text-black mb-6">
+      <div className="flex flex-1 flex-col items-stretch justify-start overflow-y-auto px-4 py-5 sm:items-center sm:justify-center sm:p-6">
+        <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg sm:rounded-3xl">
+          <div className="border-b border-gray-100 p-5 sm:p-10">
+            <h2 className="mb-4 text-2xl font-extrabold leading-tight text-black sm:mb-6 sm:text-4xl">
               ברוך הבא להערכה קוגניטיבית
             </h2>
-            <div className="space-y-4 text-2xl text-gray-700">
+            <div className="space-y-2 text-lg text-gray-700 sm:space-y-4 sm:text-2xl">
               <p>המבדק כולל 12 משימות קצרות.</p>
               <p>זמן משוער: 25-30 דקות.</p>
             </div>
             
-            <div className="mt-8 bg-blue-50 border border-blue-100 rounded-2xl p-6">
-              <h3 className="text-xl font-bold text-blue-900 mb-4 flex items-center gap-2">
+            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:mt-8 sm:p-6">
+              <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-blue-900 sm:mb-4 sm:text-xl">
                 לפני שמתחילים:
               </h3>
-              <ul className="space-y-3 text-lg text-blue-800">
+              <ul className="space-y-2 text-base leading-relaxed text-blue-800 sm:space-y-3 sm:text-lg">
                 <li>• מצא מקום שקט ללא הסחות דעת</li>
                 <li>• ניתן להשתמש באצבע או בעט מגע כדי לצייר</li>
                 <li>• הקשב להוראות בקפידה בכל משימה</li>
@@ -181,38 +181,38 @@ export function PatientWelcome() {
             </div>
           </div>
 
-          <div className="p-10 bg-gray-50">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">
+          <div className="bg-gray-50 p-5 sm:p-10">
+            <h3 className="mb-4 text-lg font-bold text-gray-900 sm:mb-6 sm:text-xl">
               בדיקת מערכת:
             </h3>
             
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-200">
-                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-6 h-6" />
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex min-h-16 items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600 sm:h-12 sm:w-12">
+                  <CheckCircle2 className="h-6 w-6" />
                 </div>
-                <div className="text-lg font-medium text-black">חיבור לאינטרנט</div>
+                <div className="text-base font-medium text-black sm:text-lg">חיבור לאינטרנט</div>
               </div>
 
               <button
                 onClick={handleAudioTest}
                 disabled={!canRunAudioTest || audioCheck === "checking"}
                 className={clsx(
-                  "w-full flex items-center gap-4 bg-white p-4 rounded-xl border text-right transition-all",
+                  "flex min-h-20 w-full items-center gap-3 rounded-xl border bg-white p-4 text-right transition-all sm:gap-4",
                   canRunAudioTest ? "border-gray-200 hover:border-blue-400 hover:shadow-md" : "border-amber-200 bg-amber-50 cursor-not-allowed",
                 )}
               >
                 <div className={clsx(
-                  "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full sm:h-12 sm:w-12",
                   audioCheck === "success" ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600",
                 )}>
-                  {audioCheck === "success" ? <CheckCircle2 className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                  {audioCheck === "success" ? <CheckCircle2 className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
                 </div>
                 <div className="flex-1">
-                  <div className="text-lg font-medium text-black">
+                  <div className="text-base font-medium text-black sm:text-lg">
                     {audioCheck === "checking" ? "משמיע בדיקת שמע..." : "בדיקת שמע בעברית"}
                   </div>
-                  <div className="text-sm font-medium text-gray-600">
+                  <div className="text-sm font-medium leading-relaxed text-gray-600">
                     {voiceState === "checking" && "בודק זמינות קול עברי בדפדפן."}
                     {voiceState === "ready" && (audioMessage ?? "לחץ כדי לוודא שההוראות נשמעות בעברית.")}
                     {voiceState === "missing" && "לא נמצא קול עברי בדפדפן זה."}
@@ -224,28 +224,28 @@ export function PatientWelcome() {
               <button
                 onClick={handleMicTest}
                 disabled={micCheck === "checking"}
-                className="w-full flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-right"
+                className="flex min-h-20 w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-right transition-all hover:border-blue-400 hover:shadow-md sm:gap-4"
               >
                 <div className={clsx(
-                  "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full sm:h-12 sm:w-12",
                   micCheck === "success" ? "bg-green-100 text-green-600" : "bg-purple-100 text-purple-600",
                 )}>
-                  {micCheck === "success" ? <CheckCircle2 className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                  {micCheck === "success" ? <CheckCircle2 className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
                 </div>
-                <div className="text-lg font-medium text-black flex-1">
+                <div className="flex-1 text-base font-medium text-black sm:text-lg">
                   <div>{micCheck === "checking" ? "בודק מיקרופון..." : "בדיקת מיקרופון"}</div>
-                  <div className="text-sm font-medium text-gray-600">
+                  <div className="text-sm font-medium leading-relaxed text-gray-600">
                     {micMessage ?? "לחץ כדי לאשר שהמיקרופון זמין להקלטת תשובות."}
                   </div>
                 </div>
               </button>
 
-              <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-200">
-                <div className="w-12 h-12 bg-gray-100 text-gray-700 rounded-full flex items-center justify-center shrink-0">
-                  <PenTool className="w-6 h-6" />
+              <div className="flex min-h-16 items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 sm:h-12 sm:w-12">
+                  <PenTool className="h-6 w-6" />
                 </div>
-                <div className="text-lg font-medium text-black flex-1">
-                  המשימה הראשונה תהיה משימת ציור לבדיקת העכבר/מגע
+                <div className="flex-1 text-base font-medium leading-relaxed text-black sm:text-lg">
+                  המשימה הראשונה היא משימת ציור. בטלפון מומלץ לסובב לרוחב לפני הציור.
                 </div>
               </div>
             </div>
@@ -279,12 +279,12 @@ export function PatientWelcome() {
                 }}
                 disabled={!canStart}
                 className={clsx(
-                  "w-full h-20 text-white text-2xl font-bold rounded-2xl focus:ring-4 focus:ring-black/20 transition-all flex items-center justify-center gap-4",
+                  "flex min-h-16 w-full items-center justify-center gap-3 rounded-2xl text-xl font-bold text-white transition-all focus:ring-4 focus:ring-black/20 sm:h-20 sm:gap-4 sm:text-2xl",
                   canStart ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed",
                 )}
               >
                 התחלת המבדק
-                <ArrowLeft className="w-8 h-8" />
+                <ArrowLeft className="h-7 w-7 sm:h-8 sm:w-8" />
               </button>
             </div>
           </div>
