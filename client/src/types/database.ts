@@ -25,6 +25,7 @@ export interface Session {
   created_at: string;
   started_at?: string | null;
   completed_at: string | null;
+  device_context?: Record<string, unknown> | null;
 }
 
 export interface TaskResult {

@@ -16,6 +16,18 @@ export interface ExportSessionRow {
   status?: string | null;
 }
 
+export interface NormalizedDeviceContext {
+  platform: string | null;
+  language: string | null;
+  viewport: string;
+  screen: string;
+  touchPoints: number | null;
+  standalone: boolean | null;
+  pointer: string | null;
+  hover: string | null;
+  userAgent: string | null;
+}
+
 export interface NormalizedExportReport {
   totalRaw: number | null;
   totalAdjusted: number | null;
@@ -91,6 +103,46 @@ export function formatDomainSummary(domains: NormalizedExportDomain[]): string {
     .join('; ');
 }
 
+export function normalizeDeviceContext(value: unknown): NormalizedDeviceContext {
+  const row = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return {
+    platform: stringOrNull(row.platform),
+    language: stringOrNull(row.language),
+    viewport: formatSize(row.viewportWidth, row.viewportHeight),
+    screen: formatSize(row.screenWidth, row.screenHeight),
+    touchPoints: numberOrNull(row.touchPoints),
+    standalone: typeof row.standalone === 'boolean' ? row.standalone : null,
+    pointer: stringOrNull(row.pointer),
+    hover: stringOrNull(row.hover),
+    userAgent: stringOrNull(row.userAgent),
+  };
+}
+
+export function formatDeviceContextSummary(value: unknown): string {
+  const context = normalizeDeviceContext(value);
+  const parts = [
+    context.standalone === true ? 'PWA installed' : context.standalone === false ? 'Browser' : null,
+    context.platform,
+    context.pointer ? `Pointer ${context.pointer}` : null,
+    context.touchPoints !== null ? `${context.touchPoints} touch points` : null,
+  ].filter((part): part is string => !!part);
+  return parts.length > 0 ? parts.join('; ') : 'N/A';
+}
+
+export function formatDeviceContextUserAgent(value: unknown): string {
+  return normalizeDeviceContext(value).userAgent ?? 'N/A';
+}
+
+export function formatDeviceContextViewport(value: unknown): string {
+  return normalizeDeviceContext(value).viewport;
+}
+
+export function formatDeviceContextScreen(value: unknown): string {
+  return normalizeDeviceContext(value).screen;
+}
+
 export function escapeCsvField(field: unknown): string {
   if (field === null || field === undefined) return '';
   let str = String(field);
@@ -126,6 +178,17 @@ function normalizeExportDomain(value: unknown): NormalizedExportDomain | null {
 
 function numberOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function formatSize(width: unknown, height: unknown): string {
+  const normalizedWidth = numberOrNull(width);
+  const normalizedHeight = numberOrNull(height);
+  if (normalizedWidth === null || normalizedHeight === null) return 'N/A';
+  return `${Math.round(normalizedWidth)}x${Math.round(normalizedHeight)}`;
 }
 
 function isPendingReviewItem(value: unknown): boolean {
