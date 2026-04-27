@@ -25,7 +25,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | PWA shell | Codex | Done | Patient manifest, icons, metadata, manual service worker, surface flags, route gating, staging banner, and offline screen pass targeted checks. | #80 |
 | Real device shell QA | User | Not Started | Installed PWA tested on iPad/tablet and phone fallback. | TBD |
 | Deploy split | Codex | Not Started | Patient subdomain build/deploy instructions exist; clinician stays on current host. | TBD |
-| Device context | Codex | Not Started | Session metadata captures concise device context and clinician detail/PDF/CSV display it. | TBD |
+| Device context | Codex | Done | Session metadata captures concise device context and clinician detail/PDF/CSV display it. | `codex/patient-device-context` |
 | UX hardening: preflight + drawing | Codex | Done | Preflight and drawing tasks fit tablet/phone viewports and drawing is stable with finger/stylus. | `codex/patient-tablet-drawing` |
 | UX hardening: audio/speech tasks | Codex | Not Started | Generated Hebrew speech and audio capture work on tablet/phone viewports. | TBD |
 | UX hardening: simple input tasks | Codex | Not Started | Remaining patient tasks fit main action and guarded navigation without desktop-web assumptions. | TBD |
@@ -55,6 +55,18 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Patient-surface browser smoke with `npm run dev:patient -- --host 127.0.0.1`
 - Phone viewport checks at 390x844 for `/patient/welcome`, `/patient/trail-making`, and `/patient/clock`
 - Tablet landscape viewport checks at 1024x768 for `/patient/cube` and `/patient/clock`
+
+2026-04-27 Codex device-context verification:
+
+- `cd client && npm test`
+- `cd client && npm run lint`
+- `cd client && npm run build -- --debug`
+- `deno check --frozen supabase/functions/start-session/index.ts supabase/functions/get-session/index.ts supabase/functions/export-csv/index.ts supabase/functions/export-pdf/index.ts`
+- `deno test --allow-env --cached-only supabase/functions/_shared/export-report.test.ts supabase/functions/start-session/index_test.ts`
+- `supabase migration up`
+- `supabase db lint`
+- `supabase functions serve create-session start-session get-stimuli submit-results save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null`
+- `node scripts/local-e2e.mjs --version 8.3`
 
 2026-04-27 Codex shell verification:
 

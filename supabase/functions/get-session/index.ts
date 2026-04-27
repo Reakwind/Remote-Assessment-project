@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
       created_at,
       started_at,
       completed_at,
+      device_context,
       moca_version,
       patients ( id, case_id, full_name, phone, date_of_birth, gender, language, dominant_hand, education_years ),
       task_results (*),

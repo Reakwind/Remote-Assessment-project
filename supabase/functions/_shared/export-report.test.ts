@@ -1,5 +1,9 @@
 import {
   escapeCsvField,
+  formatDeviceContextScreen,
+  formatDeviceContextSummary,
+  formatDeviceContextUserAgent,
+  formatDeviceContextViewport,
   formatDomainSummary,
   formatMaybeDate,
   getFinalizedExportBlockReason,
@@ -112,4 +116,26 @@ Deno.test('formatMaybeDate returns stable ISO date or N/A', () => {
   }
   if (formatMaybeDate('not-a-date') !== 'N/A') throw new Error('expected invalid dates to be hidden');
   if (formatMaybeDate(null) !== 'N/A') throw new Error('expected null date fallback');
+});
+
+Deno.test('device context export helpers format concise patient device details', () => {
+  const context = {
+    platform: 'iPad',
+    viewportWidth: 768,
+    viewportHeight: 1024,
+    screenWidth: 820,
+    screenHeight: 1180,
+    touchPoints: 5,
+    standalone: true,
+    pointer: 'coarse',
+    userAgent: 'Mobile Safari',
+  };
+
+  if (formatDeviceContextSummary(context) !== 'PWA installed; iPad; Pointer coarse; 5 touch points') {
+    throw new Error(`unexpected summary: ${formatDeviceContextSummary(context)}`);
+  }
+  if (formatDeviceContextViewport(context) !== '768x1024') throw new Error('expected viewport dimensions');
+  if (formatDeviceContextScreen(context) !== '820x1180') throw new Error('expected screen dimensions');
+  if (formatDeviceContextUserAgent(context) !== 'Mobile Safari') throw new Error('expected user agent');
+  if (formatDeviceContextSummary(null) !== 'N/A') throw new Error('expected empty context fallback');
 });

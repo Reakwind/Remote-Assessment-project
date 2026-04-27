@@ -1,6 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.104.0';
 import {
   escapeCsvField,
+  formatDeviceContextScreen,
+  formatDeviceContextSummary,
+  formatDeviceContextUserAgent,
+  formatDeviceContextViewport,
   formatDomainSummary,
   formatMaybeDate,
   formatScore,
@@ -55,6 +59,7 @@ Deno.serve(async (req) => {
       status,
       created_at,
       completed_at,
+      device_context,
       scoring_reports (
         total_raw,
         total_adjusted,
@@ -101,6 +106,10 @@ Deno.serve(async (req) => {
     'Norm SD',
     'Pending Review Count',
     'Domain Scores',
+    'Patient Device',
+    'Patient Viewport',
+    'Patient Screen',
+    'Patient User Agent',
     'Finalized',
   ].join(',');
   const rows = (sessions || []).map(s => {
@@ -121,6 +130,10 @@ Deno.serve(async (req) => {
       normalized?.normSd ?? 'N/A',
       normalized?.pendingReviewCount ?? 'N/A',
       normalized ? formatDomainSummary(normalized.domains) : 'N/A',
+      formatDeviceContextSummary(s.device_context),
+      formatDeviceContextViewport(s.device_context),
+      formatDeviceContextScreen(s.device_context),
+      formatDeviceContextUserAgent(s.device_context),
       normalized?.isFinal ? 'Yes' : 'No',
     ].map(escapeCsvField).join(',');
   });
