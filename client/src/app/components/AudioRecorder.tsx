@@ -60,6 +60,7 @@ export function AudioRecorder({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -118,6 +119,10 @@ export function AudioRecorder({
     try {
       setError(null);
       setNotice(null);
+      if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        setError("המכשיר או הדפדפן אינם תומכים בהקלטת קול. פנה לקלינאי.");
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       const mediaRecorder = new MediaRecorder(stream);
@@ -129,6 +134,7 @@ export function AudioRecorder({
         blob: Blob,
       ) => {
         clearRecordingTimers();
+        setIsSaving(false);
         const idOrUrl = audio.audioId;
         if (!idOrUrl.startsWith("http")) await AudioStore.saveAudio(idOrUrl, blob);
         const url = idOrUrl.startsWith("http") ? idOrUrl : URL.createObjectURL(blob);
@@ -159,6 +165,7 @@ export function AudioRecorder({
         clearRecordingTimers();
         setError(message);
         setIsRecording(false);
+        setIsSaving(false);
         stream.getTracks().forEach(track => track.stop());
       };
       
@@ -171,6 +178,7 @@ export function AudioRecorder({
       mediaRecorder.onstop = async () => {
         clearRecordingTimers();
         setIsRecording(false);
+        setIsSaving(true);
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
         
         let finalAudio = {
@@ -257,6 +265,7 @@ export function AudioRecorder({
       mediaRecorderRef.current.stop();
       clearRecordingTimers();
       setIsRecording(false);
+      setIsSaving(true);
     }
   };
 
@@ -280,6 +289,7 @@ export function AudioRecorder({
     setError(null);
     setNotice(null);
     setElapsedSeconds(0);
+    setIsSaving(false);
     setAudioId(null);
     if (audioUrl) {
       if (!audioUrl.startsWith("http")) {
@@ -291,7 +301,7 @@ export function AudioRecorder({
   };
 
   return (
-    <div className="flex flex-col items-center gap-5 sm:gap-6 w-full max-w-lg mx-auto bg-white p-5 sm:p-8 rounded-3xl border border-gray-200 shadow-sm">
+    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:gap-4 sm:p-5">
       {/* Hidden Audio Element for Playback */}
       {displayAudioUrl && (
         <audio ref={audioElementRef} src={displayAudioUrl} className="hidden" />
@@ -299,28 +309,32 @@ export function AudioRecorder({
       
       {/* Visual State & Controls */}
       {!audioId ? (
-        <div className="flex flex-col items-center gap-4 w-full">
+        <div className="flex w-full flex-col items-center gap-4">
           <div className={clsx(
-            "w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center transition-all duration-300",
+            "flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 sm:h-24 sm:w-24",
             isRecording ? "bg-red-50 scale-110" : "bg-gray-50"
           )}>
             <div className={clsx(
-              "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all duration-300",
+              "flex h-14 w-14 items-center justify-center rounded-full transition-all duration-300 sm:h-16 sm:w-16",
               isRecording ? "bg-red-100 animate-pulse" : "bg-gray-100"
             )}>
               <Mic className={clsx(
-                "w-10 h-10 sm:w-12 sm:h-12 transition-colors",
+                "h-8 w-8 transition-colors sm:h-9 sm:w-9",
                 isRecording ? "text-red-600" : "text-gray-400"
               )} />
             </div>
           </div>
           
-          <div className="text-center mb-2">
-            <h3 className="text-xl font-bold text-black mb-1">
-              {isRecording ? "מקליט כעת..." : "מוכן להקלטה"}
+          <div className="mb-1 text-center">
+            <h3 className="mb-1 text-xl font-bold text-black">
+              {isSaving ? "שומר הקלטה..." : isRecording ? "מקליט כעת..." : "מוכן להקלטה"}
             </h3>
-            <p className="text-gray-500 font-medium">
-              {isRecording ? "לחץ על עצור כשסיימת לדבר" : "לחץ על כפתור ההקלטה והתחל לדבר"}
+            <p className="text-sm font-medium leading-relaxed text-gray-500 sm:text-base">
+              {isSaving
+                ? "נא להמתין עד שההקלטה תישמר."
+                : isRecording
+                  ? "לחץ על עצור כשסיימת לדבר"
+                  : "לחץ על כפתור ההקלטה והתחל לדבר"}
             </p>
             <p className={clsx(
               "mt-3 font-mono text-lg font-black tabular-nums",
@@ -343,45 +357,46 @@ export function AudioRecorder({
           )}
           
           {error && (
-            <div className="w-full bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3 mb-2">
-              <AlertTriangle className="w-6 h-6 shrink-0" />
-              <p className="text-sm font-bold">{error}</p>
+            <div className="mb-2 flex w-full items-center gap-3 rounded-xl bg-red-50 p-4 text-red-700">
+              <AlertTriangle className="h-6 w-6 shrink-0" />
+              <p className="text-sm font-bold leading-relaxed">{error}</p>
             </div>
           )}
 
           {!isRecording ? (
             <button
               onClick={startRecording}
-              className="w-full h-14 sm:h-16 bg-black text-white text-lg sm:text-xl font-bold rounded-xl hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 flex items-center justify-center gap-3"
+              disabled={isSaving}
+              className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-black text-base font-bold text-white transition-colors hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 disabled:cursor-wait disabled:bg-gray-400 sm:h-14 sm:text-lg"
             >
-              <Mic className="w-6 h-6" />
-              התחל הקלטה
+              <Mic className="h-6 w-6" />
+              {isSaving ? "שומר..." : "התחל הקלטה"}
             </button>
           ) : (
             <button
               onClick={stopRecording}
-              className="w-full h-14 sm:h-16 bg-red-600 text-white text-lg sm:text-xl font-bold rounded-xl hover:bg-red-700 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-600/50 flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+              className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-red-600 text-base font-bold text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-600/50 sm:h-14 sm:text-lg"
             >
-              <Square className="w-6 h-6 fill-current" />
+              <Square className="h-6 w-6 fill-current" />
               עצור הקלטה
             </button>
           )}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-6 w-full">
-          <div className="w-24 h-24 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-2">
-            <Mic className="w-10 h-10" />
+        <div className="flex w-full flex-col items-center gap-5">
+          <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-green-600 sm:h-20 sm:w-20">
+            <Mic className="h-8 w-8 sm:h-9 sm:w-9" />
           </div>
           
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-black mb-2">ההקלטה נשמרה בהצלחה</h3>
-            <p className="text-gray-500 font-medium">התשובה שלך הוקלטה ותועבר לקלינאי לבדיקה</p>
+            <h3 className="mb-2 text-xl font-bold text-black sm:text-2xl">ההקלטה נשמרה בהצלחה</h3>
+            <p className="text-sm font-medium leading-relaxed text-gray-500 sm:text-base">התשובה שלך הוקלטה ותועבר לקלינאי לסקירה</p>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full mt-4">
+          <div className="mt-2 flex w-full flex-col gap-3 sm:flex-row sm:gap-4">
             <button
               onClick={togglePlayback}
-              className="flex-1 h-14 bg-gray-100 text-black font-bold text-lg rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600"
+              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-gray-100 text-base font-bold text-black transition-colors hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 sm:h-14 sm:text-lg"
             >
               {isPlaying ? (
                 <>
@@ -397,7 +412,7 @@ export function AudioRecorder({
             </button>
             <button
               onClick={handleReRecord}
-              className="flex-1 h-14 bg-white border-2 border-gray-200 text-gray-700 font-bold text-lg rounded-xl hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600"
+              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white text-base font-bold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 sm:h-14 sm:text-lg"
             >
               <RotateCcw className="w-5 h-5" />
               הקלט מחדש

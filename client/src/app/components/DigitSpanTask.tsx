@@ -15,22 +15,22 @@ export function DigitSpanTask() {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-5xl mx-auto w-full min-w-0">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start mb-6 sm:mb-10">
+    <div className="mx-auto flex h-full w-full max-w-5xl min-w-0 flex-col">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <div className="text-gray-500 font-bold uppercase tracking-wider text-xs sm:text-sm mb-2 sm:mb-3">
             6. קיבולת זיכרון
           </div>
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-black leading-tight">חזרה על מספרים</h2>
+          <h2 className="text-2xl font-extrabold leading-tight text-black sm:text-3xl">חזרה על מספרים</h2>
         </div>
       </div>
 
-      <div className="bg-gray-50 p-5 sm:p-10 rounded-2xl border border-gray-100 flex-1 min-h-[360px] sm:min-h-[500px] flex flex-col justify-center items-center text-center">
-        <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2 mb-8 sm:mb-10">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 text-right shadow-sm">
-            <div className="mb-3 text-sm font-extrabold uppercase tracking-wider text-gray-500">חלק ראשון</div>
-            <h3 className="mb-4 text-xl font-extrabold text-black">סדרה קדימה</h3>
-            <p className="mb-5 text-base font-medium leading-relaxed text-gray-600">
+      <div className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl border border-gray-100 bg-gray-50 p-3 text-center sm:rounded-2xl sm:p-5">
+        <div className="mb-5 grid w-full max-w-3xl grid-cols-1 gap-3 sm:mb-6 sm:grid-cols-2 sm:gap-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 text-right shadow-sm sm:rounded-2xl sm:p-5">
+            <div className="mb-2 text-xs font-extrabold uppercase tracking-wider text-gray-500 sm:mb-3 sm:text-sm">חלק ראשון</div>
+            <h3 className="mb-3 text-lg font-extrabold text-black sm:mb-4 sm:text-xl">סדרה קדימה</h3>
+            <p className="mb-4 text-sm font-medium leading-relaxed text-gray-600 sm:mb-5 sm:text-base">
               האזן למספרים וחזור עליהם באותו הסדר.
             </p>
             <ListenButton
@@ -40,10 +40,10 @@ export function DigitSpanTask() {
             />
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 text-right shadow-sm">
-            <div className="mb-3 text-sm font-extrabold uppercase tracking-wider text-gray-500">חלק שני</div>
-            <h3 className="mb-4 text-xl font-extrabold text-black">סדרה אחורה</h3>
-            <p className="mb-5 text-base font-medium leading-relaxed text-gray-600">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 text-right shadow-sm sm:rounded-2xl sm:p-5">
+            <div className="mb-2 text-xs font-extrabold uppercase tracking-wider text-gray-500 sm:mb-3 sm:text-sm">חלק שני</div>
+            <h3 className="mb-3 text-lg font-extrabold text-black sm:mb-4 sm:text-xl">סדרה אחורה</h3>
+            <p className="mb-4 text-sm font-medium leading-relaxed text-gray-600 sm:mb-5 sm:text-base">
               האזן למספרים וחזור עליהם בסדר הפוך.
             </p>
             <ListenButton
@@ -54,7 +54,7 @@ export function DigitSpanTask() {
           </div>
         </div>
 
-        <div className="text-gray-600 font-medium mb-6 text-lg sm:text-2xl max-w-2xl leading-relaxed">
+        <div className="mb-4 max-w-2xl text-base font-medium leading-relaxed text-gray-600 sm:mb-5 sm:text-lg">
           לחץ על התחל הקלטה ועצור רק אחרי שני החלקים. יש לך עד דקה להשלים את המשימה.
         </div>
 

@@ -26,13 +26,13 @@ export function VigilanceTask() {
   }, [tapped, updateTaskData]);
 
   return (
-    <div className="flex flex-col h-full max-w-5xl mx-auto w-full min-w-0">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start mb-6 sm:mb-10">
+    <div className="mx-auto flex h-full w-full max-w-5xl min-w-0 flex-col">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <div className="text-gray-500 font-bold uppercase tracking-wider text-xs sm:text-sm mb-2 sm:mb-3">
             7. קשב (Vigilance)
           </div>
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-black leading-tight">
+          <h2 className="text-2xl font-extrabold leading-tight text-black sm:text-3xl">
             הקש בכל פעם שתשמע את האות "א"
           </h2>
         </div>
@@ -43,15 +43,15 @@ export function VigilanceTask() {
         />
       </div>
 
-      <div className="bg-gray-50 p-5 sm:p-6 rounded-2xl border border-gray-100 flex-1 flex flex-col items-center justify-center">
+      <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-gray-100 bg-gray-50 p-3 sm:rounded-2xl sm:p-6">
         <button
           onClick={() => setTapped((prev: number) => prev + 1)}
-          className="w-48 h-48 sm:w-64 sm:h-64 rounded-full bg-blue-100 border-4 border-blue-500 hover:bg-blue-200 active:bg-blue-300 active:scale-95 transition-all flex items-center justify-center shadow-lg focus-visible:outline-none focus-visible:ring-8 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
+          className="flex h-40 w-40 items-center justify-center rounded-full border-4 border-blue-500 bg-blue-100 shadow-lg transition-all hover:bg-blue-200 active:scale-95 active:bg-blue-300 focus-visible:outline-none focus-visible:ring-8 focus-visible:ring-blue-600 focus-visible:ring-opacity-50 sm:h-56 sm:w-56 lg:h-64 lg:w-64"
           aria-label="הקש כאן כשתשמע את האות א"
         >
-          <span className="text-3xl sm:text-4xl font-black text-blue-900">הקש כאן</span>
+          <span className="text-2xl font-black text-blue-900 sm:text-4xl">הקש כאן</span>
         </button>
-        <p className="mt-6 text-gray-500 font-medium">מספר הקשות: {tapped}</p>
+        <p className="mt-5 font-medium text-gray-500 sm:mt-6">מספר הקשות: {tapped}</p>
       </div>
     </div>
   );
