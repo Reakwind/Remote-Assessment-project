@@ -24,7 +24,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | PR #80 review | User | Not Started | PR #80 checks are green and the branch is reviewed before merge. | #80 |
 | PWA shell | Codex | Done | Patient manifest, icons, metadata, manual service worker, surface flags, route gating, staging banner, and offline screen pass targeted checks. | #80 |
 | Real device shell QA | User | Not Started | Installed PWA tested on iPad/tablet and phone fallback. | TBD |
-| Deploy split | Codex | Not Started | Patient subdomain build/deploy instructions exist; clinician stays on current host. | TBD |
+| Deploy split | Codex | Done | Patient and clinician builds emit separate output directories; patient subdomain deploy instructions exist; clinician stays on current host without patient PWA assets. | `codex/patient-pwa-deploy-split-current` |
 | Device context | Codex | Done | Session metadata captures concise device context and clinician detail/PDF/CSV display it. | `codex/patient-device-context` |
 | UX hardening: preflight + drawing | Codex | Done | Preflight and drawing tasks fit tablet/phone viewports and drawing is stable with finger/stylus. | `codex/patient-tablet-drawing` |
 | UX hardening: audio/speech tasks | Codex | Done | Generated Hebrew speech and audio capture work on tablet/phone viewports. | `codex/patient-audio-speech` |
@@ -35,6 +35,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 
 - Use `VITE_APP_SURFACE=combined|patient|clinician`; default local development remains `combined`.
 - Use `VITE_DEPLOY_ENV=local|staging|production`; patient staging shows `מצב בדיקה`.
+- Surface builds emit separate deployable outputs: `client/dist/patient`, `client/dist/patient-staging`, and `client/dist/clinician`.
 - Keep hash routing; patient PWA starts at `/#/`.
 - In patient surface, clinician routes redirect to patient home.
 - Register the service worker only for patient preview/production builds.
@@ -46,6 +47,18 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Expire abandoned same-device resume state after 6 hours.
 
 ## Latest Verification
+
+2026-04-27 Codex deploy split verification:
+
+- `cd client && npm test -- --reporter=dot`
+- `cd client && npm run lint`
+- `cd client && npm run build -- --debug`
+- `cd client && npm run build:surfaces`
+- `cd client && npm run build:patient`
+- `cd client && npm run build:patient:staging`
+- `cd client && npm run build:clinician`
+- `cd client && npm run verify:surface-builds`
+- Built-preview browser smoke: patient build at `http://127.0.0.1:4173/#/` confirmed patient title, patient entry UI, and clinician-route redirect; clinician build at `http://127.0.0.1:4174/#/clinician/auth` confirmed website title and clinician auth page.
 
 2026-04-27 Codex simple-input verification:
 
