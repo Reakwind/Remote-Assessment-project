@@ -3,6 +3,8 @@
 ## Context
 - Remote Assessment Project.
 - GitHub set up: `https://github.com/Reakwind/Remote-Assessment-project.git`.
+- Active local checkout: `/Users/etaycohen/Projects/Remote-Assessment-project-main`.
+- Do not use OneDrive, CloudStorage, or other synced checkouts for repo work.
 - Using `grill-me` skill for discovery.
 
 ## Session History

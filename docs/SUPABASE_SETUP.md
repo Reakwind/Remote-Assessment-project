@@ -15,7 +15,7 @@ For linked hosted-project drift, migration reconciliation, remote function deplo
    - **service role key** (keep secret; server-only)
 
 ## 2. Initialize and link CLI
-Run from repository root (`/workspace`):
+Run from the active repository root. On this machine, that is `/Users/etaycohen/Projects/Remote-Assessment-project-main`.
 
 ```bash
 supabase init

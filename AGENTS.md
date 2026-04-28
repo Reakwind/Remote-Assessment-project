@@ -2,6 +2,14 @@
 
 Read [README.md](README.md) before making product, backend, scoring, or UX changes. Current `main` is the Pilot MVP baseline.
 
+## Active Local Checkout
+
+The active local checkout for this project is:
+
+`/Users/etaycohen/Projects/Remote-Assessment-project-main`
+
+Do not use or update any OneDrive, CloudStorage, or similarly synced checkout for repo work. If the shell starts in a path under `/Users/etaycohen/Library/CloudStorage/OneDrive-Personal/`, stop and switch to the active checkout above before reading, editing, testing, committing, pushing, or opening PRs. Do not rely on stale chat context, memory entries, or older worktree paths when they conflict with this rule.
+
 ## Source Of Truth
 
 Canonical files:

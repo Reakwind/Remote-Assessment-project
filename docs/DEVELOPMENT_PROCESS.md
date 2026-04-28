@@ -4,6 +4,8 @@ This project uses Supabase as the current MVP runtime. The product architecture 
 
 ## Core Rules
 
+- Use `/Users/etaycohen/Projects/Remote-Assessment-project-main` as the active local checkout.
+- Do not run repo work from OneDrive, CloudStorage, or other synced clones. If `pwd` shows `/Users/etaycohen/Library/CloudStorage/OneDrive-Personal/...`, switch checkouts before continuing.
 - Start every change from latest `origin/main`.
 - Work on a feature branch, preferably `codex/<short-scope>`.
 - Keep each branch focused on one feature, bug fix, or cleanup.

@@ -37,6 +37,8 @@ A remote assessment platform for cognitive assessment of the 60+ population in I
 6. **Polishing & Export:** Final UX refinements, PDF generation, and CSV export tools. (MVP BASELINE)
 
 ## 5. Current Operating Model
+- Active local checkout: `/Users/etaycohen/Projects/Remote-Assessment-project-main`.
+- Do not use OneDrive, CloudStorage, or other synced checkouts for repo work.
 - `main` is the MVP baseline and integration branch.
 - New work starts from latest `origin/main` on a feature branch.
 - Changes are reviewed through GitHub PRs and merge only after explicit user approval.
