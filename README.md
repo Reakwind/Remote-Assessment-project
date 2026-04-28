@@ -106,7 +106,7 @@ Full browser/Supabase E2E remains a required local pre-merge check for backend, 
 
 - `client/` - active frontend.
 - `supabase/` - active migrations and Edge Functions.
-- `scripts/` - local automation and E2E verification.
+- `scripts/` - local automation, E2E verification, and bulk flow QA.
 - `JOURNEY.md` - patient/clinician browser + backend journey playbook.
 - `docs/PATIENT_PWA_ARCHITECTURE.md` - clinician website + patient PWA deployment and UX boundary.
 - `docs/PATIENT_PWA_DEPLOYMENT.md` - patient and clinician frontend build outputs, host rules, and cache guidance.
@@ -138,6 +138,9 @@ Backend/local E2E:
 supabase start
 supabase functions serve create-session start-session get-stimuli submit-results save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null
 node scripts/local-e2e.mjs --all-versions
+node scripts/bulk-flow-qa.mjs --batch FLOWQA --patients 50 --clinicians 50 --tests-per-patient 30 --concurrency 5
+node scripts/bulk-flow-qa.mjs --report-batch FLOWQA
+node scripts/bulk-flow-qa.mjs --cleanup-batch FLOWQA
 ```
 
 Licensed stimulus readiness:

@@ -111,6 +111,7 @@ Useful local variants from the current runbooks:
 - `supabase db reset` resets the local database before rerunning flows. Use it only when local test data can be discarded.
 - `supabase start -x vector,logflare` is the fallback when Colima or Docker socket mounts break the default local start.
 - `node scripts/local-e2e.mjs --version 8.3` runs the scripted E2E flow for a single MoCA version.
+- `node scripts/bulk-flow-qa.mjs --batch FLOWQA --patients 50 --clinicians 50 --tests-per-patient 30 --concurrency 5` runs high-volume local data-flow QA; pair it with `--report-batch FLOWQA` and `--cleanup-batch FLOWQA`.
 
 For browser or UX changes, verify the affected flow in Chrome when practical.
 
