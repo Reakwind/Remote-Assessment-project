@@ -128,10 +128,12 @@ Deno.test('device context export helpers format concise patient device details',
     touchPoints: 5,
     standalone: true,
     pointer: 'coarse',
+    formFactor: 'tablet',
+    orientation: 'portrait',
     userAgent: 'Mobile Safari',
   };
 
-  if (formatDeviceContextSummary(context) !== 'PWA installed; iPad; Pointer coarse; 5 touch points') {
+  if (formatDeviceContextSummary(context) !== 'PWA installed; Tablet; Portrait; iPad; Pointer coarse; 5 touch points') {
     throw new Error(`unexpected summary: ${formatDeviceContextSummary(context)}`);
   }
   if (formatDeviceContextViewport(context) !== '768x1024') throw new Error('expected viewport dimensions');

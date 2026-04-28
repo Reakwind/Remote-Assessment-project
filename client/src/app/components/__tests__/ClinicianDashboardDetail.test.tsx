@@ -48,6 +48,8 @@ function sessionPayload(sessionOverrides: Record<string, unknown> = {}) {
         touchPoints: 5,
         standalone: true,
         pointer: 'coarse',
+        formFactor: 'tablet',
+        orientation: 'portrait',
       },
       patients: {
         id: 'patient-1',
@@ -193,6 +195,8 @@ describe('ClinicianDashboardDetail', () => {
     expect(screen.getByText('CSV זמין גם לפני סיום סקירה ויכול לכלול נתונים זמניים.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'מכשיר המטופל' })).toBeInTheDocument();
     expect(screen.getByText('PWA מותקן')).toBeInTheDocument();
+    expect(screen.getByText('טאבלט')).toBeInTheDocument();
+    expect(screen.getByText('לאורך')).toBeInTheDocument();
     expect(screen.getByText('768x1024')).toBeInTheDocument();
     expect(screen.getAllByText('שיום').length).toBeGreaterThan(0);
     expect(screen.getByText('2/3')).toBeInTheDocument();

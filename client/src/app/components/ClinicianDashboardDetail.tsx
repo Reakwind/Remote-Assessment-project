@@ -81,6 +81,8 @@ function formatDeviceContextDetails(context: Record<string, unknown> | null | un
   if (!context || typeof context !== "object") return [];
   const details = [
     { label: "מצב", value: context.standalone === true ? "PWA מותקן" : context.standalone === false ? "דפדפן" : null },
+    { label: "סוג מכשיר", value: formFactorValue(context.formFactor) },
+    { label: "כיוון", value: orientationValue(context.orientation) },
     { label: "פלטפורמה", value: stringValue(context.platform) },
     { label: "שפה", value: stringValue(context.language) },
     { label: "תצוגה", value: sizeValue(context.viewportWidth, context.viewportHeight) },
@@ -104,6 +106,19 @@ function sizeValue(width: unknown, height: unknown): string | null {
   const normalizedHeight = numberValue(height);
   if (normalizedWidth === null || normalizedHeight === null) return null;
   return `${Math.round(normalizedWidth)}x${Math.round(normalizedHeight)}`;
+}
+
+function formFactorValue(value: unknown): string | null {
+  if (value === "phone") return "טלפון";
+  if (value === "tablet") return "טאבלט";
+  if (value === "desktop") return "מחשב";
+  return null;
+}
+
+function orientationValue(value: unknown): string | null {
+  if (value === "portrait") return "לאורך";
+  if (value === "landscape") return "לרוחב";
+  return null;
 }
 
 function inputValue(context: Record<string, unknown>): string | null {
