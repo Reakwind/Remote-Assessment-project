@@ -103,7 +103,7 @@ export function useClinicianAuth() {
     if (error) return { ok: false, error: error.message };
 
     const user = data.user;
-    if (user) {
+    if (user && data.session) {
       const { error: profileError } = await supabase.from("clinicians").upsert(
         {
           id: user.id,

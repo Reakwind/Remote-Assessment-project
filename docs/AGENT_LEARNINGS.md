@@ -162,6 +162,23 @@ Required verification:
 - `node scripts/verify-stimuli.mjs --all-versions` should pass once visual assets are uploaded.
 - Browser testing should confirm Hebrew audio preflight and memory recording work in Chrome.
 
+### 9. Treat email-confirmation signup as unauthenticated until a session exists
+
+Evidence:
+
+- The clinician signup RLS fix handled Supabase returning an Auth user without a browser session, then the client attempting to write `clinicians` and hitting RLS.
+
+Rules:
+
+- Do not depend on client-side inserts for Auth-owned profile rows when signup can require email confirmation.
+- Create or backfill profile rows from `auth.users` with a database trigger using signup metadata, then let signed-in clients update their own profile through normal RLS.
+- In client auth code, only perform browser profile writes when Supabase returns an active session.
+
+Required verification:
+
+- Unit test the no-session signup path so it does not call the profile table.
+- Locally apply the migration and smoke-test that inserting an Auth user creates the profile row.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:
