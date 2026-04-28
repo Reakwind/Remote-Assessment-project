@@ -31,6 +31,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | UX hardening: audio/speech tasks | Codex | Done | Generated Hebrew speech and audio capture work on tablet/phone viewports. | `codex/patient-audio-speech` |
 | UX hardening: simple input tasks | Codex | Done | Naming task fits phone/tablet viewports with local item progress, guarded next-item navigation, and answer revisit controls. | `codex/patient-simple-inputs` |
 | Readiness reporting | Codex | Done | Local command reports patient/clinician build readiness and marks hosted staging, licensed stimuli, and real-device gates as blocked/manual until external evidence exists. | `codex/patient-readiness-report` |
+| Hosted staging smoke | Codex | Done | Playwright hosted smoke validates patient/clinician staging URL split, HTTPS, patient staging banner, manifest/service worker, and clinician-route hiding once URLs exist. | `codex/patient-hosted-smoke` |
 | Pilot readiness | Both | Blocked | Automated readiness gates exist; shared hosted staging, licensed stimuli verification, iPad/tablet install, and phone fallback checks still need external execution. | `codex/patient-pilot-readiness` |
 
 ## Current Shell Scope
@@ -52,9 +53,17 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Flag drawing reviews captured on phones so clinicians account for small-screen touch input while scoring.
 - Show home-screen guidance on patient entry unless the PWA is already running in standalone mode.
 - Use `npm run verify:patient-pwa-readiness` after `npm run build:surfaces` to print local readiness status and the remaining external blocks.
+- Use `PATIENT_STAGING_URL=https://<patient-host> CLINICIAN_STAGING_URL=https://<clinician-host> npm run e2e:hosted-pwa` after staging publication.
 - Use `docs/PATIENT_PWA_PILOT_READINESS.md` for the final staging, licensed-stimuli, installed-PWA, and phone fallback gates before clinical pilot use.
 
 ## Latest Verification
+
+2026-04-28 Codex hosted-smoke verification:
+
+- `cd client && npm run e2e:hosted-pwa` (skips until `PATIENT_STAGING_URL` and `CLINICIAN_STAGING_URL` are set)
+- `cd client && npm run lint`
+- `cd client && npm run build -- --debug`
+- `git diff --check`
 
 2026-04-28 Codex readiness-report verification:
 

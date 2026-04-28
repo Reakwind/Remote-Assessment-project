@@ -24,6 +24,7 @@
     "test:watch": "vitest",
     "e2e:browser": "playwright test",
     "e2e:patient-pwa": "E2E_EXPECT_PATIENT_SURFACE=1 E2E_APP_URL=http://127.0.0.1:4173 playwright test patient-flow.spec.ts",
+    "e2e:hosted-pwa": "E2E_NO_WEB_SERVER=1 playwright test hosted-pwa.spec.ts",
     "prepare": "husky"
   },
   "dependencies": {

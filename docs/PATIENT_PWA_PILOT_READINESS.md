@@ -80,6 +80,15 @@ Required staging checks:
 - Clinician routes are not discoverable from the patient PWA and redirect to patient entry when opened directly on the patient host.
 - Supabase remote-changing work follows `docs/SUPABASE_RECONCILIATION.md` before deploys, migration pushes, storage-policy changes, or hosted E2E.
 
+After the staging URLs exist, run:
+
+```bash
+cd client
+PATIENT_STAGING_URL=https://<patient-staging-host> CLINICIAN_STAGING_URL=https://<clinician-staging-host> npm run e2e:hosted-pwa
+```
+
+The hosted smoke requires HTTPS, checks the patient staging banner, validates manifest and service-worker availability at the patient host root, confirms clinician routes redirect away from the patient PWA, and confirms patient PWA assets are absent from the clinician host.
+
 ## Real-Device Gate
 
 Real-device checks stay blocked until the user tests the installed PWA on the target device.

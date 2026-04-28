@@ -109,4 +109,11 @@ npm run build:surfaces
 npm run verify:surface-builds
 ```
 
+To smoke-test deployed staging hosts after publication:
+
+```bash
+cd client
+PATIENT_STAGING_URL=https://<patient-staging-host> CLINICIAN_STAGING_URL=https://<clinician-staging-host> npm run e2e:hosted-pwa
+```
+
 Remote Supabase deploys, migration pushes, function deploys, storage policy changes, and hosted E2E runs still require `docs/SUPABASE_RECONCILIATION.md` before any remote-changing command.

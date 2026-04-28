@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const defaultBaseURL = 'http://127.0.0.1:5173';
 const baseURL = process.env.E2E_APP_URL ?? defaultBaseURL;
-const shouldStartWebServer = !process.env.E2E_APP_URL;
+const shouldStartWebServer = !process.env.E2E_APP_URL && process.env.E2E_NO_WEB_SERVER !== '1';
 
 export default defineConfig({
   testDir: './e2e',
