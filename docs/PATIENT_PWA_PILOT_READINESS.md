@@ -114,6 +114,8 @@ PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE=../path/to/real-device-evidence.json npm r
 
 The evidence file must include passing runs for `ipad-installed-pwa`, `tablet-browser-fallback`, and `phone-portrait-fallback`. The readiness command validates required fields, HTTPS staging URLs, and the expected checks for each device mode.
 
+For the current Netlify pilot hosts, start from `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.netlify-template.json`. That file intentionally uses `pending` results; change a run to `pass` only after completing it on the named physical device.
+
 ## Pilot Readiness Status
 
 The pilot is ready only when:

@@ -13,6 +13,17 @@ Create two separate Netlify sites from the same GitHub repository:
 
 Leave Base directory unset so Netlify builds from the repository root. The site-specific `netlify.toml` files run `npm ci` inside `client`, then publish the correct surface output.
 
+## Current Pilot Hosts
+
+The current pilot staging sites are:
+
+| Surface | Site name | URL | Deploy source |
+|---|---|---|---|
+| Patient PWA staging | `reakwind-remote-assessment-patient-staging` | `https://reakwind-remote-assessment-patient-staging.netlify.app` | CLI deploy |
+| Clinician website | `reakwind-remote-assessment-clinician` | `https://reakwind-remote-assessment-clinician.netlify.app` | CLI deploy |
+
+These sites were deployed from local builds configured with hosted Supabase project `jdkaxdtrukfxzlzspuua`. Netlify build environment variables are set for future builds, but GitHub continuous deploy is not connected yet. If automatic redeploys are needed, connect each site to `Reakwind/Remote-Assessment-project` in the Netlify UI using the package directories listed above.
+
 ## Environment Variables
 
 Set these variables on both Netlify sites with the Builds scope:
