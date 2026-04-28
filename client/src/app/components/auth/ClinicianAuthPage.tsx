@@ -79,33 +79,33 @@ export function ClinicianAuthPage() {
           <p className="text-lg text-gray-500 font-medium">ניהול מבחנים, סקירה וייצוא דוחות</p>
         </div>
 
-        <div className="bg-white p-10 md:p-12 rounded-3xl border border-gray-200 shadow-lg">
-          <div className="grid grid-cols-2 gap-3 mb-8">
+        <div className="bg-white p-6 sm:p-10 md:p-12 rounded-3xl border border-gray-200 shadow-lg">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-8">
             <button
               type="button"
               onClick={() => setMode("signin")}
-              className={`h-14 rounded-xl font-bold text-lg transition-colors ${
+              className={`h-14 rounded-xl font-bold text-base sm:text-lg transition-colors ${
                 mode === "signin"
                   ? "bg-black text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              <span className="inline-flex items-center gap-2">
-                <Lock className="w-5 h-5" />
+              <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
                 התחברות
               </span>
             </button>
             <button
               type="button"
               onClick={() => setMode("signup")}
-              className={`h-14 rounded-xl font-bold text-lg transition-colors ${
+              className={`h-14 rounded-xl font-bold text-base sm:text-lg transition-colors ${
                 mode === "signup"
                   ? "bg-black text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              <span className="inline-flex items-center gap-2">
-                <UserPlus className="w-5 h-5" />
+              <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                <UserPlus className="w-4 h-4 sm:w-5 sm:h-5" />
                 הרשמה
               </span>
             </button>
