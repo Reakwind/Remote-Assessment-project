@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router";
 import { Lock, ArrowLeft, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAssessmentResumePath, useAssessmentStore } from "../store/AssessmentContext";
-import { isPatientSurface } from "../surface";
+import { isPatientSurface, isStagingDeploy } from "../surface";
 
 function isStandalonePwa() {
   if (typeof window === "undefined") return false;
@@ -22,6 +22,7 @@ export function LandingHub() {
   const isCompleteTestNumber = normalizedToken.length === 8;
   const title = isPatientSurface ? "הערכה קוגניטיבית" : "Remote Check";
   const subtitle = isPatientSurface ? "מבדק מרחוק" : "הערכה נוירופסיכולוגית ממוחשבת";
+  const shellSpacing = isPatientSurface && isStagingDeploy ? "pb-3 pt-12 sm:py-6" : "py-3";
 
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +49,7 @@ export function LandingHub() {
   return (
     <div
       dir="rtl"
-      className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-3 sm:px-6 font-['Heebo',sans-serif]"
+      className={`min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 ${shellSpacing} sm:px-6 font-['Heebo',sans-serif]`}
     >
       <div className="w-full max-w-xl">
         <div className="mb-3 flex items-center justify-center gap-3 text-right">
