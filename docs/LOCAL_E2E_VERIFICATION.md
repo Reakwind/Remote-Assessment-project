@@ -106,6 +106,16 @@ node scripts/local-e2e.mjs --all-versions --skip-licensed-pdf-check
 
 Do not use `--skip-licensed-pdf-check` to claim clinical-readiness validation.
 
+For high-volume local data-flow QA, use the bulk runner. It creates pseudonymous clinicians and patients under one batch prefix, exercises repeated clinician-to-patient-to-review flows, writes JSONL evidence under `/tmp/remote-assessment-bulk-flow-qa/<batch>/`, and can report or clean up that batch later:
+
+```bash
+node scripts/bulk-flow-qa.mjs --batch FLOWQA --patients 50 --clinicians 50 --tests-per-patient 30 --concurrency 5
+node scripts/bulk-flow-qa.mjs --report-batch FLOWQA
+node scripts/bulk-flow-qa.mjs --cleanup-batch FLOWQA
+```
+
+Use `--negative-starts` only for sampled abuse/rate-limit checks. Running negative start-number checks at high volume from one source can intentionally trigger the patient-start rate limiter and block later valid starts in the same local window. Negative start attempts that never attach to a session cannot be tied back to a batch for scoped cleanup.
+
 Run these before and after the manual flow:
 
 ```bash

@@ -217,6 +217,25 @@ Required verification:
 - `npm run e2e:browser` in CI after local Supabase and Edge Functions are running.
 - Local clinical-readiness runs without `--skip-licensed-pdf-check` before pilot evidence collection.
 
+### 12. Separate bulk success-flow QA from abuse/rate-limit probes
+
+Evidence:
+
+- A 50-patient bulk local QA run showed that repeated invalid or reused patient test-number starts can trip the IP-based start-session limiter and then block later valid starts from the same local source.
+- The same run also showed transient local Edge runtime failures such as `WorkerAlreadyRetired` and upstream `502` during otherwise valid save/review calls.
+
+Rules:
+
+- Use `scripts/bulk-flow-qa.mjs` for high-volume local data-flow QA and keep each run under a unique batch prefix.
+- Use `--negative-starts` only for sampled start-number abuse checks, not for every generated session in a bulk success-flow matrix.
+- After any bulk run, use `node scripts/bulk-flow-qa.mjs --report-batch <batch>` and `node scripts/bulk-flow-qa.mjs --cleanup-batch <batch>` so fictitious patients, clinicians, evidence rows, storage objects, and auth rows do not pollute later QA.
+- Browser clients should retry transient Edge runtime failures, but must not retry validation, authorization, or clinical data errors.
+
+Required verification:
+
+- Run a small bulk preflight such as `node scripts/bulk-flow-qa.mjs --batch FLOWPRE --patients 1 --clinicians 1 --tests-per-patient 3 --concurrency 1`.
+- Confirm `--report-batch` and `--cleanup-batch` both work for the test batch.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AlertTriangle, CheckCircle2, ChevronRight, ClipboardCheck, Download, FileDown, Mic, Save } from "lucide-react";
 import { Link, useParams } from "react-router";
+import { edgeErrorMessage, edgeFetch } from "../../lib/edgeFetch";
 import { supabase } from "../../lib/supabase";
 import { DEFAULT_MOCA_VERSION, getMocaVersionConfig } from "../../lib/scoring/moca-config";
 import { clsx } from "clsx";
@@ -641,7 +642,7 @@ export function ClinicianDashboardDetail() {
           clinicianNotes: reviewNotes,
         };
 
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`, {
+    const res = await edgeFetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -654,12 +655,7 @@ export function ClinicianDashboardDetail() {
 
     if (!res.ok) {
       let message = "שמירת הניקוד נכשלה. נסה שוב או רענן את הדף.";
-      try {
-        const payload = await res.json();
-        if (payload?.error) message = payload.error;
-      } catch {
-        // Keep localized fallback for non-JSON errors.
-      }
+      message = await edgeErrorMessage(res, message);
       setSaveMessage(message);
       return;
     }

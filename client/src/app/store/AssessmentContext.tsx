@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { ScoringContext } from '../../types/scoring';
 import { edgeFn, edgeHeaders } from '../../lib/supabase';
+import { edgeErrorMessage, edgeFetch } from '../../lib/edgeFetch';
 import { scoreSession } from '../../lib/scoring';
 import { AudioStore } from './audioStore';
 import {
@@ -278,7 +279,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     let rawData = item.rawData;
 
     if (item.imageBase64) {
-      const drawingResponse = await fetch(edgeFn('save-drawing'), {
+      const drawingResponse = await edgeFetch(edgeFn('save-drawing'), {
         method: 'POST',
         headers: edgeHeaders(),
         body: JSON.stringify({
@@ -291,8 +292,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       });
 
       if (!drawingResponse.ok) {
-        const payload = await drawingResponse.json().catch(() => null);
-        throw new Error(payload?.error || 'Failed to save drawing');
+        throw new Error(await edgeErrorMessage(drawingResponse, 'Failed to save drawing'));
       }
 
       const { storagePath } = await drawingResponse.json();
@@ -304,7 +304,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       if (!audioBlob) throw new Error('ההקלטה המקומית לא נמצאה. יש להקליט את התשובה מחדש.');
 
       const contentType = rawData.audioContentType || audioBlob.type || 'audio/webm';
-      const audioResponse = await fetch(edgeFn('save-audio'), {
+      const audioResponse = await edgeFetch(edgeFn('save-audio'), {
         method: 'POST',
         headers: edgeHeaders(),
         body: JSON.stringify({
@@ -317,8 +317,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       });
 
       if (!audioResponse.ok) {
-        const payload = await audioResponse.json().catch(() => null);
-        throw new Error(payload?.error || 'Failed to save audio');
+        throw new Error(await edgeErrorMessage(audioResponse, 'Failed to save audio'));
       }
 
       const payload = await audioResponse.json();
@@ -331,7 +330,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       };
     }
 
-    const response = await fetch(edgeFn('submit-results'), {
+    const response = await edgeFetch(edgeFn('submit-results'), {
       method: 'POST',
       headers: edgeHeaders(),
       body: JSON.stringify({
@@ -343,8 +342,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     });
 
     if (!response.ok) {
-      const payload = await response.json().catch(() => null);
-      throw new Error(payload?.error || 'Failed to save task');
+      throw new Error(await edgeErrorMessage(response, 'Failed to save task'));
     }
 
     return rawData;
@@ -535,7 +533,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     }
 
     try {
-      const response = await fetch(edgeFn('complete-session'), {
+      const response = await edgeFetch(edgeFn('complete-session'), {
         method: 'POST',
         headers: edgeHeaders(),
         body: JSON.stringify({
@@ -546,8 +544,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       });
 
       if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error || 'Failed to complete session');
+        throw new Error(await edgeErrorMessage(response, 'Failed to complete session'));
       }
 
       cleanupLocalSessionArtifacts(state);
