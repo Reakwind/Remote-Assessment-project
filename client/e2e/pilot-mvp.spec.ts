@@ -331,18 +331,32 @@ async function clickContinue(page: Page) {
 }
 
 async function drawOnCanvas(page: Page) {
-  const canvas = page.getByTestId('drawing-canvas');
-  await canvas.scrollIntoViewIfNeeded();
-  const box = await canvas.boundingBox();
-  expect(box).toBeTruthy();
-  const startX = box!.x + box!.width * 0.35;
-  const startY = box!.y + box!.height * 0.35;
-  await page.mouse.move(startX, startY);
-  await page.mouse.down();
-  await page.mouse.move(startX + 40, startY + 40);
-  await page.mouse.move(startX + 80, startY + 10);
-  await page.mouse.up();
-  await expect(page.getByRole('button', { name: /בטל פעולה/ })).toBeEnabled();
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const canvas = page.getByTestId('drawing-canvas');
+      await expect(canvas).toBeVisible();
+      await canvas.scrollIntoViewIfNeeded();
+      const box = await canvas.boundingBox();
+      expect(box).toBeTruthy();
+      const startX = box!.x + box!.width * 0.35;
+      const startY = box!.y + box!.height * 0.35;
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX + 40, startY + 40);
+      await page.mouse.move(startX + 80, startY + 10);
+      await page.mouse.up();
+      await expect(page.getByRole('button', { name: /בטל פעולה/ })).toBeEnabled();
+      return;
+    } catch (error) {
+      lastError = error;
+      await page.mouse.up().catch(() => undefined);
+      await page.waitForTimeout(100);
+    }
+  }
+
+  throw lastError;
 }
 
 async function recordAudio(page: Page) {
