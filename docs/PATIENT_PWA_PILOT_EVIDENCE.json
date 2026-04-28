@@ -1,0 +1,19 @@
+{
+  "release": "patient-pwa-pilot-netlify",
+  "hostedStaging": {
+    "status": "pass",
+    "patientStagingUrl": "https://reakwind-remote-assessment-patient-staging.netlify.app",
+    "clinicianUrl": "https://reakwind-remote-assessment-clinician.netlify.app",
+    "verifiedAt": "2026-04-28T00:00:00Z",
+    "verifiedBy": "Codex",
+    "command": "cd client && PATIENT_STAGING_URL=https://reakwind-remote-assessment-patient-staging.netlify.app CLINICIAN_STAGING_URL=https://reakwind-remote-assessment-clinician.netlify.app npm run e2e:hosted-pwa"
+  },
+  "licensedStimuli": {
+    "status": "pass",
+    "supabaseProjectRef": "jdkaxdtrukfxzlzspuua",
+    "mocaVersions": ["8.1", "8.2", "8.3"],
+    "verifiedAt": "2026-04-28T00:00:00Z",
+    "verifiedBy": "Codex",
+    "command": "SUPABASE_URL=https://jdkaxdtrukfxzlzspuua.supabase.co SUPABASE_SERVICE_ROLE_KEY=<redacted> node scripts/verify-stimuli.mjs --all-versions"
+  }
+}

@@ -8,6 +8,8 @@ const clientDist = path.join(repoRoot, 'client', 'dist');
 const args = new Set(process.argv.slice(2));
 const jsonOutput = args.has('--json');
 const failOnBlocked = args.has('--fail-on-blocked');
+const externalOnly = args.has('--external-only');
+const defaultPilotEvidenceFile = path.join(repoRoot, 'docs', 'PATIENT_PWA_PILOT_EVIDENCE.json');
 
 const patientPwaFiles = [
   'patient.webmanifest',
@@ -154,7 +156,8 @@ async function verifySurfaceBuildMetadata(name, outDir) {
     const expectedEnvironment = name === 'patient-staging' ? 'staging' : 'production';
     const failures = [];
     if (metadata.surface !== expectedSurface) failures.push('surface flag');
-    if (metadata.deployEnvironment !== expectedEnvironment) failures.push(`${expectedEnvironment} deploy flag`);
+    if (metadata.deployEnvironment !== expectedEnvironment)
+      failures.push(`${expectedEnvironment} deploy flag`);
     return failures;
   } catch {
     return ['surface build metadata JSON'];
@@ -229,7 +232,8 @@ async function verifyClinicianOutput() {
   if (!(await exists(indexPath))) failures.push('missing index.html');
   if (!indexHtml?.includes('<title>Remote Check</title>')) failures.push('clinician title');
   if (indexHtml?.includes('patient.webmanifest')) failures.push('patient manifest leak');
-  if (indexHtml?.includes('apple-mobile-web-app-capable')) failures.push('patient iOS metadata leak');
+  if (indexHtml?.includes('apple-mobile-web-app-capable'))
+    failures.push('patient iOS metadata leak');
   failures.push(...(await verifySurfaceBuildMetadata('clinician', outDir)));
 
   for (const filename of patientPwaFiles) {
@@ -251,22 +255,61 @@ async function recordExternalGates() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY;
   const realDeviceEvidence = process.env.PATIENT_PWA_REAL_DEVICE_EVIDENCE;
   const realDeviceEvidenceFile = process.env.PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE;
+  const pilotEvidence = await readPilotEvidence();
+  const hostedEvidence = pilotEvidence.evidence?.hostedStaging;
+  const stimuliEvidence = pilotEvidence.evidence?.licensedStimuli;
+  const hostedEvidenceErrors = [
+    ...pilotEvidence.errors,
+    ...(hostedEvidence ? validateHostedStagingEvidence(hostedEvidence) : []),
+  ];
+  const stimuliEvidenceErrors = [
+    ...pilotEvidence.errors,
+    ...(stimuliEvidence ? validateLicensedStimuliEvidence(stimuliEvidence) : []),
+  ];
 
-  record(
-    'external:hosted-staging',
-    patientStagingUrl && clinicianStagingUrl ? 'manual' : 'blocked',
-    patientStagingUrl && clinicianStagingUrl
-      ? `Staging URLs provided; verify HTTPS, route fallback, manifest, service worker, and clinician-route redirect manually: ${patientStagingUrl} / ${clinicianStagingUrl}`
-      : 'Set PATIENT_STAGING_URL and CLINICIAN_STAGING_URL after deployment, then run hosted smoke checks from docs/PATIENT_PWA_PILOT_READINESS.md',
-  );
+  if (hostedEvidenceErrors.length > 0) {
+    record(
+      'external:hosted-staging',
+      'fail',
+      `Invalid hosted staging evidence in ${pilotEvidence.filePath}: ${hostedEvidenceErrors.join('; ')}`,
+    );
+  } else if (hostedEvidence) {
+    record(
+      'external:hosted-staging',
+      'pass',
+      `Hosted staging smoke passed for ${hostedEvidence.patientStagingUrl} and ${hostedEvidence.clinicianUrl} (${hostedEvidence.verifiedAt})`,
+    );
+  } else {
+    record(
+      'external:hosted-staging',
+      patientStagingUrl && clinicianStagingUrl ? 'manual' : 'blocked',
+      patientStagingUrl && clinicianStagingUrl
+        ? `Staging URLs provided; verify HTTPS, route fallback, manifest, service worker, and clinician-route redirect manually: ${patientStagingUrl} / ${clinicianStagingUrl}`
+        : 'Set PATIENT_STAGING_URL and CLINICIAN_STAGING_URL after deployment, then run hosted smoke checks from docs/PATIENT_PWA_PILOT_READINESS.md',
+    );
+  }
 
-  record(
-    'external:licensed-stimuli',
-    supabaseUrl && serviceKey ? 'manual' : 'blocked',
-    supabaseUrl && serviceKey
-      ? 'Supabase credentials are present; run node scripts/verify-stimuli.mjs --all-versions against the intended project'
-      : 'Requires SUPABASE_URL plus SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY after licensed assets are uploaded',
-  );
+  if (stimuliEvidenceErrors.length > 0) {
+    record(
+      'external:licensed-stimuli',
+      'fail',
+      `Invalid licensed stimuli evidence in ${pilotEvidence.filePath}: ${stimuliEvidenceErrors.join('; ')}`,
+    );
+  } else if (stimuliEvidence) {
+    record(
+      'external:licensed-stimuli',
+      'pass',
+      `Licensed stimuli verified for MoCA ${stimuliEvidence.mocaVersions.join(', ')} in Supabase project ${stimuliEvidence.supabaseProjectRef} (${stimuliEvidence.verifiedAt})`,
+    );
+  } else {
+    record(
+      'external:licensed-stimuli',
+      supabaseUrl && serviceKey ? 'manual' : 'blocked',
+      supabaseUrl && serviceKey
+        ? 'Supabase credentials are present; run node scripts/verify-stimuli.mjs --all-versions against the intended project'
+        : 'Requires SUPABASE_URL plus SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY after licensed assets are uploaded',
+    );
+  }
 
   if (realDeviceEvidenceFile) {
     const { errors } = await readRealDeviceEvidence(realDeviceEvidenceFile);
@@ -307,6 +350,91 @@ function parseHttpsUrl(value, label) {
     return url.protocol === 'https:' ? null : `${label} must use https://`;
   } catch {
     return `${label} must be a valid URL`;
+  }
+}
+
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+function validateVerifiedAt(value, label) {
+  if (!isNonEmptyString(value)) return `${label} must include verifiedAt`;
+  return Number.isNaN(Date.parse(value)) ? `${label}.verifiedAt must be a valid date` : null;
+}
+
+function validateHostedStagingEvidence(hostedStaging) {
+  const errors = [];
+  if (!hostedStaging || typeof hostedStaging !== 'object' || Array.isArray(hostedStaging)) {
+    return ['hostedStaging must be an object'];
+  }
+  if (hostedStaging.status !== 'pass') errors.push('hostedStaging.status must be pass');
+  if (!isNonEmptyString(hostedStaging.patientStagingUrl)) {
+    errors.push('hostedStaging must include patientStagingUrl');
+  } else {
+    const urlError = parseHttpsUrl(
+      hostedStaging.patientStagingUrl,
+      'hostedStaging.patientStagingUrl',
+    );
+    if (urlError) errors.push(urlError);
+  }
+  if (!isNonEmptyString(hostedStaging.clinicianUrl)) {
+    errors.push('hostedStaging must include clinicianUrl');
+  } else {
+    const urlError = parseHttpsUrl(hostedStaging.clinicianUrl, 'hostedStaging.clinicianUrl');
+    if (urlError) errors.push(urlError);
+  }
+  for (const field of ['verifiedBy', 'command']) {
+    if (!isNonEmptyString(hostedStaging[field])) errors.push(`hostedStaging must include ${field}`);
+  }
+  const dateError = validateVerifiedAt(hostedStaging.verifiedAt, 'hostedStaging');
+  if (dateError) errors.push(dateError);
+  return errors;
+}
+
+function validateLicensedStimuliEvidence(licensedStimuli) {
+  const errors = [];
+  if (!licensedStimuli || typeof licensedStimuli !== 'object' || Array.isArray(licensedStimuli)) {
+    return ['licensedStimuli must be an object'];
+  }
+  if (licensedStimuli.status !== 'pass') errors.push('licensedStimuli.status must be pass');
+  for (const field of ['supabaseProjectRef', 'verifiedBy', 'command']) {
+    if (!isNonEmptyString(licensedStimuli[field]))
+      errors.push(`licensedStimuli must include ${field}`);
+  }
+  if (!Array.isArray(licensedStimuli.mocaVersions)) {
+    errors.push('licensedStimuli.mocaVersions must be an array');
+  } else {
+    for (const version of ['8.1', '8.2', '8.3']) {
+      if (!licensedStimuli.mocaVersions.includes(version)) {
+        errors.push(`licensedStimuli missing MoCA ${version}`);
+      }
+    }
+  }
+  const dateError = validateVerifiedAt(licensedStimuli.verifiedAt, 'licensedStimuli');
+  if (dateError) errors.push(dateError);
+  return errors;
+}
+
+async function readPilotEvidence() {
+  const configuredPath = process.env.PATIENT_PWA_PILOT_EVIDENCE_FILE;
+  const evidencePath = configuredPath
+    ? path.resolve(process.cwd(), configuredPath)
+    : defaultPilotEvidenceFile;
+
+  if (!(await exists(evidencePath))) {
+    return { evidence: null, errors: [], filePath: evidencePath };
+  }
+
+  const content = await readText(evidencePath);
+  try {
+    const evidence = JSON.parse(content ?? '{}');
+    return { evidence, errors: [], filePath: evidencePath };
+  } catch {
+    return {
+      evidence: null,
+      errors: [`Pilot evidence file is not valid JSON: ${evidencePath}`],
+      filePath: evidencePath,
+    };
   }
 }
 
@@ -367,9 +495,11 @@ async function readRealDeviceEvidence(filePath) {
   }
 }
 
-await verifyPatientOutput('patient');
-await verifyPatientOutput('patient-staging');
-await verifyClinicianOutput();
+if (!externalOnly) {
+  await verifyPatientOutput('patient');
+  await verifyPatientOutput('patient-staging');
+  await verifyClinicianOutput();
+}
 await recordExternalGates();
 printReport();
 

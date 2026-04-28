@@ -47,11 +47,15 @@ cd client
 npm run verify:patient-pwa-readiness
 ```
 
-The command fails only for broken local build outputs by default. It reports hosted staging, licensed stimuli, and real-device checks as `blocked` or `manual` until the required external evidence is available. Use `node ../scripts/patient-pwa-readiness.mjs --fail-on-blocked` when a release process should fail while external gates remain blocked.
+The command fails only for broken local build outputs by default. It reads `docs/PATIENT_PWA_PILOT_EVIDENCE.json` for repo-recorded hosted staging and licensed-stimuli evidence, and it keeps the real-device gate `blocked` until physical-device evidence is supplied. Use `node ../scripts/patient-pwa-readiness.mjs --fail-on-blocked` when a release process should fail while external gates remain blocked.
+
+Use `node ../scripts/patient-pwa-readiness.mjs --external-only` only when inspecting repo-recorded hosted, stimuli, or real-device evidence without local surface build outputs. It is not a substitute for the automated local gates.
 
 ## Licensed Stimuli Gate
 
 Before any clinical pilot, all enabled licensed visual stimuli must be present in private Supabase Storage.
+
+Current pilot evidence: MoCA 8.1, 8.2, and 8.3 licensed stimuli were verified in hosted Supabase project `jdkaxdtrukfxzlzspuua` on 2026-04-28. The evidence record is `docs/PATIENT_PWA_PILOT_EVIDENCE.json`.
 
 Print the required manifest without contacting Supabase:
 
@@ -69,7 +73,11 @@ Keep licensed PDFs, extracted images, and service-role keys out of Git.
 
 ## Hosted Staging Gate
 
-Hosted staging is not complete until a shared patient staging URL exists and is connected to the intended Supabase project.
+Hosted staging is complete for the current Netlify pilot hosts and remains subject to re-verification if the hosts, routing, or Supabase project change.
+
+Current patient staging URL: `https://reakwind-remote-assessment-patient-staging.netlify.app`
+
+Current clinician URL: `https://reakwind-remote-assessment-clinician.netlify.app`
 
 For Netlify setup, use [NETLIFY_HOSTING.md](NETLIFY_HOSTING.md).
 
@@ -82,11 +90,11 @@ Required staging checks:
 - Clinician routes are not discoverable from the patient PWA and redirect to patient entry when opened directly on the patient host.
 - Supabase remote-changing work follows `docs/SUPABASE_RECONCILIATION.md` before deploys, migration pushes, storage-policy changes, or hosted E2E.
 
-After the staging URLs exist, run:
+To recheck hosted staging, run:
 
 ```bash
 cd client
-PATIENT_STAGING_URL=https://<patient-staging-host> CLINICIAN_STAGING_URL=https://<clinician-staging-host> npm run e2e:hosted-pwa
+PATIENT_STAGING_URL=https://reakwind-remote-assessment-patient-staging.netlify.app CLINICIAN_STAGING_URL=https://reakwind-remote-assessment-clinician.netlify.app npm run e2e:hosted-pwa
 ```
 
 The hosted smoke requires HTTPS, checks the patient staging banner, validates manifest and service-worker availability at the patient host root, confirms clinician routes redirect away from the patient PWA, and confirms patient PWA assets are absent from the clinician host.
@@ -97,11 +105,11 @@ Real-device checks stay blocked until the user tests the installed PWA on the ta
 
 Minimum device matrix:
 
-| Device mode | Required checks |
-|---|---|
+| Device mode                 | Required checks                                                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | iPadOS Safari installed PWA | Install from patient staging, open in standalone mode, enter test number, complete preflight, drawing, audio, naming, completion, and resume after app relaunch. |
-| Tablet browser fallback | Same flow without installing; verify controls remain reachable with browser chrome. |
-| Phone portrait fallback | Enter test number, complete preflight, naming, audio, and at least one drawing task; confirm phone drawing is captured and device context flags phone use. |
+| Tablet browser fallback     | Same flow without installing; verify controls remain reachable with browser chrome.                                                                              |
+| Phone portrait fallback     | Enter test number, complete preflight, naming, audio, and at least one drawing task; confirm phone drawing is captured and device context flags phone use.       |
 
 Record device, OS/browser version, staging URL, MoCA version, and any skipped task in the release note or PR handoff.
 
@@ -114,6 +122,13 @@ PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE=../path/to/real-device-evidence.json npm r
 
 The evidence file must include passing runs for `ipad-installed-pwa`, `tablet-browser-fallback`, and `phone-portrait-fallback`. The readiness command validates required fields, HTTPS staging URLs, and the expected checks for each device mode.
 
+To validate the evidence file without rebuilding local surface outputs:
+
+```bash
+cd client
+PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE=../path/to/real-device-evidence.json node ../scripts/patient-pwa-readiness.mjs --external-only
+```
+
 For the current Netlify pilot hosts, start from `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.netlify-template.json`. That file intentionally uses `pending` results; change a run to `pass` only after completing it on the named physical device.
 
 ## Pilot Readiness Status
@@ -121,7 +136,9 @@ For the current Netlify pilot hosts, start from `docs/PATIENT_PWA_REAL_DEVICE_EV
 The pilot is ready only when:
 
 - Automated local gates pass.
-- Hosted staging gate passes.
-- Licensed stimuli gate passes for all enabled MoCA versions.
+- Hosted staging gate passes. Current Netlify evidence is recorded in `docs/PATIENT_PWA_PILOT_EVIDENCE.json`.
+- Licensed stimuli gate passes for all enabled MoCA versions. Current hosted Supabase evidence is recorded in `docs/PATIENT_PWA_PILOT_EVIDENCE.json`.
 - Real-device gate passes on the target iPad/tablet plus phone fallback.
 - No completion-blocking autosave, drawing, audio, or stimulus-fetch issues remain open.
+
+Current status: hosted staging and licensed stimuli are recorded as passing; physical iPad/tablet installed-PWA and phone fallback evidence remains the active blocker.

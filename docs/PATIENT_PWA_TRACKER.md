@@ -18,26 +18,26 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 
 ## Milestone Tracker
 
-| Phase | Owner | Status | Acceptance check | PR/link |
-|---|---|---|---|---|
-| PR #80 baseline | Codex | Done | Tracker exists and is linked from architecture docs. | #80 |
-| PR #80 review | User | Done | PR #80 merged to main on 2026-04-27. | #80 |
-| PWA shell | Codex | Done | Patient manifest, icons, metadata, manual service worker, surface flags, route gating, staging banner, and offline screen pass targeted checks. | #80 |
-| Install guidance | Codex | Done | Patient surface gives tablet/phone home-screen guidance without exposing clinician navigation. | `codex/patient-install-guidance` |
-| Real device shell QA | User | Not Started | Installed PWA tested on iPad/tablet and phone fallback. | TBD |
-| Deploy split | Codex | Done | Patient and clinician builds emit separate output directories; patient subdomain deploy instructions exist; clinician stays on current host without patient PWA assets. | `codex/patient-pwa-deploy-split-current` |
-| Device context | Codex | Done | Session metadata captures concise device context and clinician detail/PDF/CSV display it. | `codex/patient-device-context` |
-| UX hardening: preflight + drawing | Codex | Done | Preflight and drawing tasks fit tablet/phone viewports and drawing is stable with finger/stylus. | `codex/patient-tablet-drawing` |
-| UX hardening: audio/speech tasks | Codex | Done | Generated Hebrew speech and audio capture work on tablet/phone viewports. | `codex/patient-audio-speech` |
-| UX hardening: simple input tasks | Codex | Done | Naming task fits phone/tablet viewports with local item progress, guarded next-item navigation, and answer revisit controls. | `codex/patient-simple-inputs` |
-| Readiness reporting | Codex | Done | Local command reports patient/clinician build readiness and marks hosted staging, licensed stimuli, and real-device gates as blocked/manual until external evidence exists. | `codex/patient-readiness-report` |
-| Hosted staging smoke | Codex | Done | Playwright hosted smoke validates patient/clinician staging URL split, HTTPS, patient staging banner, manifest/service worker, and clinician-route hiding once URLs exist. | `codex/patient-hosted-smoke` |
-| Real-device evidence gate | Codex | Done | Readiness report can validate a structured iPad installed-PWA, tablet browser, and phone fallback evidence file before pilot review. | `codex/patient-device-evidence` |
-| Verification tightening | Codex | Done | Surface/readiness scripts validate offline fallback, manifest icons, service-worker cache guardrails, surface deploy flags, and hosted manifest icon availability. | `codex/patient-pwa-verification-tightening` |
-| Netlify hosting setup | Codex | Done | Repo includes Netlify package-directory configs and runbook for separate patient staging and clinician hosts with GitHub continuous deploy from `main`. | `codex/netlify-hosting-setup` |
-| Hosted Netlify deployment | Codex | Done | Patient staging and clinician Netlify URLs are live and hosted smoke passes against both. | `https://reakwind-remote-assessment-patient-staging.netlify.app` / `https://reakwind-remote-assessment-clinician.netlify.app` |
-| Licensed hosted stimuli | Codex | Done | Hosted Supabase `stimuli` bucket contains all required MoCA 8.1, 8.2, and 8.3 licensed visual PNGs and verification passes. | `jdkaxdtrukfxzlzspuua` |
-| Pilot readiness | Both | Blocked | Automated local gates, hosted Netlify staging, and licensed stimuli pass; physical iPad/tablet install and phone fallback checks still need real-device execution. | `codex/patient-pilot-readiness` |
+| Phase                             | Owner | Status      | Acceptance check                                                                                                                                                            | PR/link                                                                                                                       |
+| --------------------------------- | ----- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| PR #80 baseline                   | Codex | Done        | Tracker exists and is linked from architecture docs.                                                                                                                        | #80                                                                                                                           |
+| PR #80 review                     | User  | Done        | PR #80 merged to main on 2026-04-27.                                                                                                                                        | #80                                                                                                                           |
+| PWA shell                         | Codex | Done        | Patient manifest, icons, metadata, manual service worker, surface flags, route gating, staging banner, and offline screen pass targeted checks.                             | #80                                                                                                                           |
+| Install guidance                  | Codex | Done        | Patient surface gives tablet/phone home-screen guidance without exposing clinician navigation.                                                                              | `codex/patient-install-guidance`                                                                                              |
+| Real device shell QA              | User  | Not Started | Installed PWA tested on iPad/tablet and phone fallback.                                                                                                                     | TBD                                                                                                                           |
+| Deploy split                      | Codex | Done        | Patient and clinician builds emit separate output directories; patient subdomain deploy instructions exist; clinician stays on current host without patient PWA assets.     | `codex/patient-pwa-deploy-split-current`                                                                                      |
+| Device context                    | Codex | Done        | Session metadata captures concise device context and clinician detail/PDF/CSV display it.                                                                                   | `codex/patient-device-context`                                                                                                |
+| UX hardening: preflight + drawing | Codex | Done        | Preflight and drawing tasks fit tablet/phone viewports and drawing is stable with finger/stylus.                                                                            | `codex/patient-tablet-drawing`                                                                                                |
+| UX hardening: audio/speech tasks  | Codex | Done        | Generated Hebrew speech and audio capture work on tablet/phone viewports.                                                                                                   | `codex/patient-audio-speech`                                                                                                  |
+| UX hardening: simple input tasks  | Codex | Done        | Naming task fits phone/tablet viewports with local item progress, guarded next-item navigation, and answer revisit controls.                                                | `codex/patient-simple-inputs`                                                                                                 |
+| Readiness reporting               | Codex | Done        | Local command reports patient/clinician build readiness and marks hosted staging, licensed stimuli, and real-device gates as blocked/manual until external evidence exists. | `codex/patient-readiness-report`                                                                                              |
+| Hosted staging smoke              | Codex | Done        | Playwright hosted smoke validates patient/clinician staging URL split, HTTPS, patient staging banner, manifest/service worker, and clinician-route hiding once URLs exist.  | `codex/patient-hosted-smoke`                                                                                                  |
+| Real-device evidence gate         | Codex | Done        | Readiness report can validate a structured iPad installed-PWA, tablet browser, and phone fallback evidence file before pilot review.                                        | `codex/patient-device-evidence`                                                                                               |
+| Verification tightening           | Codex | Done        | Surface/readiness scripts validate offline fallback, manifest icons, service-worker cache guardrails, surface deploy flags, and hosted manifest icon availability.          | `codex/patient-pwa-verification-tightening`                                                                                   |
+| Netlify hosting setup             | Codex | Done        | Repo includes Netlify package-directory configs and runbook for separate patient staging and clinician hosts with GitHub continuous deploy from `main`.                     | `codex/netlify-hosting-setup`                                                                                                 |
+| Hosted Netlify deployment         | Codex | Done        | Patient staging and clinician Netlify URLs are live and hosted smoke passes against both.                                                                                   | `https://reakwind-remote-assessment-patient-staging.netlify.app` / `https://reakwind-remote-assessment-clinician.netlify.app` |
+| Licensed hosted stimuli           | Codex | Done        | Hosted Supabase `stimuli` bucket contains all required MoCA 8.1, 8.2, and 8.3 licensed visual PNGs and verification passes.                                                 | `jdkaxdtrukfxzlzspuua`                                                                                                        |
+| Pilot readiness                   | Both  | Blocked     | Automated local gates, hosted Netlify staging, and licensed stimuli pass; physical iPad/tablet install and phone fallback checks still need real-device execution.          | `codex/patient-pilot-readiness`                                                                                               |
 
 ## Current Shell Scope
 
@@ -61,6 +61,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Use `PATIENT_STAGING_URL=https://<patient-host> CLINICIAN_STAGING_URL=https://<clinician-host> npm run e2e:hosted-pwa` after staging publication.
 - Use `PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE=../path/to/real-device-evidence.json npm run verify:patient-pwa-readiness` after filling the real-device evidence template.
 - Use `docs/NETLIFY_HOSTING.md` when creating or changing the Netlify patient staging and clinician sites.
+- Use `docs/PATIENT_PWA_PILOT_EVIDENCE.json` as the repo-recorded hosted staging and licensed-stimuli evidence for the current Netlify/Supabase pilot setup.
 - Use `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.netlify-template.json` as the current Netlify evidence template for physical-device QA.
 - Use `docs/PATIENT_PWA_PILOT_READINESS.md` for the final staging, licensed-stimuli, installed-PWA, and phone fallback gates before clinical pilot use.
 
@@ -74,6 +75,14 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - `SUPABASE_URL=https://jdkaxdtrukfxzlzspuua.supabase.co SUPABASE_SERVICE_ROLE_KEY=<from authenticated Supabase CLI> node scripts/verify-stimuli.mjs --all-versions`
 - Patient staging URL: `https://reakwind-remote-assessment-patient-staging.netlify.app`
 - Clinician URL: `https://reakwind-remote-assessment-clinician.netlify.app`
+- Remaining blocker: fill and validate `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.netlify-template.json` after real iPad/tablet/phone testing.
+
+2026-04-28 Codex pilot-evidence wiring verification:
+
+- `node --check scripts/patient-pwa-readiness.mjs`
+- `node scripts/patient-pwa-readiness.mjs --external-only --json`
+- `git diff --check`
+- Current evidence file: `docs/PATIENT_PWA_PILOT_EVIDENCE.json`
 - Remaining blocker: fill and validate `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.netlify-template.json` after real iPad/tablet/phone testing.
 
 2026-04-28 Codex verification-tightening verification:
