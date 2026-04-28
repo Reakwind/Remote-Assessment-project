@@ -253,4 +253,67 @@ describe('ClinicianDashboardDetail', () => {
     expect(screen.getByText(exactText('3/3'))).toBeInTheDocument();
     expect(screen.queryByText(exactText('5/3'))).not.toBeInTheDocument();
   });
+
+  it('flags phone drawing evidence for clinician interpretation', async () => {
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify(sessionPayload({
+          device_context: {
+            platform: 'iPhone',
+            language: 'he-IL',
+            viewportWidth: 390,
+            viewportHeight: 844,
+            screenWidth: 390,
+            screenHeight: 844,
+            touchPoints: 5,
+            standalone: true,
+            pointer: 'coarse',
+            formFactor: 'phone',
+            orientation: 'portrait',
+          },
+          drawings: [
+            {
+              id: 'clock-review',
+              task_id: 'moca-clock',
+              task_name: 'clock',
+              signedUrl: null,
+              strokes_data: [[{ x: 10, y: 10, time: 0, pointerType: 'touch' }]],
+              rubric_items: null,
+              clinician_score: null,
+              clinician_notes: null,
+            },
+          ],
+          scoring_report: {
+            total_adjusted: 20,
+            total_score: 20,
+            total_provisional: true,
+            needs_review: true,
+            pending_review_count: 1,
+            domains: [
+              {
+                domain: 'visuospatial',
+                raw: 0,
+                max: 5,
+                items: [
+                  { taskId: 'moca-clock', score: 0, max: 3, needsReview: true, reviewReason: 'drawing' },
+                ],
+              },
+            ],
+            subscores: {},
+          },
+        })),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: 'תיק CASE-1' });
+    expect(screen.getByText('טלפון')).toBeInTheDocument();
+    expect(screen.getByText('ציור זה בוצע בטלפון. קח בחשבון מסך קטן וקלט מגע בעת פירוש הציור.')).toBeInTheDocument();
+  });
 });

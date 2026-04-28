@@ -462,6 +462,7 @@ export function ClinicianDashboardDetail() {
   const currentReview = currentDrawing ?? currentScoringReview ?? currentAudioEvidenceReview;
   const isCurrentEvidenceOnly = !currentDrawing && !currentScoringReview && !!currentAudioEvidenceReview;
   const reviewNotes = reviewNotesByTab[activeReviewTab] ?? currentReview?.clinician_notes ?? "";
+  const isPhoneDrawingReview = !!currentDrawing && stringValue(sessionRecord?.device_context?.formFactor) === "phone";
 
   const getDrawingStats = (strokes: any[][]) => {
     const valid = (strokes || []).filter((s) => s && s.length > 0);
@@ -746,6 +747,15 @@ export function ClinicianDashboardDetail() {
       return (
         <div className="flex flex-col items-center">
           <PlaybackCanvas strokes={currentStrokes} width={450} height={400} backgroundImageUrl={currentImageUrl ?? undefined} />
+
+          {isPhoneDrawingReview && (
+            <div className="mt-6 flex w-full items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-right text-amber-900">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+              <p className="text-sm font-bold">
+                ציור זה בוצע בטלפון. קח בחשבון מסך קטן וקלט מגע בעת פירוש הציור.
+              </p>
+            </div>
+          )}
 
           <div className="mt-8 w-full border-t border-gray-100 pt-6">
             <h4 className="font-bold text-gray-500 text-sm mb-3">סטטיסטיקת ציור</h4>

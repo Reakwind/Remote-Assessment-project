@@ -14,7 +14,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Patient starts with the existing 8-digit test number.
 - Support may help with device setup only, not answers.
 - Formal consent is outside the app.
-- iPadOS Safari is the first real-device acceptance target; phone support has equal priority and phone drawing is accepted but should be flagged later with device context.
+- iPadOS Safari is the first real-device acceptance target; phone support has equal priority and phone drawing is accepted but flagged for clinician interpretation with device context.
 
 ## Milestone Tracker
 
@@ -48,10 +48,18 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Expire abandoned same-device resume state after 6 hours.
 - Preserve the local preflight-complete flag when session evidence is cleared, so returning local patients can start future tests at the first task.
 - Capture explicit device type and orientation at patient start so phone/tablet fallback use is visible in clinician detail, PDF, and CSV exports.
+- Flag drawing reviews captured on phones so clinicians account for small-screen touch input while scoring.
 - Show home-screen guidance on patient entry unless the PWA is already running in standalone mode.
 - Use `docs/PATIENT_PWA_PILOT_READINESS.md` for the final staging, licensed-stimuli, installed-PWA, and phone fallback gates before clinical pilot use.
 
 ## Latest Verification
+
+2026-04-28 Codex phone-drawing-review verification:
+
+- `cd client && npm test -- ClinicianDashboardDetail`
+- `cd client && npm run lint`
+- `cd client && npm run build -- --debug`
+- `git diff --check`
 
 2026-04-27 Codex device-classification verification:
 
