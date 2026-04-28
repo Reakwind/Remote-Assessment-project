@@ -197,6 +197,26 @@ Required verification:
 - Hosted smoke must include preflight checks for `create-session` from the clinician host and `start-session` from the patient host.
 - After changing hosted origins or Supabase project links, rerun `npm run e2e:hosted-pwa` with `HOSTED_SUPABASE_URL`, `PATIENT_STAGING_URL`, and `CLINICIAN_STAGING_URL`.
 
+### 11. Keep full local E2E in CI without leaking licensed assets
+
+Evidence:
+
+- The full-E2E QA branch moved Edge Function unit tests, scripted local Supabase E2E, and Playwright browser E2E into GitHub CI.
+- Licensed MoCA PDFs remain local-only clinical materials and cannot be required on GitHub-hosted runners.
+
+Rules:
+
+- Keep CI coverage broad enough to exercise clinician signup, patient creation, session creation, patient submission, clinician review, exports, storage access denial, and cross-clinician isolation.
+- Use `--skip-licensed-pdf-check` only for CI or non-clinical local contract checks where licensed PDFs are intentionally unavailable.
+- Do not treat CI's skipped licensed PDF validation as clinical-readiness evidence. Clinical-readiness work still needs local licensed PDF validation, uploaded private Storage stimulus verification, and real device/PWA checks when relevant.
+
+Required verification:
+
+- `deno test` for Edge Function/shared logic.
+- `node scripts/local-e2e.mjs --all-versions --skip-licensed-pdf-check` in CI.
+- `npm run e2e:browser` in CI after local Supabase and Edge Functions are running.
+- Local clinical-readiness runs without `--skip-licensed-pdf-check` before pilot evidence collection.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:

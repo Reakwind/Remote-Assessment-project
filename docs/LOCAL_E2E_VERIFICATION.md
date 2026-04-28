@@ -4,9 +4,9 @@ This checklist verifies the current Pilot MVP flow against local Supabase.
 
 ## CI Scope
 
-GitHub CI is intentionally stable and does not start local Supabase or Playwright browser E2E. Required PR checks cover dependency install, lint, unit tests, scoring coverage thresholds, production build, and Deno type checks for Supabase Edge Functions.
+GitHub CI runs the required baseline plus full local contract E2E: dependency install, lint, unit tests, scoring coverage thresholds, production build, Deno type checks, Edge Function unit tests, scripted local Supabase E2E, and Playwright browser E2E.
 
-Use this checklist as the required local pre-merge verification for backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes. Record any skipped local E2E checks in the PR body.
+Use this checklist as the required local pre-merge verification for backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, notification, and clinical-readiness changes. CI may skip licensed PDF file validation because licensed MoCA PDFs must stay outside GitHub-hosted runners. Record any skipped local E2E checks in the PR body.
 
 ## Prerequisites
 
@@ -69,7 +69,7 @@ Open the Vite URL in Chrome, then:
 
 ## Verification Commands
 
-The scripted local E2E flow validates the three local licensed Hebrew MoCA PDF pairs by file path and hash, then exercises the backend clinician-to-patient-to-review flow with generated local fixture answers. It also confirms repeat tests can be ordered for the same case, incomplete/provisional sessions can be exported to CSV, patient test numbers stay single-use, and the patient stimulus manifest returns version-scoped private Storage keys for the selected MoCA version. The script does not copy or extract licensed MoCA stimuli into the repository.
+The scripted local E2E flow validates the three local licensed Hebrew MoCA PDF pairs by file path and hash, then exercises the backend clinician-to-patient-to-review flow with generated local fixture answers. It also confirms repeat tests can be ordered for the same case, incomplete/provisional sessions can be exported to CSV, patient test numbers stay single-use, patient stimulus manifests return version-scoped private Storage keys, anonymous storage reads are denied, and other clinicians cannot read, review, or export a session they do not own. The script does not copy or extract licensed MoCA stimuli into the repository.
 
 From the repo root, with Supabase and Edge Functions running:
 
@@ -97,6 +97,14 @@ To run only one version:
 ```bash
 node scripts/local-e2e.mjs --version 8.3
 ```
+
+For CI-only or non-clinical local contract checks where licensed PDFs are intentionally unavailable:
+
+```bash
+node scripts/local-e2e.mjs --all-versions --skip-licensed-pdf-check
+```
+
+Do not use `--skip-licensed-pdf-check` to claim clinical-readiness validation.
 
 Run these before and after the manual flow:
 

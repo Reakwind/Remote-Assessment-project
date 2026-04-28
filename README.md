@@ -57,7 +57,7 @@ Future work proceeds feature by feature: create a branch from current `origin/ma
 
 ## Development Process
 
-Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full development workflow. Build feature slices around stable app contracts, keep Supabase-specific code isolated behind auth/database/storage/function/notification boundaries, and treat local Supabase E2E as the backend confidence check until hosted preview environments are intentionally configured and trusted.
+Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full development workflow. Build feature slices around stable app contracts, keep Supabase-specific code isolated behind auth/database/storage/function/notification boundaries, and treat local Supabase plus Playwright E2E as the backend and browser confidence check until hosted preview environments are intentionally configured and trusted.
 
 ## MVP Scope
 
@@ -98,9 +98,9 @@ Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full deve
 
 ## CI And Local E2E
 
-GitHub CI is the stable required baseline for every PR: install dependencies, lint, unit tests, scoring coverage thresholds, production build, and Deno type checks for Supabase Edge Functions.
+GitHub CI is the required baseline for every PR: install dependencies, lint, unit tests, scoring coverage thresholds, production build, Deno type checks, Edge Function unit tests, scripted local Supabase E2E, and Playwright browser E2E.
 
-Full browser/Supabase E2E is a required local pre-merge check for backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes. Run `docs/LOCAL_E2E_VERIFICATION.md` locally for those branches and record any skipped checks in the PR.
+Full browser/Supabase E2E remains a required local pre-merge check for backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes. CI may skip licensed PDF file validation, so run `docs/LOCAL_E2E_VERIFICATION.md` locally for clinical-readiness branches and record any skipped checks in the PR.
 
 ## Repo Map
 

@@ -68,7 +68,7 @@ Read [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) before backend, 
 - Build features as vertical slices: browser journey, app contract, persistence, review/scoring, verification, and docs.
 - Keep Supabase-specific work behind auth, database, storage, Edge Function/API, and notification boundaries.
 - Put deterministic scoring, validation, task mapping, and report logic in provider-independent shared modules when practical.
-- Use local Supabase E2E as the backend confidence check until hosted preview environments are intentionally configured and trusted.
+- Use local Supabase plus Playwright E2E as the backend and browser confidence check until hosted preview environments are intentionally configured and trusted.
 
 ## Product Guardrails
 
@@ -89,7 +89,7 @@ Read [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) before backend, 
 
 ## Verification
 
-GitHub CI intentionally runs the stable baseline only: dependency install, lint, unit tests, scoring coverage thresholds, production build, and Deno type checks for Supabase Edge Functions.
+GitHub CI is the required baseline: dependency install, lint, unit tests, scoring coverage thresholds, production build, Deno type checks, Edge Function unit tests, scripted local Supabase E2E, and Playwright browser E2E.
 
 For backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes, full browser/Supabase E2E remains a required local pre-merge check. Start local Supabase and Edge Functions, then run:
 
@@ -103,6 +103,8 @@ node scripts/local-e2e.mjs --all-versions
 ```
 
 Record skipped local E2E checks and the reason in the PR body.
+
+CI may use `node scripts/local-e2e.mjs --all-versions --skip-licensed-pdf-check` because licensed MoCA PDFs must stay outside GitHub-hosted runners. Do not use that flag for clinical-readiness validation; local clinical checks should verify the licensed PDFs and private Storage manifests.
 
 Useful local variants from the current runbooks:
 

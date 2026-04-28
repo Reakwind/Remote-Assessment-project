@@ -56,10 +56,16 @@ for (const version of versions) {
 
 console.log(`Local E2E target: ${baseUrl}`);
 console.log(`MoCA versions: ${versions.join(', ')}`);
-console.log('Licensed PDF check only: this script does not copy or extract MoCA stimuli.');
+if (options.skipLicensedPdfCheck) {
+  console.log('Licensed PDF check skipped: use only for CI or non-clinical local contract runs.');
+} else {
+  console.log('Licensed PDF check only: this script does not copy or extract MoCA stimuli.');
+}
 
-for (const version of versions) {
-  verifyLicensedFiles(version);
+if (!options.skipLicensedPdfCheck) {
+  for (const version of versions) {
+    verifyLicensedFiles(version);
+  }
 }
 
 for (const version of versions) {
@@ -247,6 +253,9 @@ async function runVersion(version) {
     `[${version}] at least one audio evidence row has signed audio URL`,
     detail.session.audio_evidence_reviews,
   );
+  await assertAnonymousStorageDenied('drawings', detail.session.drawings[0]?.storage_path, `[${version}] anonymous drawing read is blocked`);
+  await assertAnonymousStorageDenied('audio', audio.body.storagePath, `[${version}] anonymous audio read is blocked`);
+  await assertOtherClinicianDenied(version, sessionId, detail, now);
 
   for (const review of detail.session.drawings) {
     const score = DRAWING_MAX[review.task_id] ?? 0;
@@ -335,6 +344,74 @@ async function runVersion(version) {
   );
 
   console.log(`[${version}] OK session=${sessionId} adjusted=${finalDetail.session.scoring_report.total_adjusted}/30 percentile=${finalDetail.session.scoring_report.norm_percentile}`);
+}
+
+async function assertOtherClinicianDenied(version, sessionId, detail, now) {
+  const otherSignup = await request('/auth/v1/signup', {
+    method: 'POST',
+    headers: anonHeaders(),
+    body: JSON.stringify({
+      email: `local-e2e-other-${version.replace('.', '-')}-${now}@example.test`,
+      password: PASSWORD,
+    }),
+  });
+  assert(otherSignup.status < 300 && otherSignup.body?.access_token, `[${version}] second clinician signup for isolation checks`, otherSignup);
+
+  const otherClinicianHeaders = {
+    ...anonHeaders(),
+    Authorization: `Bearer ${otherSignup.body.access_token}`,
+  };
+
+  const hiddenSession = await request(`/functions/v1/get-session?sessionId=${encodeURIComponent(sessionId)}`, {
+    method: 'GET',
+    headers: otherClinicianHeaders,
+  });
+  assert(hiddenSession.status === 404, `[${version}] other clinician cannot read session`, hiddenSession);
+
+  const drawingReview = detail.session.drawings[0];
+  assert(drawingReview?.id, `[${version}] drawing review exists for isolation check`, detail.session.drawings);
+  const hiddenDrawingReview = await request('/functions/v1/update-drawing-review', {
+    method: 'POST',
+    headers: otherClinicianHeaders,
+    body: JSON.stringify({ reviewId: drawingReview.id, clinicianScore: 0, clinicianNotes: 'should not save' }),
+  });
+  assert(hiddenDrawingReview.status === 404, `[${version}] other clinician cannot update drawing review`, hiddenDrawingReview);
+
+  const scoringReview = detail.session.scoring_reviews[0];
+  assert(scoringReview?.id, `[${version}] scoring review exists for isolation check`, detail.session.scoring_reviews);
+  const hiddenScoringReview = await request('/functions/v1/update-scoring-review', {
+    method: 'POST',
+    headers: otherClinicianHeaders,
+    body: JSON.stringify({ reviewId: scoringReview.id, clinicianScore: 0, clinicianNotes: 'should not save' }),
+  });
+  assert(hiddenScoringReview.status === 404, `[${version}] other clinician cannot update scoring review`, hiddenScoringReview);
+
+  const hiddenPdf = await request('/functions/v1/export-pdf', {
+    method: 'POST',
+    headers: otherClinicianHeaders,
+    body: JSON.stringify({ sessionId }),
+  });
+  assert(hiddenPdf.status === 404, `[${version}] other clinician cannot export session PDF`, hiddenPdf);
+
+  const hiddenCsv = await request('/functions/v1/export-csv', {
+    method: 'POST',
+    headers: otherClinicianHeaders,
+    body: JSON.stringify({ sessionId }),
+  });
+  assert(hiddenCsv.status === 404, `[${version}] other clinician cannot export session CSV`, hiddenCsv);
+}
+
+async function assertAnonymousStorageDenied(bucket, storagePath, message) {
+  assert(typeof storagePath === 'string' && storagePath.length > 0, `${message}: storage path exists`, storagePath);
+  const response = await request(`/storage/v1/object/${bucket}/${encodeURIComponentObjectPath(storagePath)}`, {
+    method: 'GET',
+    headers: anonHeaders(),
+  });
+  assert([400, 401, 403, 404].includes(response.status), message, response);
+}
+
+function encodeURIComponentObjectPath(storagePath) {
+  return storagePath.split('/').map(part => encodeURIComponent(part)).join('/');
 }
 
 async function createPatient(headers, caseId, version) {
@@ -481,12 +558,13 @@ function readClientEnv() {
 }
 
 function parseArgs(args) {
-  const parsed = { allVersions: false, version: null };
+  const parsed = { allVersions: false, version: null, skipLicensedPdfCheck: false };
   for (let i = 0; i < args.length; i += 1) {
     if (args[i] === '--all-versions') parsed.allVersions = true;
     if (args[i] === '--version') parsed.version = args[++i];
+    if (args[i] === '--skip-licensed-pdf-check') parsed.skipLicensedPdfCheck = true;
     if (args[i] === '--help') {
-      console.log('Usage: node scripts/local-e2e.mjs [--version 8.1|8.2|8.3] [--all-versions]');
+      console.log('Usage: node scripts/local-e2e.mjs [--version 8.1|8.2|8.3] [--all-versions] [--skip-licensed-pdf-check]');
       process.exit(0);
     }
   }
