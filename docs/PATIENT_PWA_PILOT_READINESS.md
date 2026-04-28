@@ -89,6 +89,7 @@ Required staging checks:
 - Patient host has HTTPS, manifest, icons, and service worker at the host root.
 - Clinician routes are not discoverable from the patient PWA and redirect to patient entry when opened directly on the patient host.
 - Supabase remote-changing work follows `docs/SUPABASE_RECONCILIATION.md` before deploys, migration pushes, storage-policy changes, or hosted E2E.
+- Supabase MCP or the CLI fallback in `docs/SUPABASE_RECONCILIATION.md` confirms hosted migrations, Edge Functions, required secret names, storage expectations, and linked database lint/advisor status before physical-device evidence is collected.
 
 To recheck hosted staging, run:
 

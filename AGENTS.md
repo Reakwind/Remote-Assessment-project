@@ -121,4 +121,4 @@ For licensed stimulus storage or clinical-readiness changes, keep assets out of 
 
 The linked hosted Supabase project may drift from local MVP code. Before any hosted deployment, migration push, remote function deploy, storage-policy change, or remote E2E run, read [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md).
 
-Read-only Supabase inspection is allowed when needed. Remote-changing commands require explicit user approval immediately before execution. Destructive hosted database/storage/auth actions require a backup or rollback note before approval.
+Use the project-scoped Supabase MCP server for read-only hosted inspection when it is available in the current Codex session; use the CLI fallback commands in `docs/SUPABASE_RECONCILIATION.md` when MCP tools are unavailable. Remote-changing MCP or CLI operations require explicit user approval immediately before execution. Destructive hosted database/storage/auth actions require a backup or rollback note before approval.

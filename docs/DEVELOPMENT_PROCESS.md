@@ -63,7 +63,7 @@ Use the smallest check set that covers the risk:
 - Docs-only: link/search verification is enough.
 - Frontend-only: unit tests, lint, build, and targeted browser checks.
 - Backend/session/storage/review/scoring changes: unit tests, lint, build, Deno checks, Edge Function unit tests, local Supabase functions, scripted Supabase E2E, and Playwright browser E2E.
-- Hosted Supabase work: follow `docs/SUPABASE_RECONCILIATION.md`, inspect drift first, get explicit approval before remote-changing commands, and record rollback notes for destructive actions.
+- Hosted Supabase work: follow `docs/SUPABASE_RECONCILIATION.md`, inspect drift first with Supabase MCP when available or the CLI fallback, get explicit approval before remote-changing commands, and record rollback notes for destructive actions.
 
 GitHub CI runs the stable baseline plus local contract E2E: Deno Edge Function unit tests, scripted Supabase E2E, and Playwright browser E2E. Local clinical-readiness checks are still required when the branch depends on licensed PDFs, uploaded private Storage stimuli, installed PWA behavior, real-device browser behavior, or hosted Supabase configuration.
 

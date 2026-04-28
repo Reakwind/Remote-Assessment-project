@@ -11,9 +11,11 @@ Use it before hosted deployments, remote E2E, migration pushes, Edge Function de
 - Region: Southeast Asia (Singapore)
 - Local stack URL: `http://127.0.0.1:54321`
 
-As of 2026-04-26, the Supabase CLI is authenticated and this repo is linked to the hosted project.
+As of 2026-04-28, the Supabase CLI is authenticated and this repo is linked to the hosted project. The local Codex setup also has a project-scoped Supabase MCP server configured for `jdkaxdtrukfxzlzspuua`; reload the Codex session if `/mcp` does not show the Supabase tools after setup changes.
 
 ## Operating Rules
+
+Prefer Supabase MCP for read-only hosted inspection when the tools are available in the current Codex session. Use MCP to inspect hosted migrations, functions, storage buckets, advisors/lint findings, logs, and Supabase docs without switching to the dashboard. The Supabase CLI commands below remain the fallback and are still valid evidence.
 
 Read-only inspection is allowed when needed:
 
@@ -24,7 +26,9 @@ supabase migration list --local
 supabase migration list --linked
 supabase functions list
 supabase secrets list
+supabase storage ls ss:/// --linked --experimental
 supabase db lint
+supabase db lint --linked
 ```
 
 Remote-changing operations require explicit user approval immediately before running:
@@ -48,9 +52,112 @@ Destructive remote actions require a written backup/rollback note in the PR or h
 
 Do not paste Supabase access tokens or service-role keys into chat or docs. Use local CLI login, gitignored env files, or Supabase dashboard secrets.
 
+## Supabase MCP Workflow
+
+Use this workflow before pilot-readiness decisions, hosted debugging, remote E2E, deployment, migration, function, storage, auth, or RLS work.
+
+### 1. Pre-pilot hosted readiness checks
+
+Use Supabase MCP first, or the CLI fallback commands below, to confirm:
+
+- Remote migrations match local migration files.
+- All MVP Edge Functions are deployed and active.
+- Required secret names exist. Do not inspect or paste secret values.
+- Expected private Storage buckets exist for `stimuli`, `drawings`, and `audio`.
+- Database advisors/lint findings do not reveal app-schema blockers.
+
+CLI fallback:
+
+```bash
+supabase migration list --linked
+supabase functions list
+supabase secrets list
+supabase storage ls ss:/// --linked --experimental
+supabase db lint --linked
+```
+
+### 2. Remote/local drift detection
+
+Compare hosted state against repo state before any hosted-changing command:
+
+```bash
+supabase migration list --local
+supabase migration list --linked
+find supabase/functions -maxdepth 1 -mindepth 1 -type d | sort
+supabase functions list
+```
+
+For MCP, use the equivalent read-only migration/function/schema inspection tools, then summarize drift as:
+
+- migrations: aligned, local-only, remote-only, or unknown,
+- functions: all expected deployed, local-only missing remotely, or remote-only,
+- storage: expected buckets/policies present, missing, or unknown,
+- secrets: required names present or missing,
+- advisors/logs: blocker, warning, or clean.
+
+### 3. Safer hosted debugging
+
+When a hosted browser or patient/clinician issue appears, use MCP read-only inspection before changing anything:
+
+- Check recent Edge Function logs for the failing endpoint.
+- Inspect CORS-related failures for the actual hosted origins.
+- Inspect function deployment status and last update time.
+- Inspect schema/policy state for the affected table or bucket.
+- Search Supabase docs through MCP for current behavior before changing RLS, storage, auth, or Edge Function code.
+
+Only move to remote-changing commands after the failure is understood, the intended change is written down, and the user approves that specific action.
+
+### 4. Docs-backed Supabase changes
+
+Supabase behavior changes often. Before changing migrations, RLS, storage policies, auth/session behavior, Edge Functions, branching, or hosted configuration:
+
+- Use MCP docs search when available.
+- If MCP docs are unavailable in the session, use official Supabase docs.
+- Capture the relevant rule in the PR body or handoff when it affects the implementation.
+- Keep local Supabase plus browser E2E as the verification baseline even when hosted inspection passes.
+
+### 5. Workflow hardening
+
+For every hosted Supabase PR or handoff, include:
+
+- the exact read-only inspection commands or MCP checks used,
+- date, branch, and commit inspected,
+- migration/function/storage/secret/advisor summary,
+- remote-changing commands skipped or run,
+- rollback note for any destructive or hosted-changing action,
+- hosted smoke or local E2E checks performed and skipped.
+
 ## Point-In-Time Drift Snapshot
 
-Observed on 2026-04-26:
+Observed on 2026-04-28 with read-only CLI inspection after Supabase MCP setup:
+
+- Remote migrations align with all local migration files through `20260428000002`.
+- All expected current MVP Edge Functions are deployed and active:
+  - `create-session`
+  - `start-session`
+  - `get-stimuli`
+  - `submit-results`
+  - `save-drawing`
+  - `save-audio`
+  - `complete-session`
+  - `get-session`
+  - `update-drawing-review`
+  - `update-scoring-review`
+  - `export-pdf`
+  - `export-csv`
+- Required secret names are present:
+  - `SUPABASE_URL`
+  - `SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `ALLOWED_ORIGINS`
+  - `RESEND_API_KEY`
+  - `RESEND_FROM_EMAIL`
+- Legacy/future SMS secret names are also present.
+- Hosted Storage lists expected private buckets `stimuli`, `drawings`, and `audio`; it also lists legacy/extra `assessment-drawings`.
+- The Storage CLI inspection required `--experimental`; retry with `--dns-resolver https` if API key lookup times out.
+- `supabase db lint --linked` exits successfully, but reports advisory-extension issues in `extensions.index_advisor` (`text` to `text[]` cast warning and missing `hypopg_reset()` error). Treat these as a hosted advisor tooling issue unless app-schema evidence says otherwise.
+
+Previous historical snapshot from 2026-04-26:
 
 - Remote migrations are not aligned with local migration files.
 - Remote has only the first three local migration versions applied cleanly.

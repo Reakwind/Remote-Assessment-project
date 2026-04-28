@@ -236,6 +236,25 @@ Required verification:
 - Run a small bulk preflight such as `node scripts/bulk-flow-qa.mjs --batch FLOWPRE --patients 1 --clinicians 1 --tests-per-patient 3 --concurrency 1`.
 - Confirm `--report-batch` and `--cleanup-batch` both work for the test batch.
 
+### 13. Use Supabase MCP for hosted inspection, not hosted mutation by default
+
+Evidence:
+
+- The project-scoped Supabase MCP setup was added for hosted project `jdkaxdtrukfxzlzspuua`.
+- A 2026-04-28 read-only hosted snapshot showed migrations and Edge Functions aligned, while `supabase db lint --linked` still reported advisory-extension issues that should not be confused with app-schema drift.
+
+Rules:
+
+- Prefer Supabase MCP for read-only hosted inspection of migrations, functions, storage, advisors, logs, and docs before pilot or hosted-debugging work.
+- If MCP tools are not visible in the current Codex session, verify `codex mcp get supabase`, reload Codex when practical, and use the CLI fallback commands in `docs/SUPABASE_RECONCILIATION.md`.
+- Do not run remote-changing MCP or CLI operations without explicit user approval immediately before the operation.
+- Keep local Supabase plus browser E2E as the contract baseline even when hosted inspection is clean.
+
+Required verification:
+
+- Record the MCP checks or CLI fallback commands in the PR/handoff.
+- Record migrations, functions, required secret names, storage expectations, and linked lint/advisor status before hosted deploys or pilot evidence runs.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:
