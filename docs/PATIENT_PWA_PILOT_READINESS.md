@@ -103,6 +103,15 @@ Minimum device matrix:
 
 Record device, OS/browser version, staging URL, MoCA version, and any skipped task in the release note or PR handoff.
 
+Use `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.example.json` as the evidence template. After filling it with the tested devices, include it in the readiness report:
+
+```bash
+cd client
+PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE=../path/to/real-device-evidence.json npm run verify:patient-pwa-readiness
+```
+
+The evidence file must include passing runs for `ipad-installed-pwa`, `tablet-browser-fallback`, and `phone-portrait-fallback`. The readiness command validates required fields, HTTPS staging URLs, and the expected checks for each device mode.
+
 ## Pilot Readiness Status
 
 The pilot is ready only when:

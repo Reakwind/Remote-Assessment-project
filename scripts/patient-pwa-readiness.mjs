@@ -17,6 +17,51 @@ const patientPwaFiles = [
   'patient-icon-512.png',
 ];
 
+const realDeviceModes = [
+  {
+    mode: 'ipad-installed-pwa',
+    label: 'iPadOS Safari installed PWA',
+    checks: [
+      'install-from-patient-staging',
+      'standalone-open',
+      'test-number-entry',
+      'preflight',
+      'drawing',
+      'audio',
+      'naming',
+      'completion',
+      'resume-after-relaunch',
+    ],
+  },
+  {
+    mode: 'tablet-browser-fallback',
+    label: 'Tablet browser fallback',
+    checks: [
+      'browser-open',
+      'test-number-entry',
+      'preflight',
+      'drawing',
+      'audio',
+      'naming',
+      'completion',
+      'controls-reachable-with-browser-chrome',
+    ],
+  },
+  {
+    mode: 'phone-portrait-fallback',
+    label: 'Phone portrait fallback',
+    checks: [
+      'phone-portrait',
+      'test-number-entry',
+      'preflight',
+      'drawing',
+      'audio',
+      'naming',
+      'phone-drawing-flagged',
+    ],
+  },
+];
+
 const results = [];
 
 function record(gate, status, detail) {
@@ -113,12 +158,13 @@ async function verifyClinicianOutput() {
   record('local:clinician', 'pass', 'client/dist/clinician excludes patient PWA assets');
 }
 
-function recordExternalGates() {
+async function recordExternalGates() {
   const patientStagingUrl = process.env.PATIENT_STAGING_URL;
   const clinicianStagingUrl = process.env.CLINICIAN_STAGING_URL;
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY;
   const realDeviceEvidence = process.env.PATIENT_PWA_REAL_DEVICE_EVIDENCE;
+  const realDeviceEvidenceFile = process.env.PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE;
 
   record(
     'external:hosted-staging',
@@ -136,12 +182,24 @@ function recordExternalGates() {
       : 'Requires SUPABASE_URL plus SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY after licensed assets are uploaded',
   );
 
+  if (realDeviceEvidenceFile) {
+    const { errors } = await readRealDeviceEvidence(realDeviceEvidenceFile);
+    record(
+      'external:real-device',
+      errors.length === 0 ? 'manual' : 'fail',
+      errors.length === 0
+        ? `Real-device evidence file covers required iPad installed-PWA, tablet browser, and phone fallback checks: ${realDeviceEvidenceFile}`
+        : `Invalid real-device evidence file ${realDeviceEvidenceFile}: ${errors.join('; ')}`,
+    );
+    return;
+  }
+
   record(
     'external:real-device',
     realDeviceEvidence ? 'manual' : 'blocked',
     realDeviceEvidence
       ? `Real-device evidence note provided: ${realDeviceEvidence}`
-      : 'Requires installed-PWA iPad/tablet QA plus phone fallback testing on target devices',
+      : 'Requires PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE with installed-PWA iPad/tablet QA plus phone fallback checks',
   );
 }
 
@@ -157,10 +215,76 @@ function printReport() {
   }
 }
 
+function parseHttpsUrl(value, label) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? null : `${label} must use https://`;
+  } catch {
+    return `${label} must be a valid URL`;
+  }
+}
+
+function validateRealDeviceEvidence(evidence) {
+  const errors = [];
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
+    return ['Evidence file must contain a JSON object'];
+  }
+  if (!Array.isArray(evidence.runs)) {
+    return ['Evidence file must contain a runs array'];
+  }
+
+  for (const requiredMode of realDeviceModes) {
+    const run = evidence.runs.find((candidate) => candidate?.mode === requiredMode.mode);
+    if (!run) {
+      errors.push(`Missing ${requiredMode.label} run (${requiredMode.mode})`);
+      continue;
+    }
+
+    for (const field of ['device', 'osBrowserVersion', 'stagingUrl', 'mocaVersion', 'verifiedAt']) {
+      if (typeof run[field] !== 'string' || run[field].trim() === '') {
+        errors.push(`${requiredMode.mode} must include ${field}`);
+      }
+    }
+
+    const urlError = parseHttpsUrl(run.stagingUrl, `${requiredMode.mode}.stagingUrl`);
+    if (urlError) errors.push(urlError);
+    if (run.result !== 'pass') {
+      errors.push(`${requiredMode.mode} result must be pass`);
+    }
+    if (!Array.isArray(run.checks)) {
+      errors.push(`${requiredMode.mode} checks must be an array`);
+      continue;
+    }
+
+    for (const check of requiredMode.checks) {
+      if (!run.checks.includes(check)) {
+        errors.push(`${requiredMode.mode} missing check ${check}`);
+      }
+    }
+  }
+
+  return errors;
+}
+
+async function readRealDeviceEvidence(filePath) {
+  const resolvedPath = path.resolve(process.cwd(), filePath);
+  const content = await readText(resolvedPath);
+  if (content == null) {
+    return { errors: [`Real-device evidence file not found: ${filePath}`] };
+  }
+
+  try {
+    const evidence = JSON.parse(content);
+    return { errors: validateRealDeviceEvidence(evidence), evidence };
+  } catch {
+    return { errors: [`Real-device evidence file is not valid JSON: ${filePath}`] };
+  }
+}
+
 await verifyPatientOutput('patient');
 await verifyPatientOutput('patient-staging');
 await verifyClinicianOutput();
-recordExternalGates();
+await recordExternalGates();
 printReport();
 
 const hasFailure = results.some((result) => result.status === 'fail');

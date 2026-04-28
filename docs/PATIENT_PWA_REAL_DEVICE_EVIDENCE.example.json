@@ -1,0 +1,66 @@
+{
+  "release": "patient-pwa-pilot",
+  "tester": "Name or initials",
+  "runs": [
+    {
+      "mode": "ipad-installed-pwa",
+      "result": "pass",
+      "device": "iPad model",
+      "osBrowserVersion": "iPadOS version, Safari installed PWA",
+      "stagingUrl": "https://patient-staging.example.com",
+      "mocaVersion": "8.3",
+      "verifiedAt": "2026-04-28T12:00:00Z",
+      "checks": [
+        "install-from-patient-staging",
+        "standalone-open",
+        "test-number-entry",
+        "preflight",
+        "drawing",
+        "audio",
+        "naming",
+        "completion",
+        "resume-after-relaunch"
+      ],
+      "notes": "Record skipped tasks, browser permission prompts, or install friction here."
+    },
+    {
+      "mode": "tablet-browser-fallback",
+      "result": "pass",
+      "device": "Tablet model",
+      "osBrowserVersion": "OS and browser version",
+      "stagingUrl": "https://patient-staging.example.com",
+      "mocaVersion": "8.3",
+      "verifiedAt": "2026-04-28T12:30:00Z",
+      "checks": [
+        "browser-open",
+        "test-number-entry",
+        "preflight",
+        "drawing",
+        "audio",
+        "naming",
+        "completion",
+        "controls-reachable-with-browser-chrome"
+      ],
+      "notes": "Record viewport or browser chrome issues here."
+    },
+    {
+      "mode": "phone-portrait-fallback",
+      "result": "pass",
+      "device": "Phone model",
+      "osBrowserVersion": "OS and browser version",
+      "stagingUrl": "https://patient-staging.example.com",
+      "mocaVersion": "8.3",
+      "verifiedAt": "2026-04-28T13:00:00Z",
+      "checks": [
+        "phone-portrait",
+        "test-number-entry",
+        "preflight",
+        "drawing",
+        "audio",
+        "naming",
+        "phone-drawing-flagged"
+      ],
+      "notes": "Record drawing limitations and clinician flag confirmation here."
+    }
+  ]
+}
