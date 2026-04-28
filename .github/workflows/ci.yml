@@ -121,7 +121,7 @@ jobs:
           supabase functions serve create-session start-session get-stimuli submit-results save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null > /tmp/supabase-functions.log 2>&1 &
           echo "$!" > /tmp/supabase-functions.pid
           for _ in {1..30}; do
-            if curl -sS -o /dev/null http://127.0.0.1:54321/functions/v1/start-session; then
+            if grep -q "Serving functions on" /tmp/supabase-functions.log && curl -sS -o /dev/null http://127.0.0.1:54321/functions/v1/start-session; then
               exit 0
             fi
             sleep 2
