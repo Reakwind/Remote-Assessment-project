@@ -4,6 +4,14 @@ Remote Hebrew MoCA pilot MVP. Current `main` is the Pilot MVP baseline.
 
 The active product direction is simple: a clinician creates a session and shares the generated test number outside the app, a patient completes the assessment, raw task/drawing/audio evidence is persisted, deterministic rule scoring is applied where supported by the active test manual, and the clinician reviews/finalizes anything requiring judgment.
 
+## Active Local Checkout
+
+Use this local checkout for all work on this repository:
+
+`/Users/etaycohen/Projects/Remote-Assessment-project-main`
+
+Do not work from a OneDrive, CloudStorage, or other synced clone. If a terminal or agent starts under `/Users/etaycohen/Library/CloudStorage/OneDrive-Personal/`, switch to the active checkout above before running repo commands or making changes.
+
 ## Source Of Truth
 
 Read these first:
