@@ -12,10 +12,19 @@ const failOnBlocked = args.has('--fail-on-blocked');
 const patientPwaFiles = [
   'patient.webmanifest',
   'patient-sw.js',
+  'offline.html',
   'patient-icon.svg',
   'patient-icon-192.png',
   'patient-icon-512.png',
 ];
+
+const expectedManifestIcons = [
+  { src: '/patient-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+  { src: '/patient-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+  { src: '/patient-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+];
+
+const forbiddenCachePrefixes = ['"/auth/"', '"/functions/"', '"/rest/"', '"/storage/"'];
 
 const realDeviceModes = [
   {
@@ -85,12 +94,83 @@ async function readText(filePath) {
   }
 }
 
+function verifyManifestIcons(name, manifest) {
+  const failures = [];
+  if (!Array.isArray(manifest.icons)) {
+    return ['manifest icons'];
+  }
+
+  for (const expectedIcon of expectedManifestIcons) {
+    const icon = manifest.icons.find((candidate) => candidate?.src === expectedIcon.src);
+    if (!icon) {
+      failures.push(`manifest icon ${expectedIcon.src}`);
+      continue;
+    }
+
+    for (const field of ['sizes', 'type', 'purpose']) {
+      if (icon[field] !== expectedIcon[field]) {
+        failures.push(`manifest icon ${expectedIcon.src} ${field}`);
+      }
+    }
+  }
+
+  return failures.map((failure) => `${name} ${failure}`);
+}
+
+function verifyOfflineFallback(offlineHtml) {
+  const failures = [];
+  if (!offlineHtml?.includes('<title>אין חיבור לאינטרנט</title>')) {
+    failures.push('offline title');
+  }
+  if (!offlineHtml?.includes('כדי להתחיל או להמשיך את המבדק יש להתחבר לאינטרנט')) {
+    failures.push('offline recovery copy');
+  }
+  return failures;
+}
+
+function verifyPatientServiceWorker(serviceWorker) {
+  const failures = [];
+  if (!serviceWorker?.includes('const OFFLINE_URL = "/offline.html"')) {
+    failures.push('offline fallback URL');
+  }
+  if (!serviceWorker?.includes('caches.match(OFFLINE_URL)')) {
+    failures.push('offline navigation fallback');
+  }
+  for (const prefix of forbiddenCachePrefixes) {
+    if (!serviceWorker?.includes(prefix)) {
+      failures.push(`forbidden cache prefix ${prefix}`);
+    }
+  }
+  return failures;
+}
+
+async function verifySurfaceBuildMetadata(name, outDir) {
+  const metadataText = await readText(path.join(outDir, 'surface-build.json'));
+  if (!metadataText) return ['surface build metadata'];
+
+  try {
+    const metadata = JSON.parse(metadataText);
+    const expectedSurface = name === 'clinician' ? 'clinician' : 'patient';
+    const expectedEnvironment = name === 'patient-staging' ? 'staging' : 'production';
+    const failures = [];
+    if (metadata.surface !== expectedSurface) failures.push('surface flag');
+    if (metadata.deployEnvironment !== expectedEnvironment) failures.push(`${expectedEnvironment} deploy flag`);
+    return failures;
+  } catch {
+    return ['surface build metadata JSON'];
+  }
+}
+
 async function verifyPatientOutput(name) {
   const outDir = path.join(clientDist, name);
   const indexPath = path.join(outDir, 'index.html');
   const manifestPath = path.join(outDir, 'patient.webmanifest');
+  const offlinePath = path.join(outDir, 'offline.html');
+  const serviceWorkerPath = path.join(outDir, 'patient-sw.js');
   const indexHtml = await readText(indexPath);
   const manifestText = await readText(manifestPath);
+  const offlineHtml = await readText(offlinePath);
+  const serviceWorker = await readText(serviceWorkerPath);
   const missingFiles = [];
 
   for (const filename of ['index.html', ...patientPwaFiles]) {
@@ -123,9 +203,14 @@ async function verifyPatientOutput(name) {
     if (manifest.start_url !== '/#/') failures.push('manifest start_url');
     if (manifest.scope !== '/') failures.push('manifest scope');
     if (manifest.display !== 'standalone') failures.push('manifest display');
+    failures.push(...verifyManifestIcons(name, manifest));
   } catch {
     failures.push('manifest JSON');
   }
+  failures.push(...verifyOfflineFallback(offlineHtml));
+  failures.push(...verifyPatientServiceWorker(serviceWorker));
+
+  failures.push(...(await verifySurfaceBuildMetadata(name, outDir)));
 
   if (failures.length > 0) {
     record(`local:${name}`, 'fail', `Invalid patient output: ${failures.join(', ')}`);
@@ -145,6 +230,7 @@ async function verifyClinicianOutput() {
   if (!indexHtml?.includes('<title>Remote Check</title>')) failures.push('clinician title');
   if (indexHtml?.includes('patient.webmanifest')) failures.push('patient manifest leak');
   if (indexHtml?.includes('apple-mobile-web-app-capable')) failures.push('patient iOS metadata leak');
+  failures.push(...(await verifySurfaceBuildMetadata('clinician', outDir)));
 
   for (const filename of patientPwaFiles) {
     if (await exists(path.join(outDir, filename))) failures.push(`unexpected ${filename}`);

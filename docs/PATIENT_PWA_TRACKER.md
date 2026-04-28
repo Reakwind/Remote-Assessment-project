@@ -33,6 +33,7 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | Readiness reporting | Codex | Done | Local command reports patient/clinician build readiness and marks hosted staging, licensed stimuli, and real-device gates as blocked/manual until external evidence exists. | `codex/patient-readiness-report` |
 | Hosted staging smoke | Codex | Done | Playwright hosted smoke validates patient/clinician staging URL split, HTTPS, patient staging banner, manifest/service worker, and clinician-route hiding once URLs exist. | `codex/patient-hosted-smoke` |
 | Real-device evidence gate | Codex | Done | Readiness report can validate a structured iPad installed-PWA, tablet browser, and phone fallback evidence file before pilot review. | `codex/patient-device-evidence` |
+| Verification tightening | Codex | Done | Surface/readiness scripts validate offline fallback, manifest icons, service-worker cache guardrails, surface deploy flags, and hosted manifest icon availability. | `codex/patient-pwa-verification-tightening` |
 | Pilot readiness | Both | Blocked | Automated readiness gates exist; shared hosted staging, licensed stimuli verification, iPad/tablet install, and phone fallback checks still need external execution. | `codex/patient-pilot-readiness` |
 
 ## Current Shell Scope
@@ -59,6 +60,24 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Use `docs/PATIENT_PWA_PILOT_READINESS.md` for the final staging, licensed-stimuli, installed-PWA, and phone fallback gates before clinical pilot use.
 
 ## Latest Verification
+
+2026-04-28 Codex verification-tightening verification:
+
+- `node --check scripts/verify-surface-builds.mjs`
+- `node --check scripts/patient-pwa-readiness.mjs`
+- `cd client && npm run e2e:hosted-pwa` (skips until `PATIENT_STAGING_URL` and `CLINICIAN_STAGING_URL` are set)
+- `cd client && npm test`
+- `cd client && npm run lint`
+- `cd client && npm run build -- --debug`
+- `cd client && npm run e2e:browser`
+- `cd client && npm run build:patient`
+- `cd client && npm run e2e:patient-pwa` against `npm run preview:patient -- --host 127.0.0.1 --port 4173`
+- `cd client && npm run build:surfaces`
+- `cd client && npm run verify:surface-builds`
+- `node scripts/patient-pwa-readiness.mjs`
+- `PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE=docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.example.json node scripts/patient-pwa-readiness.mjs --json`
+- `node scripts/verify-stimuli.mjs --all-versions --print-manifest`
+- `git diff --check`
 
 2026-04-28 Codex real-device-evidence verification:
 

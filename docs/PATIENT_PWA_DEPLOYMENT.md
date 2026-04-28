@@ -50,14 +50,14 @@ Configure each host as a single-page app:
 Patient host requirements:
 
 - Publish `client/dist/patient` or `client/dist/patient-staging`.
-- Keep `patient.webmanifest`, `patient-sw.js`, and patient icons at the host root.
+- Keep `patient.webmanifest`, `patient-sw.js`, `offline.html`, and patient icons at the host root.
 - Use the patient host root as the PWA scope.
 - Do not add clinician navigation or clinician route links.
 
 Clinician host requirements:
 
 - Publish `client/dist/clinician`.
-- Do not publish patient manifest, service worker, or patient app icons.
+- Do not publish patient manifest, service worker, offline fallback page, or patient app icons.
 - Keep clinician auth and dashboard routes available behind normal app auth.
 
 Recommended cache policy:
@@ -99,6 +99,7 @@ Check the preview root:
 
 - `index.html` does not link a web app manifest.
 - `patient.webmanifest`, `patient-sw.js`, and patient app icons are absent from the output directory.
+- `offline.html` is absent from the output directory.
 - Clinician auth and dashboard routes are available.
 
 To build and mechanically verify all deployable surface outputs:

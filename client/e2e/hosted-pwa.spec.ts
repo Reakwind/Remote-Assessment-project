@@ -24,6 +24,11 @@ test.describe('hosted patient PWA staging', () => {
     const manifest = await request.get(new URL('/patient.webmanifest', patientUrl).href);
     expect(manifest.ok()).toBe(true);
     const manifestJson = await manifest.json();
+    expect(manifestJson.icons).toEqual(expect.arrayContaining([expect.objectContaining({ src: expect.any(String) })]));
+    for (const icon of manifestJson.icons) {
+      const iconResponse = await request.get(new URL(icon.src, patientUrl).href);
+      expect(iconResponse.ok()).toBe(true);
+    }
     expect(manifestJson).toEqual(
       expect.objectContaining({
         name: 'Remote Assessment',
