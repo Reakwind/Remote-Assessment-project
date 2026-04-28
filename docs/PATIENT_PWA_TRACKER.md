@@ -34,8 +34,10 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | Hosted staging smoke | Codex | Done | Playwright hosted smoke validates patient/clinician staging URL split, HTTPS, patient staging banner, manifest/service worker, and clinician-route hiding once URLs exist. | `codex/patient-hosted-smoke` |
 | Real-device evidence gate | Codex | Done | Readiness report can validate a structured iPad installed-PWA, tablet browser, and phone fallback evidence file before pilot review. | `codex/patient-device-evidence` |
 | Verification tightening | Codex | Done | Surface/readiness scripts validate offline fallback, manifest icons, service-worker cache guardrails, surface deploy flags, and hosted manifest icon availability. | `codex/patient-pwa-verification-tightening` |
-| Netlify hosting setup | Codex | Done | Repo includes Netlify package-directory configs and runbook for separate patient staging and clinician hosts. | `codex/netlify-hosting-setup` |
-| Pilot readiness | Both | Blocked | Automated readiness gates exist; shared hosted staging, licensed stimuli verification, iPad/tablet install, and phone fallback checks still need external execution. | `codex/patient-pilot-readiness` |
+| Netlify hosting setup | Codex | Done | Repo includes Netlify package-directory configs and runbook for separate patient staging and clinician hosts with GitHub continuous deploy from `main`. | `codex/netlify-hosting-setup` |
+| Hosted Netlify deployment | Codex | Done | Patient staging and clinician Netlify URLs are live and hosted smoke passes against both. | `https://reakwind-remote-assessment-patient-staging.netlify.app` / `https://reakwind-remote-assessment-clinician.netlify.app` |
+| Licensed hosted stimuli | Codex | Done | Hosted Supabase `stimuli` bucket contains all required MoCA 8.1, 8.2, and 8.3 licensed visual PNGs and verification passes. | `jdkaxdtrukfxzlzspuua` |
+| Pilot readiness | Both | Blocked | Automated local gates, hosted Netlify staging, and licensed stimuli pass; physical iPad/tablet install and phone fallback checks still need real-device execution. | `codex/patient-pilot-readiness` |
 
 ## Current Shell Scope
 
@@ -59,9 +61,20 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Use `PATIENT_STAGING_URL=https://<patient-host> CLINICIAN_STAGING_URL=https://<clinician-host> npm run e2e:hosted-pwa` after staging publication.
 - Use `PATIENT_PWA_REAL_DEVICE_EVIDENCE_FILE=../path/to/real-device-evidence.json npm run verify:patient-pwa-readiness` after filling the real-device evidence template.
 - Use `docs/NETLIFY_HOSTING.md` when creating or changing the Netlify patient staging and clinician sites.
+- Use `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.netlify-template.json` as the current Netlify evidence template for physical-device QA.
 - Use `docs/PATIENT_PWA_PILOT_READINESS.md` for the final staging, licensed-stimuli, installed-PWA, and phone fallback gates before clinical pilot use.
 
 ## Latest Verification
+
+2026-04-28 Codex hosted Netlify and stimuli verification:
+
+- `cd deploy/netlify/patient-staging && netlify build`
+- `cd deploy/netlify/clinician && netlify build`
+- `cd client && PATIENT_STAGING_URL=https://reakwind-remote-assessment-patient-staging.netlify.app CLINICIAN_STAGING_URL=https://reakwind-remote-assessment-clinician.netlify.app npm run e2e:hosted-pwa`
+- `SUPABASE_URL=https://jdkaxdtrukfxzlzspuua.supabase.co SUPABASE_SERVICE_ROLE_KEY=<from authenticated Supabase CLI> node scripts/verify-stimuli.mjs --all-versions`
+- Patient staging URL: `https://reakwind-remote-assessment-patient-staging.netlify.app`
+- Clinician URL: `https://reakwind-remote-assessment-clinician.netlify.app`
+- Remaining blocker: fill and validate `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.netlify-template.json` after real iPad/tablet/phone testing.
 
 2026-04-28 Codex verification-tightening verification:
 

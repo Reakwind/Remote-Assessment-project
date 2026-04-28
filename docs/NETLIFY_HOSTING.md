@@ -11,7 +11,18 @@ Create two separate Netlify sites from the same GitHub repository:
 | Patient PWA staging | `deploy/netlify/patient-staging` | `deploy/netlify/patient-staging/netlify.toml` | `client/dist/patient-staging` |
 | Clinician website | `deploy/netlify/clinician` | `deploy/netlify/clinician/netlify.toml` | `client/dist/clinician` |
 
-Leave Base directory unset so Netlify builds from the repository root. The site-specific `netlify.toml` files run `npm ci` inside `client`, then publish the correct surface output.
+Set Base directory to the matching package directory. Netlify resolves each site-specific `netlify.toml` from that directory, so the checked-in build commands and publish paths are relative to `deploy/netlify/<site>`.
+
+## Current Pilot Hosts
+
+The current pilot staging sites are:
+
+| Surface | Site name | URL | Deploy source |
+|---|---|---|---|
+| Patient PWA staging | `reakwind-remote-assessment-patient-staging` | `https://reakwind-remote-assessment-patient-staging.netlify.app` | GitHub continuous deploy from `main` |
+| Clinician website | `reakwind-remote-assessment-clinician` | `https://reakwind-remote-assessment-clinician.netlify.app` | GitHub continuous deploy from `main` |
+
+These sites are connected to `Reakwind/Remote-Assessment-project` and configured with hosted Supabase project `jdkaxdtrukfxzlzspuua`. Netlify build environment variables are set on both sites.
 
 ## Environment Variables
 
@@ -35,10 +46,10 @@ VITE_PATIENT_PWA_URL=https://<patient-staging-host>
 1. In Netlify, add a new project from `Reakwind/Remote-Assessment-project`.
 2. Select manual configuration if the site is not auto-detected.
 3. Set Package directory to `deploy/netlify/patient-staging`.
-4. Leave Base directory unset.
+4. Set Base directory to `deploy/netlify/patient-staging`.
 5. Keep the config-file build settings:
-   - Build command: `cd client && npm ci && npm run build:patient:staging`
-   - Publish directory: `client/dist/patient-staging`
+   - Build command: `cd ../../../client && npm ci --legacy-peer-deps && npm run build:patient:staging`
+   - Publish directory: `../../../client/dist/patient-staging`
 6. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 7. Deploy from `main`.
 
@@ -59,10 +70,10 @@ The patient staging host must serve these files from the host root:
 1. In Netlify, add another new project from `Reakwind/Remote-Assessment-project`.
 2. Select manual configuration if the site is not auto-detected.
 3. Set Package directory to `deploy/netlify/clinician`.
-4. Leave Base directory unset.
+4. Set Base directory to `deploy/netlify/clinician`.
 5. Keep the config-file build settings:
-   - Build command: `cd client && npm ci && npm run build:clinician`
-   - Publish directory: `client/dist/clinician`
+   - Build command: `cd ../../../client && npm ci --legacy-peer-deps && npm run build:clinician`
+   - Publish directory: `../../../client/dist/clinician`
 6. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 7. Deploy from `main`.
 

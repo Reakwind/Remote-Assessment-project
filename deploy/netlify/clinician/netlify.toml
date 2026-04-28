@@ -1,6 +1,6 @@
 [build]
-  command = "cd client && npm ci && npm run build:clinician"
-  publish = "client/dist/clinician"
+  command = "cd ../../../client && npm ci --legacy-peer-deps && npm run build:clinician"
+  publish = "../../../client/dist/clinician"
 
 [[redirects]]
   from = "/*"
