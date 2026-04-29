@@ -86,7 +86,7 @@ For function deploys, first run:
 deno check --frozen $(node scripts/edge-functions.mjs deno-check-args)
 ```
 
-Then deploy only the intended functions after approval. For destructive schema/storage/auth work, include a backup or forward-only rollback note before asking for approval.
+Then deploy only the intended functions after approval. Keep hosted Edge Functions on `verify_jwt = true`; patient-browser calls use anon-key headers, and clinician functions validate the user token inside the handler. For destructive schema/storage/auth work, include a backup or forward-only rollback note before asking for approval.
 
 ## Known Setup Limits
 

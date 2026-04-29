@@ -64,6 +64,7 @@ Use Supabase MCP first, or the CLI fallback commands below, to confirm:
 - All MVP Edge Functions are deployed and active.
 - Required secret names exist. Do not inspect or paste secret values.
 - Expected private Storage buckets exist for `stimuli`, `drawings`, and `audio`.
+- Private Storage buckets enforce the repo-defined MIME and file-size limits.
 - Database advisors/lint findings do not reveal app-schema blockers.
 
 CLI fallback:
@@ -190,6 +191,12 @@ Make hosted Supabase match the current `origin/main` MVP backend contract:
 - Required secrets exist by name.
 - Remote smoke tests pass without exposing patient bearer tokens, private drawings, private audio, or licensed stimuli.
 
+Current repo hardening expectations:
+
+- Public legacy RPC helpers from the original prototype are removed; browser flows use Edge Functions rather than `validate_link_token`, `mark_session_started`, `mark_session_completed`, or `recalculate_total_score`.
+- Trigger helper functions in `public` set an explicit `search_path` and are not directly executable by `public`, `anon`, or `authenticated`.
+- `stimuli`, `drawings`, and `audio` stay private and enforce bucket-level upload limits that match the app contract.
+
 ## Step 1: Classify The Hosted Project
 
 Before changing remote state, ask the user whether the hosted project is:
@@ -269,6 +276,8 @@ Then print the deploy commands and run only the approved function deploys:
 node scripts/edge-functions.mjs deploy-commands
 ```
 
+Hosted Edge Functions are expected to keep `verify_jwt = true`. Public patient calls send the Supabase anon key in `apikey` and `Authorization` headers; clinician-only functions still validate the clinician user token inside the handler.
+
 ## Step 5: Verify Secrets
 
 Required remote secret names for current/future MVP behavior:
@@ -300,9 +309,9 @@ If this secret is missing, hosted browser calls to Edge Functions can fail befor
 
 Expected buckets:
 
-- `stimuli`: private licensed assets, served through signed URLs.
-- `drawings`: private patient drawings, served through signed URLs.
-- `audio`: private patient audio evidence, served through signed URLs.
+- `stimuli`: private licensed PNG assets, served through signed URLs, `image/png`, 10 MiB limit.
+- `drawings`: private patient drawings, served through signed URLs, `image/png`, 6 MiB limit.
+- `audio`: private patient audio evidence, served through signed URLs, `audio/webm`, `audio/ogg`, `audio/mp4`, `audio/mpeg`, `audio/wav`, or `audio/x-wav`, 20 MiB limit.
 
 Required checks:
 
@@ -310,6 +319,7 @@ Required checks:
 - Clinician reads go through authenticated functions or scoped signed URLs.
 - Service role can upload/manage runtime evidence.
 - Licensed MoCA assets are not committed to Git.
+- Legacy/extra buckets such as `assessment-drawings` require an empty-bucket check, backup/rollback note, and explicit approval before deletion.
 
 ## Step 7: Remote Smoke Test
 
