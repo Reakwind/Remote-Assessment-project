@@ -47,6 +47,10 @@ jobs:
         working-directory: ./client
         run: npm run test:coverage
 
+      - name: Enforce App Coverage Baseline
+        working-directory: ./client
+        run: npm run test:coverage:app
+
       - name: Run Production Build
         working-directory: ./client
         run: npm run build
@@ -66,6 +70,7 @@ jobs:
         run: |
           deno test --allow-env --allow-net --allow-read=client/src/lib/scoring/__fixtures__ \
             supabase/functions/_shared/*_test.ts \
+            supabase/functions/create-session/index_test.ts \
             supabase/functions/start-session/index_test.ts
 
   full-e2e:
