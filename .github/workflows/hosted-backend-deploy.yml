@@ -43,6 +43,7 @@ env:
   CLINICIAN_STAGING_URL: ${{ github.event.inputs.clinician_url || vars.CLINICIAN_STAGING_URL || 'https://reakwind-remote-assessment-clinician.netlify.app' }}
   HOSTED_SUPABASE_URL: ${{ github.event.inputs.hosted_supabase_url || vars.HOSTED_SUPABASE_URL || 'https://jdkaxdtrukfxzlzspuua.supabase.co' }}
   SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || vars.SUPABASE_PROJECT_REF || 'jdkaxdtrukfxzlzspuua' }}
+  SUPABASE_CLI_VERSION: 2.95.4
 
 jobs:
   detect-changes:
@@ -55,7 +56,7 @@ jobs:
       run_hosted_smoke: ${{ steps.detect.outputs.run_hosted_smoke }}
       deploy_sha: ${{ steps.detect.outputs.deploy_sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 2
@@ -118,24 +119,29 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.detect-changes.outputs.deploy_sha }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
+          package-manager-cache: false
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.95.4
+      - name: Install Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase_bin="$RUNNER_TEMP/supabase-cli/node_modules/.bin"
+          npm install --prefix "$RUNNER_TEMP/supabase-cli" --no-audit --no-fund "supabase@${SUPABASE_CLI_VERSION}"
+          echo "$supabase_bin" >> "$GITHUB_PATH"
+          "$supabase_bin/supabase" --version
 
       - name: Validate deployment secrets
         run: |
@@ -158,14 +164,24 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.detect-changes.outputs.deploy_sha }}
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          version: 2.95.4
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Install Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase_bin="$RUNNER_TEMP/supabase-cli/node_modules/.bin"
+          npm install --prefix "$RUNNER_TEMP/supabase-cli" --no-audit --no-fund "supabase@${SUPABASE_CLI_VERSION}"
+          echo "$supabase_bin" >> "$GITHUB_PATH"
+          "$supabase_bin/supabase" --version
 
       - name: Validate migration secrets
         run: |
@@ -207,12 +223,12 @@ jobs:
     if: ${{ always() && needs.detect-changes.outputs.run_hosted_smoke == 'true' && needs.detect-changes.result == 'success' && (needs.deploy-functions.result == 'success' || needs.deploy-functions.result == 'skipped') && (needs.deploy-migrations.result == 'success' || needs.deploy-migrations.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.detect-changes.outputs.deploy_sha }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
