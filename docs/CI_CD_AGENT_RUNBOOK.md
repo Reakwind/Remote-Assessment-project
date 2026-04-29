@@ -8,6 +8,7 @@ This runbook is the delivery checklist for future agents working across GitHub, 
 |---|---|---|
 | GitHub | Source control, PR review, CI, manual hosted smoke workflow | `Reakwind/Remote-Assessment-project`, default branch `main` |
 | GitHub Actions | Required baseline verification | `CI` workflow jobs `test` and `full-e2e` |
+| GitHub Actions | Hosted backend deploy and hosted smoke | `Deploy Hosted Backend` workflow |
 | Supabase hosted | MVP backend runtime | project ref `jdkaxdtrukfxzlzspuua` |
 | Supabase local | Contract and browser E2E backend | `http://127.0.0.1:54321` |
 | Netlify patient | Patient PWA staging host | `https://reakwind-remote-assessment-patient-staging.netlify.app` |
@@ -34,8 +35,9 @@ Do not put Supabase service-role keys, Netlify auth tokens, Resend keys, Twilio 
 | Frontend-only | `cd client && npm test && npm run lint && npm run build`; add `npm run build:surfaces && npm run verify:surface-builds` for surface/deploy changes. |
 | Patient PWA | Frontend checks plus `npm run e2e:patient-pwa` against a patient preview when installability, cache, routing, or task UX changed. |
 | Backend/session/storage/review/scoring | GitHub CI baseline locally where practical: Deno check, Edge Function tests, local Supabase, `node scripts/local-e2e.mjs --all-versions`, and `cd client && npm run e2e:browser`. |
-| Hosted Supabase | Follow `docs/SUPABASE_RECONCILIATION.md`; inspect remote state first, get explicit approval before any remote-changing command, and record rollback notes. |
-| Hosted frontend smoke | Run the manual GitHub `Hosted Smoke` workflow or run `cd client && PATIENT_STAGING_URL=... CLINICIAN_STAGING_URL=... HOSTED_SUPABASE_URL=... npm run e2e:hosted-pwa`. |
+| Hosted Supabase Edge Functions | Merges to `main` run `Deploy Hosted Backend` after `CI` succeeds when `supabase/functions/**`, `supabase/config.toml`, or `scripts/edge-functions.mjs` changed. |
+| Hosted Supabase migrations | Use `Deploy Hosted Backend` manually with `deploy_migrations=true`; keep the `supabase-production-migrations` environment approval gate enabled. |
+| Hosted frontend smoke | `Deploy Hosted Backend` runs hosted smoke after frontend or hosted backend code changes. The manual `Hosted Smoke` workflow remains available for ad hoc rechecks. |
 
 CI may use `node scripts/local-e2e.mjs --all-versions --skip-licensed-pdf-check`. Do not use that skipped licensed-PDF path as clinical-readiness evidence.
 
@@ -56,7 +58,14 @@ The deploy commands printed by `deploy-commands` are remote-changing commands. R
 
 The `CI` workflow is the required PR and `main` baseline. It installs dependencies with `npm ci --legacy-peer-deps`, runs lint, unit tests, coverage, production build, deployable surface builds, Deno checks, Edge Function unit tests, local Supabase E2E, and Playwright browser E2E.
 
-The `Hosted Smoke` workflow is manual. Use it after Netlify or hosted Supabase changes, or before pilot-readiness handoff. It does not need service-role secrets.
+The `Deploy Hosted Backend` workflow runs after successful `CI` runs on `main`, then:
+
+- deploys all hosted Supabase Edge Functions when function/config deploy inputs changed,
+- reports a manual gate when migration files changed on `main`,
+- runs hosted smoke after frontend, Netlify, Edge Function, or migration changes,
+- retries hosted smoke to absorb normal Netlify deploy lag.
+
+The `Hosted Smoke` workflow is still manual. Use it for ad hoc rechecks or before pilot-readiness handoff. It does not need service-role secrets.
 
 ## Netlify
 
@@ -69,7 +78,7 @@ Backend-only or docs-only commits can produce Netlify deploy records that say `C
 
 ## Supabase
 
-Hosted Supabase is intentionally not auto-mutated by PR CI. Before any hosted-changing work:
+Hosted Supabase is intentionally not mutated by PR CI. After merge to `main`, Edge Functions deploy automatically through `Deploy Hosted Backend` when relevant files changed. Before manual hosted-changing work:
 
 ```bash
 supabase migration list --local
@@ -80,13 +89,31 @@ supabase storage ls ss:/// --linked --experimental
 supabase db lint --linked
 ```
 
+Required GitHub secrets for hosted automation:
+
+| Secret | Used by | Notes |
+|---|---|---|
+| `SUPABASE_ACCESS_TOKEN` | Edge Function deploys, migration deploys | Personal access token for Supabase CLI in GitHub Actions. |
+| `SUPABASE_DB_PASSWORD` | migration deploys only | Required only for the protected migration job. |
+
+Optional GitHub repository variables override the default hosted smoke targets:
+
+| Variable | Default |
+|---|---|
+| `SUPABASE_PROJECT_REF` | `jdkaxdtrukfxzlzspuua` |
+| `PATIENT_STAGING_URL` | `https://reakwind-remote-assessment-patient-staging.netlify.app` |
+| `CLINICIAN_STAGING_URL` | `https://reakwind-remote-assessment-clinician.netlify.app` |
+| `HOSTED_SUPABASE_URL` | `https://jdkaxdtrukfxzlzspuua.supabase.co` |
+
 For function deploys, first run:
 
 ```bash
 deno check --frozen $(node scripts/edge-functions.mjs deno-check-args)
 ```
 
-Then deploy only the intended functions after approval. Keep hosted Edge Functions on `verify_jwt = true`; patient-browser calls use anon-key headers, and clinician functions validate the user token inside the handler. For destructive schema/storage/auth work, include a backup or forward-only rollback note before asking for approval.
+The automatic workflow deploys all checked-in Edge Functions with `supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF"` after CI passes. Keep hosted Edge Functions on `verify_jwt = true`; patient-browser calls use anon-key headers, and clinician functions validate the user token inside the handler. For destructive schema/storage/auth work, include a backup or forward-only rollback note before asking for approval.
+
+For migrations, use `Deploy Hosted Backend` with `deploy_migrations=true` only after reviewing the migration diff, drift state, and rollback note. The job uses the `supabase-production-migrations` GitHub Environment so repository admins can require approval before it applies hosted migrations.
 
 ## Known Setup Limits
 

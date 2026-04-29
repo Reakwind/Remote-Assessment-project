@@ -22,6 +22,7 @@ Skipped checks and reason:
 
 - GitHub CI run:
 - Netlify deploys checked:
+- Hosted Supabase deploy path: none / automatic Edge Functions after merge / manual protected migrations / ad hoc command
 - Hosted Supabase inspection/deploy commands:
 - Rollback note for hosted-changing work:
 

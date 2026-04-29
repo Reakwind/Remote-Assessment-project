@@ -1,0 +1,244 @@
+name: Deploy Hosted Backend
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_functions:
+        description: Deploy hosted Supabase Edge Functions
+        required: true
+        type: boolean
+        default: true
+      deploy_migrations:
+        description: Apply pending hosted Supabase migrations
+        required: true
+        type: boolean
+        default: false
+      run_hosted_smoke:
+        description: Run hosted Netlify/Supabase smoke after deploy steps
+        required: true
+        type: boolean
+        default: true
+      patient_staging_url:
+        description: Patient PWA staging URL
+        required: true
+        default: https://reakwind-remote-assessment-patient-staging.netlify.app
+      clinician_url:
+        description: Clinician website URL
+        required: true
+        default: https://reakwind-remote-assessment-clinician.netlify.app
+      hosted_supabase_url:
+        description: Hosted Supabase project URL
+        required: true
+        default: https://jdkaxdtrukfxzlzspuua.supabase.co
+
+permissions:
+  contents: read
+
+env:
+  PATIENT_STAGING_URL: ${{ github.event.inputs.patient_staging_url || vars.PATIENT_STAGING_URL || 'https://reakwind-remote-assessment-patient-staging.netlify.app' }}
+  CLINICIAN_STAGING_URL: ${{ github.event.inputs.clinician_url || vars.CLINICIAN_STAGING_URL || 'https://reakwind-remote-assessment-clinician.netlify.app' }}
+  HOSTED_SUPABASE_URL: ${{ github.event.inputs.hosted_supabase_url || vars.HOSTED_SUPABASE_URL || 'https://jdkaxdtrukfxzlzspuua.supabase.co' }}
+  SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || vars.SUPABASE_PROJECT_REF || 'jdkaxdtrukfxzlzspuua' }}
+
+jobs:
+  detect-changes:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_functions: ${{ steps.detect.outputs.deploy_functions }}
+      deploy_migrations: ${{ steps.detect.outputs.deploy_migrations }}
+      migration_changed: ${{ steps.detect.outputs.migration_changed }}
+      run_hosted_smoke: ${{ steps.detect.outputs.run_hosted_smoke }}
+      deploy_sha: ${{ steps.detect.outputs.deploy_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Detect hosted deploy scope
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          DISPATCH_DEPLOY_FUNCTIONS: ${{ github.event.inputs.deploy_functions }}
+          DISPATCH_DEPLOY_MIGRATIONS: ${{ github.event.inputs.deploy_migrations }}
+          DISPATCH_RUN_HOSTED_SMOKE: ${{ github.event.inputs.run_hosted_smoke }}
+        run: |
+          set -euo pipefail
+
+          echo "deploy_sha=${DEPLOY_SHA}" >> "$GITHUB_OUTPUT"
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "deploy_functions=${DISPATCH_DEPLOY_FUNCTIONS}" >> "$GITHUB_OUTPUT"
+            echo "deploy_migrations=${DISPATCH_DEPLOY_MIGRATIONS}" >> "$GITHUB_OUTPUT"
+            echo "migration_changed=${DISPATCH_DEPLOY_MIGRATIONS}" >> "$GITHUB_OUTPUT"
+            echo "run_hosted_smoke=${DISPATCH_RUN_HOSTED_SMOKE}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git rev-parse "${DEPLOY_SHA}^" >/dev/null 2>&1; then
+            base="${DEPLOY_SHA}^"
+          else
+            base="$(git rev-list --max-parents=0 "$DEPLOY_SHA")"
+          fi
+
+          changed="$(git diff --name-only "$base" "$DEPLOY_SHA")"
+          printf '%s\n' "$changed"
+
+          deploy_functions=false
+          migration_changed=false
+          run_hosted_smoke=false
+
+          if printf '%s\n' "$changed" | grep -Eq '^(supabase/functions/|supabase/config\.toml|scripts/edge-functions\.mjs|\.github/workflows/hosted-backend-deploy\.yml)'; then
+            deploy_functions=true
+          fi
+
+          if printf '%s\n' "$changed" | grep -Eq '^supabase/migrations/'; then
+            migration_changed=true
+          fi
+
+          if printf '%s\n' "$changed" | grep -Eq '^(client/|deploy/netlify/|supabase/functions/|supabase/migrations/|supabase/config\.toml|scripts/edge-functions\.mjs|\.github/workflows/(hosted-backend-deploy|hosted-smoke)\.yml)'; then
+            run_hosted_smoke=true
+          fi
+
+          echo "deploy_functions=${deploy_functions}" >> "$GITHUB_OUTPUT"
+          echo "deploy_migrations=false" >> "$GITHUB_OUTPUT"
+          echo "migration_changed=${migration_changed}" >> "$GITHUB_OUTPUT"
+          echo "run_hosted_smoke=${run_hosted_smoke}" >> "$GITHUB_OUTPUT"
+
+  deploy-functions:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.deploy_functions == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.detect-changes.outputs.deploy_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.95.4
+
+      - name: Validate deployment secrets
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN:-}" || { echo "Missing SUPABASE_ACCESS_TOKEN secret"; exit 1; }
+          test -n "${SUPABASE_PROJECT_REF:-}" || { echo "Missing SUPABASE_PROJECT_REF secret"; exit 1; }
+
+      - name: Type check Edge Functions
+        run: deno check --frozen $(node scripts/edge-functions.mjs deno-check-args)
+
+      - name: Deploy Edge Functions
+        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF"
+
+  deploy-migrations:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.deploy_migrations == 'true' }}
+    runs-on: ubuntu-latest
+    environment: supabase-production-migrations
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.detect-changes.outputs.deploy_sha }}
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.95.4
+
+      - name: Validate migration secrets
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN:-}" || { echo "Missing SUPABASE_ACCESS_TOKEN secret"; exit 1; }
+          test -n "${SUPABASE_PROJECT_REF:-}" || { echo "Missing SUPABASE_PROJECT_REF secret"; exit 1; }
+          test -n "${SUPABASE_DB_PASSWORD:-}" || { echo "Missing SUPABASE_DB_PASSWORD secret"; exit 1; }
+
+      - name: Link hosted project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Inspect hosted migrations
+        run: |
+          supabase migration list --local
+          supabase migration list --linked
+
+      - name: Lint hosted database
+        run: supabase db lint --linked
+
+      - name: Apply hosted migrations
+        run: supabase migration up --linked
+
+  migration-notice:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.migration_changed == 'true' && needs.detect-changes.outputs.deploy_migrations != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report manual migration gate
+        run: |
+          {
+            echo "## Hosted migration gate"
+            echo ""
+            echo "This commit changed Supabase migrations. The workflow did not apply hosted migrations automatically."
+            echo "Run this workflow manually with \`deploy_migrations=true\` after reviewing rollback risk and the \`supabase-production-migrations\` environment approval gate."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  hosted-smoke:
+    needs: [detect-changes, deploy-functions, deploy-migrations]
+    if: ${{ always() && needs.detect-changes.outputs.run_hosted_smoke == 'true' && needs.detect-changes.result == 'success' && (needs.deploy-functions.result == 'success' || needs.deploy-functions.result == 'skipped') && (needs.deploy-migrations.result == 'success' || needs.deploy-migrations.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.detect-changes.outputs.deploy_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./client
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright browser
+        working-directory: ./client
+        run: npx playwright install --with-deps chrome
+
+      - name: Run hosted PWA smoke with deploy lag retries
+        working-directory: ./client
+        env:
+          PATIENT_STAGING_URL: ${{ env.PATIENT_STAGING_URL }}
+          CLINICIAN_STAGING_URL: ${{ env.CLINICIAN_STAGING_URL }}
+          HOSTED_SUPABASE_URL: ${{ env.HOSTED_SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            echo "Hosted smoke attempt ${attempt}/5"
+            if npm run e2e:hosted-pwa; then
+              exit 0
+            fi
+            sleep 30
+          done
+          exit 1

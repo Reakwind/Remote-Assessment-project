@@ -2,7 +2,7 @@
 
 This runbook is the source of truth for reconciling local Supabase state with the linked hosted Supabase project.
 
-Use it before hosted deployments, remote E2E, migration pushes, Edge Function deploys, or storage/security policy changes.
+Use it before manual hosted deployments, remote E2E, migration pushes, storage/security policy changes, or debugging the automatic hosted deploy workflow.
 
 ## Current Linked Project
 
@@ -31,7 +31,7 @@ supabase db lint
 supabase db lint --linked
 ```
 
-Remote-changing operations require explicit user approval immediately before running:
+Remote-changing operations outside the approved GitHub `Deploy Hosted Backend` workflow require explicit user approval immediately before running:
 
 ```bash
 supabase db push
@@ -41,6 +41,8 @@ supabase functions deploy <function-name>
 supabase secrets set ...
 supabase storage ...
 ```
+
+Merges to `main` can automatically deploy hosted Edge Functions after `CI` passes when the changed files affect `supabase/functions/**`, `supabase/config.toml`, or `scripts/edge-functions.mjs`. Hosted migrations are not applied automatically on push; run `Deploy Hosted Backend` manually with `deploy_migrations=true` after reviewing drift and rollback risk. Keep the `supabase-production-migrations` GitHub Environment protected with required reviewers before storing `SUPABASE_DB_PASSWORD`.
 
 Destructive remote actions require a written backup/rollback note in the PR or handoff before approval:
 
@@ -114,7 +116,7 @@ When a hosted browser or patient/clinician issue appears, use MCP read-only insp
 - Inspect schema/policy state for the affected table or bucket.
 - Search Supabase docs through MCP for current behavior before changing RLS, storage, auth, or Edge Function code.
 
-Only move to remote-changing commands after the failure is understood, the intended change is written down, and the user approves that specific action.
+Only move to ad hoc remote-changing commands after the failure is understood, the intended change is written down, and the user approves that specific action. Prefer fixing the checked-in workflow when the issue is with repeatable Edge Function deployment.
 
 ### 4. Docs-backed Supabase changes
 

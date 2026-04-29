@@ -107,7 +107,7 @@ npm run verify:surface-builds
 npm run verify:patient-pwa-readiness
 ```
 
-After both Netlify URLs exist, run the hosted smoke:
+After both Netlify URLs exist, hosted smoke runs automatically from the `Deploy Hosted Backend` GitHub workflow after relevant `main` changes. To run it manually:
 
 ```bash
 cd client
@@ -115,6 +115,8 @@ HOSTED_SUPABASE_URL=https://<hosted-project-ref>.supabase.co PATIENT_STAGING_URL
 ```
 
 The hosted smoke checks HTTPS, patient staging banner, manifest, service worker, manifest icons, clinician-route redirects on the patient host, absence of patient PWA assets on the clinician host, and hosted Edge Function CORS for the patient and clinician origins.
+
+The automatic workflow retries hosted smoke to absorb normal Netlify deploy lag. If a frontend-only commit fails hosted smoke, first inspect both Netlify deploy records for the merged commit before assuming a code regression.
 
 Backend-only or docs-only commits can produce Netlify deploy records that say `Canceled build due to no content change`. Treat those as deploy-signal noise unless a frontend surface changed or the published site fails hosted smoke.
 
