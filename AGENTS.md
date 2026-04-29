@@ -25,9 +25,10 @@ Canonical files:
 9. [CONTEXT.md](CONTEXT.md)
 10. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
 11. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
-12. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-13. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-14. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+12. [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md)
+13. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
+14. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
+15. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
 
 `JOURNEY.md` is the patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
 `docs/PATIENT_PWA_ARCHITECTURE.md` is the surface architecture authority. Clinician work is a website; patient work is a tablet/phone-first PWA.
@@ -37,6 +38,7 @@ Canonical files:
 `docs/PATIENT_PWA_TRACKER.md` is the shared patient PWA implementation tracker. Update it when milestone status, ownership, or acceptance checks change.
 `docs/HEBREW_TERMINOLOGY.md` is the Hebrew UI terminology authority. Use it before changing patient-facing copy, clinician dashboard labels, status labels, task names, or review rubrics.
 `docs/DEVELOPMENT_PROCESS.md` is the provider-neutral engineering workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
+`docs/CI_CD_AGENT_RUNBOOK.md` is the GitHub, Netlify, and Supabase delivery workflow for agents.
 `docs/AGENT_LEARNINGS.md` is the durable lessons file for future agents. Update it when PRs or review findings expose reusable engineering rules or recurring failure modes.
 
 ## Required GitHub Workflow
@@ -89,16 +91,16 @@ Read [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) before backend, 
 
 ## Verification
 
-GitHub CI is the required baseline: dependency install, lint, unit tests, scoring coverage thresholds, production build, Deno type checks, Edge Function unit tests, scripted local Supabase E2E, and Playwright browser E2E.
+GitHub CI is the required baseline: dependency install, lint, unit tests, scoring coverage thresholds, production build, deployable surface builds, Deno type checks, Edge Function unit tests, scripted local Supabase E2E, and Playwright browser E2E.
 
 For backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes, full browser/Supabase E2E remains a required local pre-merge check. Start local Supabase and Edge Functions, then run:
 
 ```bash
 supabase start
-supabase functions serve create-session start-session get-stimuli submit-results save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null
+supabase functions serve $(node scripts/edge-functions.mjs serve-args) --env-file /dev/null
 cd client && npm test && npm run build && npm run lint && npm run e2e:browser
 cd ..
-deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/get-stimuli/index.ts supabase/functions/submit-results/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts supabase/functions/export-pdf/index.ts supabase/functions/export-csv/index.ts
+deno check --frozen $(node scripts/edge-functions.mjs deno-check-args)
 node scripts/local-e2e.mjs --all-versions
 ```
 

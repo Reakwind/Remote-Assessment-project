@@ -87,6 +87,14 @@ find supabase/functions -maxdepth 1 -mindepth 1 -type d | sort
 supabase functions list
 ```
 
+For expected local Edge Function names and entrypoints, prefer the checked-in helper over copying the list by hand:
+
+```bash
+node scripts/edge-functions.mjs list
+node scripts/edge-functions.mjs deno-check-args
+node scripts/edge-functions.mjs deploy-commands
+```
+
 For MCP, use the equivalent read-only migration/function/schema inspection tools, then summarize drift as:
 
 - migrations: aligned, local-only, remote-only, or unknown,
@@ -255,27 +263,22 @@ Use this for staging/production or any environment with useful data.
 
 Deploy only after schema drift is resolved.
 
-Expected current MVP functions:
+Expected current MVP functions are listed by:
 
 ```bash
-supabase functions deploy create-session
-supabase functions deploy start-session
-supabase functions deploy get-stimuli
-supabase functions deploy submit-results
-supabase functions deploy save-drawing
-supabase functions deploy save-audio
-supabase functions deploy complete-session
-supabase functions deploy get-session
-supabase functions deploy update-drawing-review
-supabase functions deploy update-scoring-review
-supabase functions deploy export-pdf
-supabase functions deploy export-csv
+node scripts/edge-functions.mjs list
 ```
 
 Before deploying, run:
 
 ```bash
-deno check --frozen supabase/functions/complete-session/index.ts supabase/functions/create-session/index.ts supabase/functions/start-session/index.ts supabase/functions/get-stimuli/index.ts supabase/functions/submit-results/index.ts supabase/functions/save-drawing/index.ts supabase/functions/save-audio/index.ts supabase/functions/get-session/index.ts supabase/functions/update-drawing-review/index.ts supabase/functions/update-scoring-review/index.ts supabase/functions/export-pdf/index.ts supabase/functions/export-csv/index.ts
+deno check --frozen $(node scripts/edge-functions.mjs deno-check-args)
+```
+
+Then print the deploy commands and run only the approved function deploys:
+
+```bash
+node scripts/edge-functions.mjs deploy-commands
 ```
 
 ## Step 5: Verify Secrets

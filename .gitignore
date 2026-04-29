@@ -7,6 +7,7 @@ dist/
 .playwright-mcp/
 client/test-results/
 client/playwright-report/
+client/coverage/
 /patient-*.png
 deploy/netlify/*/.netlify/
 .claude/worktrees/

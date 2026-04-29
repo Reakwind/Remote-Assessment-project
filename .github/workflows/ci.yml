@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -15,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: client/package-lock.json
 
@@ -44,21 +51,16 @@ jobs:
         working-directory: ./client
         run: npm run build
 
+      - name: Run Surface Builds
+        working-directory: ./client
+        run: npm run build:surfaces
+
+      - name: Verify Surface Builds
+        working-directory: ./client
+        run: npm run verify:surface-builds
+
       - name: Type Check Edge Functions
-        run: |
-          deno check --frozen \
-            supabase/functions/complete-session/index.ts \
-            supabase/functions/create-session/index.ts \
-            supabase/functions/start-session/index.ts \
-            supabase/functions/get-stimuli/index.ts \
-            supabase/functions/submit-results/index.ts \
-            supabase/functions/save-drawing/index.ts \
-            supabase/functions/save-audio/index.ts \
-            supabase/functions/get-session/index.ts \
-            supabase/functions/update-drawing-review/index.ts \
-            supabase/functions/update-scoring-review/index.ts \
-            supabase/functions/export-pdf/index.ts \
-            supabase/functions/export-csv/index.ts
+        run: deno check --frozen $(node scripts/edge-functions.mjs deno-check-args)
 
       - name: Run Edge Function Unit Tests
         run: |
@@ -75,7 +77,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: client/package-lock.json
 
@@ -118,7 +120,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase functions serve create-session start-session get-stimuli submit-results save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null > /tmp/supabase-functions.log 2>&1 &
+          supabase functions serve $(node scripts/edge-functions.mjs serve-args) --env-file /dev/null > /tmp/supabase-functions.log 2>&1 &
           echo "$!" > /tmp/supabase-functions.pid
           for _ in {1..30}; do
             if grep -q "Serving functions on" /tmp/supabase-functions.log && curl -sS -o /dev/null http://127.0.0.1:54321/functions/v1/start-session; then
