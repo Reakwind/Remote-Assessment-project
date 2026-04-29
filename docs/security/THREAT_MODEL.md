@@ -43,13 +43,13 @@ Open questions that would materially change risk:
 - Patient evidence APIs persist task JSON, drawing PNG/strokes, audio files, and completion/scoring state (`supabase/functions/_shared/submitResult.ts`, `save-drawing`, `save-audio`, `complete-session`).
 - Clinician APIs read, review, score, and export sessions using clinician JWTs (`get-session`, `update-drawing-review`, `update-scoring-review`, `export-pdf`, `export-csv`).
 - Supabase Postgres stores sessions, patients, task results, scoring reports, drawing/scoring reviews, audit events, notification events, and rate-limit attempts (`supabase/migrations/*.sql`).
-- Supabase Storage stores private `stimuli`, `drawings`, and `audio` buckets served through signed URLs (`20260421000004_stimuli_storage.sql`, `20260424000001_drawings_storage.sql`, `20260426000001_enforce_private_audio_storage.sql`).
+- Supabase Storage stores private `stimuli`, `drawings`, and `audio` buckets served through signed URLs with bucket-level MIME and file-size limits (`20260421000004_stimuli_storage.sql`, `20260424000001_drawings_storage.sql`, `20260426000001_enforce_private_audio_storage.sql`).
 - Notification integration sends clinician completion emails through Resend when configured (`supabase/functions/_shared/notifications.ts`).
 - CI runs lint, unit tests, coverage, build, and Deno checks (`.github/workflows/ci.yml`).
 
 ### Data flows and trust boundaries
 
-- Clinician browser -> Supabase Auth: email/password and session tokens over HTTPS. Supabase Auth handles credential validation; local config shows email/password auth enabled, 1-hour JWT expiry, refresh token rotation, and MFA disabled.
+- Clinician browser -> Supabase Auth: email/password and session tokens over HTTPS. Supabase Auth handles credential validation; local config shows email/password auth enabled, 1-hour JWT expiry, refresh token rotation, stronger password rules, and MFA disabled.
 - Clinician browser -> Edge Functions: bearer clinician JWT crosses from browser to service-role functions. `requireClinician` calls `supabase.auth.getUser` before clinician actions, and functions additionally filter by `clinician_id`.
 - Clinician browser -> PostgREST: patient/profile reads and writes use Supabase client with RLS. Patient RLS policies constrain rows to `auth.uid() = clinician_id`.
 - Patient browser -> `start-session`: unauthenticated 8-digit test number crosses the internet boundary. The function validates format, rate-limits hashed IP/code attempts, atomically consumes unused test numbers, and returns `linkToken`.

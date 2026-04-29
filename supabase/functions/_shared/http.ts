@@ -4,23 +4,31 @@ const DEFAULT_ALLOWED_ORIGINS = [
 ];
 
 export function corsHeaders(req?: Request): Record<string, string> {
-  const origin = req?.headers.get('Origin') ?? '';
+  const allowedOrigin = allowedCorsOrigin(req);
+  const headers: Record<string, string> = {
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+  };
+  if (allowedOrigin) headers['Access-Control-Allow-Origin'] = allowedOrigin;
+  return headers;
+}
+
+function allowedCorsOrigin(req?: Request): string | null {
+  const origin = req?.headers.get('Origin');
   const configuredOrigins = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
     .split(',')
     .map(value => value.trim())
     .filter(Boolean);
   const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : DEFAULT_ALLOWED_ORIGINS;
-  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Vary': 'Origin',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
-  };
+  if (!origin) return allowedOrigins[0] ?? null;
+  return allowedOrigins.includes(origin) ? origin : null;
 }
 
 export function corsResponse(req: Request): Response {
+  if (req.headers.get('Origin') && !allowedCorsOrigin(req)) {
+    return new Response(null, { status: 403, headers: { 'Vary': 'Origin' } });
+  }
   return new Response(null, { headers: corsHeaders(req) });
 }
 
