@@ -73,8 +73,7 @@ jobs:
         run: |
           deno test --allow-env --allow-net --allow-read=client/src/lib/scoring/__fixtures__ \
             supabase/functions/_shared/*_test.ts \
-            supabase/functions/create-session/index_test.ts \
-            supabase/functions/start-session/index_test.ts
+            supabase/functions/*/index_test.ts
 
   full-e2e:
     runs-on: ubuntu-latest

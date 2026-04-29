@@ -37,7 +37,7 @@ Do not put Supabase service-role keys, Netlify auth tokens, Resend keys, Twilio 
 | Backend/session/storage/review/scoring | GitHub CI baseline locally where practical: Deno check, Edge Function tests, local Supabase, `node scripts/local-e2e.mjs --all-versions`, and `cd client && npm run e2e:browser`. |
 | Hosted Supabase Edge Functions | Merges to `main` run `Deploy Hosted Backend` after `CI` succeeds when `supabase/functions/**`, `supabase/config.toml`, or `scripts/edge-functions.mjs` changed. |
 | Hosted Supabase migrations | Use `Deploy Hosted Backend` manually with `deploy_migrations=true`; keep the `supabase-production-migrations` environment approval gate enabled. |
-| Hosted frontend smoke | `Deploy Hosted Backend` runs hosted smoke after frontend or hosted backend code changes. The manual `Hosted Smoke` workflow remains available for ad hoc rechecks. |
+| Hosted frontend/backend smoke | `Deploy Hosted Backend` runs a hosted Supabase create/start data smoke and Netlify PWA shell smoke after frontend or hosted backend code changes. The manual `Hosted Smoke` workflow remains available for ad hoc rechecks. |
 
 CI may use `node scripts/local-e2e.mjs --all-versions --skip-licensed-pdf-check`. Do not use that skipped licensed-PDF path as clinical-readiness evidence.
 
@@ -60,12 +60,14 @@ The `CI` workflow is the required PR and `main` baseline. It installs dependenci
 
 The `Deploy Hosted Backend` workflow runs after successful `CI` runs on `main`, then:
 
-- deploys all hosted Supabase Edge Functions when function/config deploy inputs changed,
-- reports a manual gate when migration files changed on `main`,
-- runs hosted smoke after frontend, Netlify, Edge Function, or migration changes,
+- deploys all hosted Supabase Edge Functions when function/config deploy inputs changed and no pending migration gate blocks the hosted deploy,
+- blocks with a manual gate when migration files changed on `main` but `deploy_migrations=true` was not selected,
+- runs hosted data-contract smoke and Netlify shell smoke after frontend, Netlify, Edge Function, or migration changes,
 - retries hosted smoke to absorb normal Netlify deploy lag.
 
-The `Hosted Smoke` workflow is still manual. Use it for ad hoc rechecks or before pilot-readiness handoff. It does not need service-role secrets.
+The hosted data-contract smoke is `node scripts/hosted-backend-smoke.mjs`. It creates a confirmed smoke clinician, inserts a complete patient profile, calls `create-session`, verifies the returned 8-digit patient test number, calls `start-session`, checks the stored hosted session contract, and then cleans up its smoke records. Use `--keep-records` only when debugging a failed hosted smoke run.
+
+The `Hosted Smoke` workflow is still manual. Use it for ad hoc rechecks or before pilot-readiness handoff. Keep `run_backend_data_smoke=true` unless you intentionally only want the Netlify shell/PWA smoke; the backend data smoke needs anon and service-role secrets.
 
 ## Netlify
 
@@ -95,6 +97,8 @@ Required GitHub secrets for hosted automation:
 |---|---|---|
 | `SUPABASE_ACCESS_TOKEN` | Edge Function deploys, migration deploys | Personal access token for Supabase CLI in GitHub Actions. |
 | `SUPABASE_DB_PASSWORD` | migration deploys only | Required only for the protected migration job. |
+| `HOSTED_SUPABASE_ANON_KEY` or `SUPABASE_ANON_KEY` | hosted backend data smoke | Hosted project's anon key. |
+| `HOSTED_SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SERVICE_ROLE_KEY` | hosted backend data smoke | Hosted project's service-role key; never expose it to frontend build env. |
 
 Optional GitHub repository variables override the default hosted smoke targets:
 

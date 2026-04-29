@@ -114,7 +114,7 @@ jobs:
 
   deploy-functions:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.deploy_functions == 'true' }}
+    if: ${{ needs.detect-changes.outputs.deploy_functions == 'true' && !(needs.detect-changes.outputs.migration_changed == 'true' && needs.detect-changes.outputs.deploy_migrations != 'true') }}
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -217,10 +217,12 @@ jobs:
             echo "This commit changed Supabase migrations. The workflow did not apply hosted migrations automatically."
             echo "Run this workflow manually with \`deploy_migrations=true\` after reviewing rollback risk and the \`supabase-production-migrations\` environment approval gate."
           } >> "$GITHUB_STEP_SUMMARY"
+          echo "Blocking hosted smoke until hosted migrations are intentionally applied."
+          exit 1
 
   hosted-smoke:
-    needs: [detect-changes, deploy-functions, deploy-migrations]
-    if: ${{ always() && needs.detect-changes.outputs.run_hosted_smoke == 'true' && needs.detect-changes.result == 'success' && (needs.deploy-functions.result == 'success' || needs.deploy-functions.result == 'skipped') && (needs.deploy-migrations.result == 'success' || needs.deploy-migrations.result == 'skipped') }}
+    needs: [detect-changes, deploy-functions, deploy-migrations, migration-notice]
+    if: ${{ always() && needs.detect-changes.outputs.run_hosted_smoke == 'true' && needs.detect-changes.result == 'success' && (needs.deploy-functions.result == 'success' || needs.deploy-functions.result == 'skipped') && (needs.deploy-migrations.result == 'success' || needs.deploy-migrations.result == 'skipped') && needs.migration-notice.result == 'skipped' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -233,6 +235,26 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: client/package-lock.json
+
+      - name: Run hosted backend data smoke with deploy lag retries
+        env:
+          HOSTED_SUPABASE_URL: ${{ env.HOSTED_SUPABASE_URL }}
+          HOSTED_SUPABASE_ANON_KEY: ${{ secrets.HOSTED_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+          HOSTED_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOSTED_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PATIENT_STAGING_URL: ${{ env.PATIENT_STAGING_URL }}
+          CLINICIAN_STAGING_URL: ${{ env.CLINICIAN_STAGING_URL }}
+        run: |
+          set -euo pipefail
+          test -n "${HOSTED_SUPABASE_ANON_KEY:-}" || { echo "Missing HOSTED_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY secret"; exit 1; }
+          test -n "${HOSTED_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "Missing HOSTED_SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_ROLE_KEY secret"; exit 1; }
+          for attempt in 1 2 3 4 5; do
+            echo "Hosted backend data smoke attempt ${attempt}/5"
+            if node scripts/hosted-backend-smoke.mjs; then
+              exit 0
+            fi
+            sleep 30
+          done
+          exit 1
 
       - name: Install dependencies
         working-directory: ./client

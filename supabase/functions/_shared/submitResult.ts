@@ -3,6 +3,13 @@ import { json } from './http.ts';
 import { writeAuditEvent } from './audit.ts';
 import { validateTaskPayload } from './tasks.ts';
 
+type SupabaseClient = any;
+
+export interface SubmitResultDeps {
+  createSupabaseClient?: () => SupabaseClient;
+  writeAuditEvent?: typeof writeAuditEvent;
+}
+
 const TASK_TYPE_TO_TASK_NAME: Record<string, string> = {
   'moca-visuospatial': 'trailMaking',
   'moca-cube': 'cube',
@@ -18,7 +25,7 @@ const TASK_TYPE_TO_TASK_NAME: Record<string, string> = {
   'moca-orientation-task': 'orientation',
 };
 
-export async function handleSubmitResult(req: Request): Promise<Response> {
+export async function handleSubmitResult(req: Request, deps: SubmitResultDeps = {}): Promise<Response> {
   let body: { sessionId: string; linkToken: string; taskType: string; rawData: unknown };
   try {
     body = await req.json();
@@ -34,10 +41,12 @@ export async function handleSubmitResult(req: Request): Promise<Response> {
   const validationError = validateTaskPayload(taskType, rawData);
   if (validationError) return json({ error: validationError }, 400, req);
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  );
+  const supabase = deps.createSupabaseClient
+    ? deps.createSupabaseClient()
+    : createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
 
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
@@ -67,7 +76,7 @@ export async function handleSubmitResult(req: Request): Promise<Response> {
   }
 
   try {
-    await writeAuditEvent(supabase, {
+    await (deps.writeAuditEvent ?? writeAuditEvent)(supabase, {
       eventType: 'task_result_submitted',
       sessionId,
       actorType: 'patient',

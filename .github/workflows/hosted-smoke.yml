@@ -15,6 +15,11 @@ on:
         description: Hosted Supabase project URL
         required: true
         default: https://jdkaxdtrukfxzlzspuua.supabase.co
+      run_backend_data_smoke:
+        description: Create and start a real hosted Supabase smoke session
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -31,6 +36,20 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: client/package-lock.json
+
+      - name: Run hosted backend data smoke
+        if: ${{ inputs.run_backend_data_smoke }}
+        env:
+          PATIENT_STAGING_URL: ${{ inputs.patient_staging_url }}
+          CLINICIAN_STAGING_URL: ${{ inputs.clinician_url }}
+          HOSTED_SUPABASE_URL: ${{ inputs.hosted_supabase_url }}
+          HOSTED_SUPABASE_ANON_KEY: ${{ secrets.HOSTED_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+          HOSTED_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOSTED_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${HOSTED_SUPABASE_ANON_KEY:-}" || { echo "Missing HOSTED_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY secret"; exit 1; }
+          test -n "${HOSTED_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "Missing HOSTED_SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_ROLE_KEY secret"; exit 1; }
+          node scripts/hosted-backend-smoke.mjs
 
       - name: Install dependencies
         working-directory: ./client
