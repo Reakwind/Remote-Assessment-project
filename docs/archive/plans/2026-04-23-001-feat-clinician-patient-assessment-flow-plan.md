@@ -8,7 +8,7 @@ superseded_date: 2026-04-25
 
 # Superseded Clinician Flow Plan
 
-This older plan is retained only as project history. Use [../../JOURNEY.md](../../JOURNEY.md) for the current patient and clinician journey.
+This older plan is retained only as project history. Use [../../../JOURNEY.md](../../../JOURNEY.md) for the current patient and clinician journey.
 
 Current MVP direction:
 

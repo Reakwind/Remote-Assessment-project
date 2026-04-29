@@ -14,32 +14,32 @@ Do not work from a OneDrive, CloudStorage, or other synced clone. If a terminal 
 
 ## Source Of Truth
 
-Read these first:
+Read these first for every task:
 
 1. [README.md](README.md)
 2. [AGENTS.md](AGENTS.md)
 3. [JOURNEY.md](JOURNEY.md)
-4. [docs/PATIENT_PWA_ARCHITECTURE.md](docs/PATIENT_PWA_ARCHITECTURE.md)
-5. [docs/PATIENT_PWA_DEPLOYMENT.md](docs/PATIENT_PWA_DEPLOYMENT.md)
-6. [docs/PATIENT_PWA_PILOT_READINESS.md](docs/PATIENT_PWA_PILOT_READINESS.md)
-7. [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md)
-8. [CONTEXT.md](CONTEXT.md)
-9. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
-10. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
-11. [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md)
-12. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-13. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-14. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+4. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
 
 `JOURNEY.md` is the bird's-eye patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
-`docs/PATIENT_PWA_ARCHITECTURE.md` is the patient/clinician surface authority. The selected direction is clinician website plus tablet/phone-first patient PWA.
-`docs/PATIENT_PWA_DEPLOYMENT.md` is the patient/clinician frontend deployment split authority.
-`docs/PATIENT_PWA_PILOT_READINESS.md` is the clinical-pilot readiness checklist for staging, licensed stimuli, installed-PWA, and phone fallback checks.
-`docs/PATIENT_PWA_TRACKER.md` is the shared patient PWA implementation tracker. Update it when PWA milestone status, ownership, or acceptance checks change.
-`docs/HEBREW_TERMINOLOGY.md` is the Hebrew UI terminology authority. Use it before changing patient or clinician copy.
 `docs/DEVELOPMENT_PROCESS.md` defines the provider-neutral development workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
-`docs/CI_CD_AGENT_RUNBOOK.md` is the GitHub/Netlify/Supabase delivery checklist for agents.
-`docs/AGENT_LEARNINGS.md` captures durable lessons from recent PRs and reviews so future agents can inherit them directly from the repo.
+
+Read focused docs only when touching their area:
+
+| Area | Doc |
+| --- | --- |
+| Patient PWA architecture, installability, cache policy | [docs/PATIENT_PWA_ARCHITECTURE.md](docs/PATIENT_PWA_ARCHITECTURE.md) |
+| Surface builds, output directories, frontend hosting split | [docs/PATIENT_PWA_DEPLOYMENT.md](docs/PATIENT_PWA_DEPLOYMENT.md) |
+| Netlify patient/clinician hosts | [docs/NETLIFY_HOSTING.md](docs/NETLIFY_HOSTING.md) |
+| Clinical-pilot readiness, licensed stimuli, physical-device gates | [docs/PATIENT_PWA_PILOT_READINESS.md](docs/PATIENT_PWA_PILOT_READINESS.md) |
+| Patient PWA milestone status | [docs/PATIENT_PWA_TRACKER.md](docs/PATIENT_PWA_TRACKER.md) |
+| Patient or clinician Hebrew copy | [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md) |
+| GitHub, Netlify, and Supabase delivery flow | [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md) |
+| Local browser/Supabase E2E | [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md) |
+| Licensed stimulus upload and validation | [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md) |
+| Hosted Supabase inspection or changes | [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md) |
+| Security threat modeling | [docs/security/THREAT_MODEL.md](docs/security/THREAT_MODEL.md) |
+| Reusable engineering lessons | [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md) |
 
 ## Required GitHub Workflow
 
@@ -122,8 +122,9 @@ Full browser/Supabase E2E remains a required local pre-merge check for backend, 
 - `docs/LOCAL_E2E_VERIFICATION.md` - local end-to-end test instructions.
 - `docs/STIMULI_ASSET_RUNBOOK.md` - private licensed stimulus upload and validation instructions.
 - `docs/SUPABASE_RECONCILIATION.md` - hosted Supabase drift/reconciliation runbook.
-- `docs/plans/` - background implementation plans, not product authority.
-- `CONTEXT.md` and `MEMORY.md` - project context/history.
+- `docs/security/THREAT_MODEL.md` - current application threat model.
+- `docs/archive/` - historical plans and backlog notes, not product authority.
+- `CONTEXT.md` - project context.
 
 ## Development
 
@@ -141,7 +142,7 @@ Backend/local E2E:
 
 ```bash
 supabase start
-supabase functions serve create-session start-session get-stimuli submit-results save-drawing save-audio complete-session get-session update-drawing-review update-scoring-review export-pdf export-csv --env-file /dev/null
+supabase functions serve $(node scripts/edge-functions.mjs serve-args) --env-file /dev/null
 node scripts/local-e2e.mjs --all-versions
 node scripts/bulk-flow-qa.mjs --batch FLOWQA --patients 50 --clinicians 50 --tests-per-patient 30 --concurrency 5
 node scripts/bulk-flow-qa.mjs --report-batch FLOWQA

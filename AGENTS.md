@@ -12,34 +12,32 @@ Do not use or update any OneDrive, CloudStorage, or similarly synced checkout fo
 
 ## Source Of Truth
 
-Canonical files:
+Read these first for every task:
 
 1. [README.md](README.md)
 2. [AGENTS.md](AGENTS.md)
 3. [JOURNEY.md](JOURNEY.md)
-4. [docs/PATIENT_PWA_ARCHITECTURE.md](docs/PATIENT_PWA_ARCHITECTURE.md)
-5. [docs/PATIENT_PWA_DEPLOYMENT.md](docs/PATIENT_PWA_DEPLOYMENT.md)
-6. [docs/NETLIFY_HOSTING.md](docs/NETLIFY_HOSTING.md)
-7. [docs/PATIENT_PWA_PILOT_READINESS.md](docs/PATIENT_PWA_PILOT_READINESS.md)
-8. [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md)
-9. [CONTEXT.md](CONTEXT.md)
-10. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
-11. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
-12. [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md)
-13. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-14. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-15. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+4. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
 
 `JOURNEY.md` is the patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
-`docs/PATIENT_PWA_ARCHITECTURE.md` is the surface architecture authority. Clinician work is a website; patient work is a tablet/phone-first PWA.
-`docs/PATIENT_PWA_DEPLOYMENT.md` is the patient/clinician frontend deployment split authority. Use it before changing surface build scripts, output directories, hosting fallbacks, or PWA cache headers.
-`docs/NETLIFY_HOSTING.md` is the Netlify provider runbook for the patient staging and clinician hosts.
-`docs/PATIENT_PWA_PILOT_READINESS.md` is the patient PWA clinical-pilot readiness checklist. Use it before marking staging, licensed stimuli, installed-PWA, or phone fallback checks complete.
-`docs/PATIENT_PWA_TRACKER.md` is the shared patient PWA implementation tracker. Update it when milestone status, ownership, or acceptance checks change.
-`docs/HEBREW_TERMINOLOGY.md` is the Hebrew UI terminology authority. Use it before changing patient-facing copy, clinician dashboard labels, status labels, task names, or review rubrics.
 `docs/DEVELOPMENT_PROCESS.md` is the provider-neutral engineering workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
-`docs/CI_CD_AGENT_RUNBOOK.md` is the GitHub, Netlify, and Supabase delivery workflow for agents.
-`docs/AGENT_LEARNINGS.md` is the durable lessons file for future agents. Update it when PRs or review findings expose reusable engineering rules or recurring failure modes.
+
+Read focused docs only when touching their area:
+
+| Area | Doc |
+| --- | --- |
+| Patient PWA architecture, installability, cache policy | [docs/PATIENT_PWA_ARCHITECTURE.md](docs/PATIENT_PWA_ARCHITECTURE.md) |
+| Surface builds, output directories, frontend hosting split | [docs/PATIENT_PWA_DEPLOYMENT.md](docs/PATIENT_PWA_DEPLOYMENT.md) |
+| Netlify patient/clinician hosts | [docs/NETLIFY_HOSTING.md](docs/NETLIFY_HOSTING.md) |
+| Clinical-pilot readiness, licensed stimuli, physical-device gates | [docs/PATIENT_PWA_PILOT_READINESS.md](docs/PATIENT_PWA_PILOT_READINESS.md) |
+| Patient PWA milestone status | [docs/PATIENT_PWA_TRACKER.md](docs/PATIENT_PWA_TRACKER.md) |
+| Patient-facing copy, clinician labels, status labels, task names, review rubrics | [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md) |
+| GitHub, Netlify, and Supabase delivery flow | [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md) |
+| Local browser/Supabase E2E | [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md) |
+| Licensed stimulus upload and validation | [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md) |
+| Hosted Supabase inspection or changes | [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md) |
+| Security threat modeling | [docs/security/THREAT_MODEL.md](docs/security/THREAT_MODEL.md) |
+| Reusable engineering lessons | [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md) |
 
 ## Required GitHub Workflow
 

@@ -83,7 +83,7 @@ Compare hosted state against repo state before any hosted-changing command:
 ```bash
 supabase migration list --local
 supabase migration list --linked
-find supabase/functions -maxdepth 1 -mindepth 1 -type d | sort
+node scripts/edge-functions.mjs list
 supabase functions list
 ```
 
@@ -140,19 +140,7 @@ For every hosted Supabase PR or handoff, include:
 Observed on 2026-04-28 with read-only CLI inspection after Supabase MCP setup:
 
 - Remote migrations align with all local migration files through `20260428000002`.
-- All expected current MVP Edge Functions are deployed and active:
-  - `create-session`
-  - `start-session`
-  - `get-stimuli`
-  - `submit-results`
-  - `save-drawing`
-  - `save-audio`
-  - `complete-session`
-  - `get-session`
-  - `update-drawing-review`
-  - `update-scoring-review`
-  - `export-pdf`
-  - `export-csv`
+- All expected current MVP Edge Functions from `node scripts/edge-functions.mjs list` are deployed and active.
 - Required secret names are present:
   - `SUPABASE_URL`
   - `SUPABASE_ANON_KEY`
@@ -229,7 +217,7 @@ For local comparison:
 ```bash
 supabase status
 supabase migration list --local
-find supabase/functions -maxdepth 1 -mindepth 1 -type d | sort
+node scripts/edge-functions.mjs list
 ```
 
 If local Supabase is running and inspection requires direct Postgres queries, use targeted read-only queries only.
