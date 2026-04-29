@@ -1,0 +1,49 @@
+name: Hosted Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      patient_staging_url:
+        description: Patient PWA staging URL
+        required: true
+        default: https://reakwind-remote-assessment-patient-staging.netlify.app
+      clinician_url:
+        description: Clinician website URL
+        required: true
+        default: https://reakwind-remote-assessment-clinician.netlify.app
+      hosted_supabase_url:
+        description: Hosted Supabase project URL
+        required: true
+        default: https://jdkaxdtrukfxzlzspuua.supabase.co
+
+permissions:
+  contents: read
+
+jobs:
+  hosted-pwa-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./client
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright browser
+        working-directory: ./client
+        run: npx playwright install --with-deps chrome
+
+      - name: Run hosted PWA smoke
+        working-directory: ./client
+        env:
+          PATIENT_STAGING_URL: ${{ inputs.patient_staging_url }}
+          CLINICIAN_STAGING_URL: ${{ inputs.clinician_url }}
+          HOSTED_SUPABASE_URL: ${{ inputs.hosted_supabase_url }}
+        run: npm run e2e:hosted-pwa

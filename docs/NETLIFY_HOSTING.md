@@ -116,6 +116,8 @@ HOSTED_SUPABASE_URL=https://<hosted-project-ref>.supabase.co PATIENT_STAGING_URL
 
 The hosted smoke checks HTTPS, patient staging banner, manifest, service worker, manifest icons, clinician-route redirects on the patient host, absence of patient PWA assets on the clinician host, and hosted Edge Function CORS for the patient and clinician origins.
 
+Backend-only or docs-only commits can produce Netlify deploy records that say `Canceled build due to no content change`. Treat those as deploy-signal noise unless a frontend surface changed or the published site fails hosted smoke.
+
 ## Pilot Handoff
 
 Record these values in the pilot handoff:

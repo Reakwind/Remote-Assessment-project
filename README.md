@@ -26,9 +26,10 @@ Read these first:
 8. [CONTEXT.md](CONTEXT.md)
 9. [docs/AGENT_LEARNINGS.md](docs/AGENT_LEARNINGS.md)
 10. [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md)
-11. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
-12. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
-13. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
+11. [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md)
+12. [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md)
+13. [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md)
+14. [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md)
 
 `JOURNEY.md` is the bird's-eye patient/clinician journey authority. Update it when browser, backend, status, scoring, notification, or review behavior changes.
 `docs/PATIENT_PWA_ARCHITECTURE.md` is the patient/clinician surface authority. The selected direction is clinician website plus tablet/phone-first patient PWA.
@@ -37,6 +38,7 @@ Read these first:
 `docs/PATIENT_PWA_TRACKER.md` is the shared patient PWA implementation tracker. Update it when PWA milestone status, ownership, or acceptance checks change.
 `docs/HEBREW_TERMINOLOGY.md` is the Hebrew UI terminology authority. Use it before changing patient or clinician copy.
 `docs/DEVELOPMENT_PROCESS.md` defines the provider-neutral development workflow. Supabase is the current MVP runtime; the app contract is the architecture boundary.
+`docs/CI_CD_AGENT_RUNBOOK.md` is the GitHub/Netlify/Supabase delivery checklist for agents.
 `docs/AGENT_LEARNINGS.md` captures durable lessons from recent PRs and reviews so future agents can inherit them directly from the repo.
 
 ## Required GitHub Workflow
@@ -98,7 +100,9 @@ Use [docs/DEVELOPMENT_PROCESS.md](docs/DEVELOPMENT_PROCESS.md) for the full deve
 
 ## CI And Local E2E
 
-GitHub CI is the required baseline for every PR: install dependencies, lint, unit tests, scoring coverage thresholds, production build, Deno type checks, Edge Function unit tests, scripted local Supabase E2E, and Playwright browser E2E.
+GitHub CI is the required baseline for every PR: install dependencies, lint, unit tests, scoring coverage thresholds, production build, deployable surface builds, Deno type checks, Edge Function unit tests, scripted local Supabase E2E, and Playwright browser E2E.
+
+Use [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md) for the agent delivery flow across GitHub, Netlify, and Supabase, including the manual hosted smoke workflow.
 
 Full browser/Supabase E2E remains a required local pre-merge check for backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes. CI may skip licensed PDF file validation, so run `docs/LOCAL_E2E_VERIFICATION.md` locally for clinical-readiness branches and record any skipped checks in the PR.
 
@@ -114,6 +118,7 @@ Full browser/Supabase E2E remains a required local pre-merge check for backend, 
 - `docs/PATIENT_PWA_TRACKER.md` - shared patient PWA milestone tracker.
 - `docs/AGENT_LEARNINGS.md` - durable lessons from repeated fixes, review findings, and verification gaps.
 - `docs/DEVELOPMENT_PROCESS.md` - branch, PR, verification, and provider-neutral backend process.
+- `docs/CI_CD_AGENT_RUNBOOK.md` - GitHub, Netlify, and Supabase delivery checklist for agents.
 - `docs/LOCAL_E2E_VERIFICATION.md` - local end-to-end test instructions.
 - `docs/STIMULI_ASSET_RUNBOOK.md` - private licensed stimulus upload and validation instructions.
 - `docs/SUPABASE_RECONCILIATION.md` - hosted Supabase drift/reconciliation runbook.

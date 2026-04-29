@@ -255,6 +255,25 @@ Required verification:
 - Record the MCP checks or CLI fallback commands in the PR/handoff.
 - Record migrations, functions, required secret names, storage expectations, and linked lint/advisor status before hosted deploys or pilot evidence runs.
 
+### 14. Keep CI/CD orchestration repo-backed and approval-gated
+
+Evidence:
+
+- The CI/CD streamlining branch added `docs/CI_CD_AGENT_RUNBOOK.md`, a PR template, a manual hosted smoke workflow, `.nvmrc`, and `scripts/edge-functions.mjs`.
+- Live inspection showed GitHub CI and Supabase Preview were green, hosted Supabase matched local migrations/functions, and Netlify deploy records could show no-content-change errors for backend-only commits.
+
+Rules:
+
+- Use `docs/CI_CD_AGENT_RUNBOOK.md` before coordinating GitHub, Netlify, and hosted Supabase work.
+- Keep Edge Function names in `scripts/edge-functions.mjs`; do not hand-copy long function lists into new workflow steps or docs.
+- Treat hosted Supabase deploys and destructive remote operations as approval-gated even when local CI is green.
+- Treat Netlify `Canceled build due to no content change` records as signal noise for backend-only or docs-only changes unless hosted smoke fails.
+
+Required verification:
+
+- `deno check --frozen $(node scripts/edge-functions.mjs deno-check-args)` for Edge Function entrypoint checks.
+- Manual `Hosted Smoke` workflow or `npm run e2e:hosted-pwa` after hosted frontend/Supabase changes.
+
 ## Update Rule
 
 Update this file before merge when a branch does any of the following:
