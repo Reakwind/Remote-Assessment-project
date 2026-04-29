@@ -1028,8 +1028,8 @@ export function ClinicianDashboardDetail() {
     : "pending";
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
-      <div className="mb-6">
+    <div className="max-w-6xl mx-auto flex flex-col pb-16">
+      <div className="mb-4">
         <Link
           to={breadcrumbTo}
           className="text-gray-500 font-bold hover:text-black flex items-center gap-2 transition-colors w-fit"
@@ -1039,16 +1039,16 @@ export function ClinicianDashboardDetail() {
         </Link>
       </div>
 
-      <div className="mb-8 flex flex-col gap-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex min-w-0 gap-4 sm:gap-6 items-center">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-100 text-2xl font-extrabold text-blue-700 sm:h-20 sm:w-20 sm:text-3xl">
+      <div className="mb-5 flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 gap-4 items-center">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl font-extrabold text-blue-700 sm:h-16 sm:w-16 sm:text-2xl">
             {(patientCaseLabel?.trim()[0] ?? sessionRecord?.case_id?.trim()[0] ?? "ת").toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h1 className="mb-2 break-words text-2xl font-extrabold leading-tight text-black sm:text-3xl">
+            <h1 className="mb-1 break-words text-2xl font-extrabold leading-tight text-black">
               {patientCaseLabel ? `תיק ${patientCaseLabel}` : sessionRecord?.case_id ? `תיק ${sessionRecord.case_id}` : "תיק"}
             </h1>
-            <div className="flex flex-wrap items-center gap-3 text-base font-medium text-gray-500 sm:gap-4 sm:text-lg">
+            <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-gray-500">
               {sessionRecord?.case_id && (
                 <span className="break-all font-mono bg-gray-100 px-2 py-0.5 rounded-md">{sessionRecord.case_id}</span>
               )}
@@ -1071,7 +1071,7 @@ export function ClinicianDashboardDetail() {
               onClick={handlePdfExport}
               disabled={!canExportPdf}
               className={clsx(
-                "flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-white border-2 border-gray-200 transition-colors text-black",
+                "flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 font-bold text-black transition-colors",
                 canExportPdf ? "hover:border-black" : "opacity-50 cursor-not-allowed",
               )}
             >
@@ -1082,7 +1082,7 @@ export function ClinicianDashboardDetail() {
               onClick={() => setCsvConfirmOpen(true)}
               disabled={exportingCsv}
               className={clsx(
-                "flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-white border-2 border-gray-200 transition-colors text-black",
+                "flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 font-bold text-black transition-colors",
                 exportingCsv ? "cursor-wait opacity-60" : "hover:border-black",
               )}
             >
@@ -1109,16 +1109,16 @@ export function ClinicianDashboardDetail() {
         </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="order-3 mb-5 grid grid-cols-2 gap-3 lg:grid-cols-6">
         {summary.map((item, i) => (
           <div
             key={i}
-            className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm sm:p-6"
+            className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm"
           >
-            <div className="mb-2 text-sm font-bold text-gray-600">{item.label}</div>
+            <div className="mb-1 text-sm font-bold text-gray-600">{item.label}</div>
             <div
               className={clsx(
-                "text-3xl font-extrabold tabular-nums",
+                "text-2xl font-extrabold tabular-nums",
                 item.color === "warn" ? "text-red-600" : item.color === "pass" ? "text-green-600" : "text-black",
               )}
             >
@@ -1129,16 +1129,16 @@ export function ClinicianDashboardDetail() {
       </div>
 
       {deviceContextDetails.length > 0 && (
-        <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-extrabold text-black">מכשיר המטופל</h2>
-            <span className="rounded-xl bg-gray-50 px-3 py-2 text-xs font-extrabold text-gray-600">
+        <section className="order-4 mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-extrabold text-black">מכשיר המטופל</h2>
+            <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs font-extrabold text-gray-600">
               נשמר בתחילת המבדק
             </span>
           </div>
           <dl className="grid grid-cols-2 gap-4 text-right sm:grid-cols-3 lg:grid-cols-6">
             {deviceContextDetails.map((detail) => (
-              <div key={detail.label} className="min-w-0 rounded-xl bg-gray-50 p-3">
+              <div key={detail.label} className="min-w-0 rounded-lg bg-gray-50 p-3">
                 <dt className="mb-1 text-xs font-bold text-gray-500">{detail.label}</dt>
                 <dd className="truncate text-sm font-extrabold text-black" title={detail.value}>{detail.value}</dd>
               </div>
@@ -1148,15 +1148,15 @@ export function ClinicianDashboardDetail() {
       )}
 
       {scoringBreakdown.length > 0 && (
-        <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div className="order-5 mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-extrabold text-black">פירוט ניקוד לפי פריט</h2>
+              <h2 className="text-lg font-extrabold text-black">פירוט ניקוד לפי פריט</h2>
               <p className="mt-1 text-sm font-bold text-gray-500">
                 ניקוד נוכחי לפי תחום ופריט. פריטים הדורשים שיקול קליני מופיעים גם בסקירה למטה.
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 px-3 py-2 text-sm font-extrabold text-gray-700">
+            <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-extrabold text-gray-700">
               {scoringBreakdown.length} פריטים
             </div>
           </div>
@@ -1214,14 +1214,14 @@ export function ClinicianDashboardDetail() {
         </div>
       )}
 
-      <div className="mb-6 mt-12 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="order-1 mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white">
-              <ClipboardCheck className="h-6 w-6" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
+              <ClipboardCheck className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-black">סקירה קלינית</h2>
+              <h2 className="text-lg font-extrabold text-black">סקירה קלינית</h2>
               <p className="text-sm font-bold text-gray-500">
                 {reviewQueue.length > 0
                   ? `${pendingQueue.length} ממתינים · ${completedQueue.length} נשמרו · ${reviewQueue.length} מסכי סקירה`
@@ -1245,7 +1245,7 @@ export function ClinicianDashboardDetail() {
               onClick={() => setShowPendingOnly((value) => !value)}
               disabled={pendingQueue.length === 0}
               className={clsx(
-                "rounded-xl border px-4 py-2 text-sm font-extrabold transition-colors",
+                "rounded-lg border px-3 py-2 text-sm font-extrabold transition-colors",
                 showPendingOnly
                   ? "border-black bg-black text-white"
                   : "border-gray-200 bg-white text-gray-700 hover:border-gray-400",
@@ -1266,9 +1266,9 @@ export function ClinicianDashboardDetail() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={clsx(
-                    "min-w-[132px] rounded-xl border p-3 text-right transition-colors sm:min-w-[150px] sm:p-4",
+	                  onClick={() => setActiveTab(tab.id)}
+	                  className={clsx(
+	                    "min-w-[128px] rounded-lg border p-3 text-right transition-colors",
                     isActive
                       ? "border-black bg-black text-white"
                       : tab.isReviewed
@@ -1300,7 +1300,7 @@ export function ClinicianDashboardDetail() {
       </div>
 
       {reviewQueue.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-8 text-center shadow-sm">
+        <div className="order-2 rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center shadow-sm">
           <ClipboardCheck className="mx-auto mb-4 h-10 w-10 text-gray-400" />
           <h3 className="text-xl font-extrabold text-black">אין פריטי סקירה להצגה</h3>
           <p className="mx-auto mt-2 max-w-xl text-sm font-bold text-gray-500">
@@ -1308,15 +1308,15 @@ export function ClinicianDashboardDetail() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-8 lg:col-span-7">
+        <div className="order-2 grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-7">
             {renderTaskContent()}
           </div>
 
-          <div className="flex flex-col rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm sm:p-8 lg:col-span-5">
-            <div className="mb-8 flex items-center justify-between border-b border-gray-200 pb-4">
-              <h3 className="text-2xl font-extrabold text-black">ניקוד</h3>
-              <div className="text-3xl font-extrabold tabular-nums bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex flex-col rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm lg:col-span-5">
+            <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-3">
+              <h3 className="text-xl font-extrabold text-black">ניקוד</h3>
+              <div className="text-2xl font-extrabold tabular-nums bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-200">
                 <span className="text-black">{rubricData.score}</span>
                 <span className="text-gray-400">/{rubricData.max}</span>
               </div>
@@ -1333,39 +1333,41 @@ export function ClinicianDashboardDetail() {
               </div>
             )}
 
-            <div className="space-y-3 mb-8 flex-1">
+            <div className="space-y-2 mb-5 flex-1">
               {isCurrentEvidenceOnly ? (
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-5 text-sm font-bold text-blue-950">
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm font-bold text-blue-950">
                   עדות קולית בלבד למשימה זו. אין פריט ניקוד ידני לשמירה במסך זה.
                 </div>
               ) : rubricData.items.map((crit) => {
                 const isChecked = rubrics[activeReviewTab][crit.id];
                 return (
-                  <div
+                  <button
                     key={crit.id}
+                    type="button"
+                    aria-pressed={isChecked}
                     onClick={() => toggleRubric(crit.id)}
                     className={clsx(
-                      "flex gap-4 p-5 rounded-xl cursor-pointer transition-all border-2",
+                      "flex w-full gap-3 rounded-lg border p-4 text-right transition-all",
                       isChecked ? "bg-[#ecfdf5] border-green-200" : "bg-white border-transparent hover:border-gray-200",
                     )}
                   >
                     <div
                       className={clsx(
-                        "mt-1 w-6 h-6 rounded flex items-center justify-center flex-shrink-0 transition-colors",
+                        "mt-0.5 w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors",
                         isChecked ? "bg-green-600 text-white" : "bg-gray-200 text-transparent",
                       )}
                     >
-                      <CheckCircle2 className="w-5 h-5" />
+                      <CheckCircle2 className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className={clsx("font-bold text-lg", isChecked ? "text-green-900" : "text-black")}>
+                      <div className={clsx("font-bold text-base", isChecked ? "text-green-900" : "text-black")}>
                         {crit.label}
                       </div>
                       <div className={clsx("text-sm mt-1", isChecked ? "text-green-700" : "text-gray-500")}>
                         {crit.desc}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -1379,14 +1381,14 @@ export function ClinicianDashboardDetail() {
                   setReviewNotesByTab((prev) => ({ ...prev, [activeReviewTab]: event.target.value }));
                 }}
                 placeholder="הוסף הערה קלינית…"
-                className="w-full h-32 p-4 bg-white border border-gray-200 rounded-xl resize-none text-lg focus:outline-none focus:ring-4 focus:ring-blue-600 focus:border-blue-600 transition-all"
+                className="w-full h-24 p-3 bg-white border border-gray-200 rounded-lg resize-none text-base focus:outline-none focus:ring-4 focus:ring-blue-600 focus:border-blue-600 transition-all"
               />
-              <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="mt-3 flex items-center justify-between gap-3">
                 <button
                   onClick={handleSaveReview}
                   disabled={savingReview || isCurrentEvidenceOnly || (!currentDrawing && !currentScoringReview)}
                   className={clsx(
-                    "inline-flex items-center gap-2 rounded-xl px-5 py-3 font-bold text-white transition-colors",
+                    "inline-flex h-11 items-center gap-2 rounded-lg px-4 font-bold text-white transition-colors",
                     savingReview || isCurrentEvidenceOnly || (!currentDrawing && !currentScoringReview)
                       ? "bg-gray-300 cursor-not-allowed"
                       : "bg-black hover:bg-gray-800",
@@ -1402,8 +1404,8 @@ export function ClinicianDashboardDetail() {
         </div>
       )}
 
-      <div className="mt-12 bg-white rounded-xl p-6 border border-gray-200">
-        <h3 className="text-xl font-bold mb-4">יומן אירועים</h3>
+      <div className="order-6 mt-5 bg-white rounded-xl p-4 border border-gray-200">
+        <h3 className="text-lg font-bold mb-3">יומן אירועים</h3>
         <div className="max-h-64 space-y-2 overflow-y-auto text-sm text-gray-600">
           {auditLogs.length === 0 ? (
             <div className="text-gray-400">אין אירועים להצגה.</div>

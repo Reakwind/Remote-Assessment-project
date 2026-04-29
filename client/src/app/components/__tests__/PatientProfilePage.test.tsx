@@ -157,6 +157,7 @@ describe('PatientProfilePage', () => {
   it('prioritizes the awaiting-review session as the profile primary action', async () => {
     const router = renderProfile();
 
+    expect(await screen.findAllByRole('button', { name: 'מבדק חדש' })).toHaveLength(1);
     await userEvent.click(await screen.findByRole('button', { name: 'סקור מבדק' }));
 
     expect(router.state.location.pathname).toBe('/dashboard/session/session-review');

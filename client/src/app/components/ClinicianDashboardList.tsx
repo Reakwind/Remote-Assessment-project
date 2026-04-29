@@ -3,6 +3,7 @@ import { Search, ChevronLeft, Plus, Hash, ClipboardCheck } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { clsx } from "clsx";
 import { supabase } from "../../lib/supabase";
 import { PatientForm } from "./PatientForm";
 import { CsvExportConfirmDialog } from "./CsvExportConfirmDialog";
@@ -91,12 +92,12 @@ function latestOf<T>(arr: T[] | null | undefined, key: (v: T) => string | null):
 function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
   if (points.length === 0) {
     return (
-      <div className="flex h-full min-h-44 flex-col">
-        <div className="mb-3">
+      <div className="flex h-full min-h-28 flex-col">
+        <div className="mb-2">
           <div className="text-sm font-bold text-gray-600">שינוי בציון MoCA לאורך זמן</div>
           <div className="text-xs font-bold text-gray-500">0 מבדקים סופיים</div>
         </div>
-        <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 text-center text-sm font-bold text-gray-500">
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 text-center text-sm font-bold text-gray-500">
           אין עדיין מבדקים סופיים להצגת שינוי בציון.
         </div>
       </div>
@@ -104,7 +105,7 @@ function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
   }
 
   const width = 560;
-  const height = 180;
+  const height = 130;
   const padding = { top: 16, right: 36, bottom: 34, left: 28 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
@@ -118,15 +119,15 @@ function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
   const last = points[points.length - 1];
 
   return (
-    <div className="flex h-full min-h-44 flex-col">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+    <div className="flex h-full min-h-32 flex-col">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
         <div>
           <div className="text-sm font-bold text-gray-600">שינוי בציון MoCA לאורך זמן</div>
           <div className="text-xs font-bold text-gray-500">
             {points.length} מבדקים סופיים
           </div>
         </div>
-        <div className="text-2xl font-extrabold text-black tabular-nums">
+        <div className="text-xl font-extrabold text-black tabular-nums">
           {last.score}/30
         </div>
       </div>
@@ -135,7 +136,7 @@ function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
         role="img"
         aria-label={`שינוי ציון MoCA מ-${first.score} ל-${last.score}`}
         viewBox={`0 0 ${width} ${height}`}
-        className="h-44 w-full overflow-visible"
+        className="h-28 w-full overflow-visible"
         preserveAspectRatio="none"
       >
         {[0, 15, 30].map((tick) => {
@@ -182,7 +183,7 @@ function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
 export function ClinicianDashboardList() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "review">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | PatientRow["status"]>("all");
   const [rows, setRows] = useState<PatientRow[]>([]);
   const [scoreTrend, setScoreTrend] = useState<ScoreTrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -273,19 +274,31 @@ export function ClinicianDashboardList() {
   }, [loadPatients]);
 
   const filtered = useMemo(() => {
-    const scopedRows = statusFilter === "review" ? rows.filter((r) => r.status === "review") : rows;
+    const statusPriority: Record<PatientRow["status"], number> = {
+      review: 0,
+      in_progress: 1,
+      new: 2,
+      completed: 3,
+    };
+    const scopedRows = statusFilter === "all" ? rows : rows.filter((r) => r.status === statusFilter);
     const q = search.trim().toLowerCase();
-    if (!q) return scopedRows;
-    return scopedRows.filter(
-      (r) => caseDisplay(r).toLowerCase().includes(q) || r.id.toLowerCase().includes(q),
-    );
+    const matchingRows = q
+      ? scopedRows.filter(
+          (r) => caseDisplay(r).toLowerCase().includes(q) || r.id.toLowerCase().includes(q),
+        )
+      : scopedRows;
+    return [...matchingRows].sort((a, b) => {
+      const priorityDelta = statusPriority[a.status] - statusPriority[b.status];
+      if (priorityDelta !== 0) return priorityDelta;
+      return new Date(b.lastActive ?? b.created_at).getTime() - new Date(a.lastActive ?? a.created_at).getTime();
+    });
   }, [rows, search, statusFilter]);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
     count: Math.max(filtered.length, 1),
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 88,
+    estimateSize: () => 76,
     overscan: 5,
   });
 
@@ -338,10 +351,19 @@ export function ClinicianDashboardList() {
 
   const totalCases = rows.length;
   const reviewCount = rows.filter((r) => r.status === "review").length;
+  const inProgressCount = rows.filter((r) => r.status === "in_progress").length;
+  const pendingCount = rows.filter((r) => r.status === "new").length;
   const completedCount = rows.filter((r) => r.status === "completed").length;
+  const statusFilters: Array<{ key: "all" | PatientRow["status"]; label: string; count: number; icon?: boolean }> = [
+    { key: "all", label: "כל התיקים", count: totalCases },
+    { key: "review", label: "ממתינים לסקירה", count: reviewCount, icon: true },
+    { key: "in_progress", label: "בתהליך", count: inProgressCount },
+    { key: "new", label: "טרם החל", count: pendingCount },
+    { key: "completed", label: "הושלמו", count: completedCount },
+  ];
   const filterButtonClass = (active: boolean) =>
     [
-      "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-extrabold transition-colors",
+      "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-extrabold transition-colors",
       active
         ? "bg-black text-white shadow-sm"
         : "border border-gray-200 bg-white text-gray-800 hover:bg-gray-50",
@@ -349,27 +371,27 @@ export function ClinicianDashboardList() {
   const emptyMessage =
     rows.length === 0
       ? "עדיין לא נוספו תיקים. התחילו על ידי לחיצה על \"תיק חדש\"."
-      : statusFilter === "review" && reviewCount === 0
-        ? "אין תיקים שממתינים לסקירה."
+      : statusFilter !== "all" && filtered.length === 0
+        ? "אין תיקים בסטטוס הנבחר."
         : "לא נמצאו תיקים מתאימים לחיפוש.";
 
   return (
-    <div className="max-w-6xl mx-auto min-h-[calc(100vh-120px)] lg:h-[calc(100vh-56px)] flex flex-col">
-      <div className="mb-6 flex shrink-0 flex-col gap-4 lg:mb-8">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+    <div className="max-w-6xl mx-auto min-h-[calc(100vh-120px)] lg:h-[calc(100vh-56px)] flex flex-col gap-4">
+      <div className="flex shrink-0 flex-col gap-3">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-extrabold text-black mb-2">תיקים</h1>
-            <div className="text-gray-500 font-medium text-base lg:text-lg">
+            <h1 className="text-2xl lg:text-3xl font-extrabold text-black mb-1">תיקים</h1>
+            <div className="text-gray-500 font-bold text-sm">
               {loading
                 ? "טוען..."
                 : `${totalCases} תיקים · ${reviewCount} דורשים סקירה`}
             </div>
           </div>
-          <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] xl:w-auto xl:grid-cols-[auto_minmax(18rem,20rem)_auto]">
+          <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto] xl:w-auto xl:grid-cols-[auto_minmax(18rem,20rem)_auto]">
             <button
               onClick={() => setCsvConfirmOpen(true)}
               disabled={exportingCsv}
-              className="flex items-center justify-center gap-2 bg-white text-black border border-gray-200 px-5 py-3 rounded-xl font-bold hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 transition-colors shadow-sm text-base lg:text-lg"
+              className="flex h-11 items-center justify-center gap-2 bg-white text-black border border-gray-200 px-4 rounded-lg font-bold hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 transition-colors shadow-sm text-sm"
             >
               <span>{exportingCsv ? "מייצא CSV..." : "ייצוא CSV"}</span>
             </button>
@@ -381,15 +403,15 @@ export function ClinicianDashboardList() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="חיפוש לפי מזהה תיק…"
-                className="w-full xl:w-80 pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-xl text-base lg:text-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-600 focus:border-blue-600 transition-all"
+                className="h-11 w-full xl:w-80 pl-4 pr-12 bg-white border border-gray-200 rounded-lg text-base shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-600 focus:border-blue-600 transition-all"
               />
             </div>
 
             <button
               onClick={() => setFormOpen(true)}
-              className="flex items-center justify-center gap-2 bg-black text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-md text-base lg:text-lg"
+              className="flex h-11 items-center justify-center gap-2 bg-black text-white px-4 rounded-lg font-bold hover:bg-gray-800 transition-colors shadow-sm text-sm"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               <span>תיק חדש</span>
             </button>
           </div>
@@ -403,57 +425,46 @@ export function ClinicianDashboardList() {
           </p>
         )}
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="סינון תיקים">
-          <button
-            type="button"
-            aria-pressed={statusFilter === "all"}
-            onClick={() => setStatusFilter("all")}
-            className={filterButtonClass(statusFilter === "all")}
-          >
-            כל התיקים
-          </button>
-          <button
-            type="button"
-            aria-pressed={statusFilter === "review"}
-            aria-label={`ממתינים לסקירה ${reviewCount}`}
-            onClick={() => setStatusFilter("review")}
-            className={filterButtonClass(statusFilter === "review")}
-          >
-            <ClipboardCheck className="h-4 w-4" />
-            ממתינים לסקירה
-            <span className={statusFilter === "review" ? "text-white" : "text-red-600"}>{reviewCount}</span>
-          </button>
+          {statusFilters.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              aria-pressed={statusFilter === filter.key}
+              aria-label={`${filter.label} ${filter.count}`}
+              onClick={() => setStatusFilter(filter.key)}
+              className={filterButtonClass(statusFilter === filter.key)}
+            >
+              {filter.icon && <ClipboardCheck className="h-4 w-4" />}
+              {filter.label}
+              <span
+                className={clsx(
+                  statusFilter === filter.key ? "text-white" : filter.key === "review" ? "text-red-600" : "text-gray-500",
+                )}
+              >
+                {filter.count}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-sm sm:max-w-xl">
+          {[
+            { label: "תיקים", value: totalCases },
+            { label: "הושלמו", value: completedCount },
+            { label: "לסקירה", value: reviewCount, warn: true },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm">
+              <div className="text-xs font-bold text-gray-500">{stat.label}</div>
+              <div className={clsx("text-xl font-extrabold tabular-nums", stat.warn ? "text-red-600" : "text-black")}>
+                {stat.value}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8 shrink-0">
-        {[
-          { label: "סה״כ תיקים", value: String(totalCases), delta: "רשומים" },
-          { label: "מבדקים הושלמו", value: String(completedCount), delta: "תיקים שהושלמו" },
-          { label: "ממתינים לסקירה", value: String(reviewCount), delta: "דורשים סקירה", warn: true },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white border border-gray-200 p-5 lg:p-6 rounded-2xl shadow-sm">
-            <div className="mb-2 text-sm font-bold text-gray-600">{stat.label}</div>
-            <div className="flex items-end justify-between gap-3">
-              <div className="text-3xl lg:text-4xl font-extrabold text-black tabular-nums">{stat.value}</div>
-              <div
-                className={`text-xs lg:text-sm font-bold ${
-                  stat.warn ? "text-red-600" : "text-green-600"
-                } bg-gray-50 px-2 py-1 rounded-md`}
-              >
-                {stat.delta}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mb-6 shrink-0 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:mb-8 lg:p-6">
-        <ScoreTrendChart points={scoreTrend} />
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex-1 flex flex-col min-h-0">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex-1 flex flex-col min-h-[260px]">
         <div className="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm font-bold shrink-0">
-          <div className="hidden md:flex text-right px-6 py-4">
+          <div className="hidden md:flex text-right px-5 py-3">
             <div className="w-5/12 font-bold">מזהה תיק</div>
             <div className="w-1/12 font-bold">מבדקים</div>
             <div className="w-2/12 font-bold">פעילות אחרונה</div>
@@ -539,36 +550,36 @@ export function ClinicianDashboardList() {
                   type="button"
                   key={virtualRow.index}
                   onClick={() => navigate(`/dashboard/patient/${p.id}`)}
-                  className="absolute left-0 top-0 flex w-full cursor-pointer appearance-none items-center border-0 border-b border-gray-100 bg-white px-6 py-0 text-right text-inherit transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 group"
+                  className="absolute left-0 top-0 flex w-full cursor-pointer appearance-none items-center border-0 border-b border-gray-100 bg-white px-5 py-0 text-right text-inherit transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 group"
                   style={{
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <div className="w-5/12 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">
+                  <div className="w-5/12 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-base shrink-0">
                       {(caseDisplay(p).trim()[0] || "ת").toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-bold text-lg text-black truncate">תיק {caseDisplay(p)}</div>
-                      <div className="text-sm text-gray-500 font-mono flex items-center gap-1.5">
+                      <div className="font-bold text-base text-black truncate">תיק {caseDisplay(p)}</div>
+                      <div className="text-xs text-gray-500 font-mono flex items-center gap-1.5">
                         <Hash className="w-3 h-3" />
                         {p.id.slice(0, 8)}
                       </div>
                     </div>
                   </div>
-                  <div className="w-1/12 text-gray-600 text-lg tabular-nums">{p.tests}</div>
-                  <div className="w-2/12 text-gray-600 text-lg tabular-nums">
+                  <div className="w-1/12 text-gray-600 text-base tabular-nums">{p.tests}</div>
+                  <div className="w-2/12 text-gray-600 text-base tabular-nums">
                     {p.lastActive ? new Date(p.lastActive).toLocaleDateString("he-IL") : "—"}
                   </div>
                   <div className="w-2/12">
                     <StatusPill status={p.status} />
                   </div>
-                  <div className="w-1/12 font-extrabold text-xl text-black tabular-nums">
+                  <div className="w-1/12 font-extrabold text-lg text-black tabular-nums">
                     {scoreLabel(p.latestScore, p.latestScoreProvisional)}
                   </div>
                   <div className="w-1/12 text-left flex justify-end">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-transparent group-hover:bg-white border border-transparent group-hover:border-gray-200 group-hover:shadow-sm transition-all text-gray-400">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-transparent group-hover:bg-white border border-transparent group-hover:border-gray-200 group-hover:shadow-sm transition-all text-gray-400">
                       <ChevronLeft className="w-5 h-5" />
                     </div>
                   </div>
@@ -577,6 +588,10 @@ export function ClinicianDashboardList() {
             })}
           </div>
         </div>
+      </div>
+
+      <div className="shrink-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <ScoreTrendChart points={scoreTrend} />
       </div>
 
       <PatientForm

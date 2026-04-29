@@ -212,8 +212,8 @@ export function PatientProfilePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
-      <div className="mb-6">
+    <div className="max-w-6xl mx-auto pb-16">
+      <div className="mb-4">
         <Link
           to="/dashboard"
           className="text-gray-500 font-bold hover:text-black flex items-center gap-2 transition-colors w-fit"
@@ -223,15 +223,15 @@ export function PatientProfilePage() {
         </Link>
       </div>
 
-      <div className="bg-white p-5 sm:p-8 rounded-2xl border border-gray-200 shadow-sm mb-8">
+      <div className="bg-white p-5 sm:p-6 rounded-xl border border-gray-200 shadow-sm mb-5">
         <div className="flex items-start justify-between gap-6 flex-wrap">
-          <div className="flex items-center gap-4 sm:gap-6 min-w-0">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-2xl sm:text-3xl shrink-0">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-xl sm:text-2xl shrink-0">
               {caseLabel(patient).trim()[0]?.toUpperCase() || "ת"}
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-black mb-2 truncate">תיק {caseLabel(patient)}</h1>
-              <div className="flex gap-5 text-gray-500 font-medium flex-wrap">
+              <h1 className="text-2xl font-extrabold text-black mb-1 truncate">תיק {caseLabel(patient)}</h1>
+              <div className="flex gap-4 text-gray-500 font-bold text-sm flex-wrap">
                 <span className="inline-flex items-center gap-2">
                   <Hash className="w-4 h-4" />
                   <span className="font-mono">{patient.id.slice(0, 8)}</span>
@@ -244,7 +244,7 @@ export function PatientProfilePage() {
             <button
               type="button"
               onClick={handlePrimaryAction}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-6 py-3 font-bold text-white shadow-md transition-colors hover:bg-gray-800"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-black px-4 font-bold text-white shadow-sm transition-colors hover:bg-gray-800"
             >
               {nextReviewSession ? <FileText className="h-5 w-5" /> : <Stethoscope className="h-5 w-5" />}
               {nextReviewSession ? "סקור מבדק" : "פתח מבדק"}
@@ -253,7 +253,7 @@ export function PatientProfilePage() {
               <button
                 type="button"
                 onClick={() => setOrderOpen(true)}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-800 transition-colors hover:bg-gray-50"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-bold text-gray-800 transition-colors hover:bg-gray-50"
               >
                 <Plus className="h-4 w-4" />
                 מבדק חדש
@@ -264,29 +264,29 @@ export function PatientProfilePage() {
 
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-bold text-gray-500 mb-1">סה״כ מבדקים</div>
-          <div className="text-3xl font-extrabold text-black tabular-nums">{sessions.length}</div>
+          <div className="text-2xl font-extrabold text-black tabular-nums">{sessions.length}</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-bold text-gray-500 mb-1">הושלמו</div>
-          <div className="text-3xl font-extrabold text-black tabular-nums">{completedCount}</div>
+          <div className="text-2xl font-extrabold text-black tabular-nums">{completedCount}</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-bold text-gray-500 mb-1">ציון MoCA סופי אחרון</div>
-          <div className="text-3xl font-extrabold text-black tabular-nums">
+          <div className="text-2xl font-extrabold text-black tabular-nums">
             {latestFinalScore != null ? `${latestFinalScore}/30` : "—"}
           </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-bold text-gray-500 uppercase mb-1">שנות לימוד</div>
-          <div className="text-3xl font-extrabold text-black tabular-nums">{patient.education_years ?? "—"}</div>
+          <div className="text-2xl font-extrabold text-black tabular-nums">{patient.education_years ?? "—"}</div>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mb-8">
-        <h2 className="text-lg font-extrabold text-black mb-4">פרטי רקע קליניים</h2>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-5">
+        <h2 className="text-base font-extrabold text-black mb-3">פרטי רקע קליניים</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <div className="font-bold text-gray-500 mb-1">טלפון</div>
@@ -311,22 +311,15 @@ export function PatientProfilePage() {
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-xl font-extrabold text-black">היסטוריית מבדקים</h2>
-          <button
-            onClick={() => setOrderOpen(true)}
-            className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-700 hover:text-blue-900"
-          >
-            <Plus className="w-4 h-4" />
-            מבדק חדש
-          </button>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+          <h2 className="text-lg font-extrabold text-black">היסטוריית מבדקים</h2>
         </div>
 
         {sessions.length === 0 ? (
           <div className="px-6 py-12 text-center text-gray-500">
             <Activity className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-            עדיין לא נפתחו מבדקים לתיק זה. לחץ "מבדק חדש" כדי להתחיל.
+            עדיין לא נפתחו מבדקים לתיק זה. לחץ "פתח מבדק" כדי להתחיל.
           </div>
         ) : (
           <div className="overflow-x-auto">

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 const PASSWORD = 'Password123!';
 const SUPABASE_URL = readEnv('VITE_SUPABASE_URL') ?? 'http://127.0.0.1:54321';
@@ -144,10 +144,48 @@ test.describe('clinician mobile UX', () => {
     await page.getByRole('button', { name: 'צור מספר מבדק' }).click();
 
     await expect(page.getByRole('heading', { name: 'המבדק נוצר בהצלחה' })).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'המבדק נוצר בהצלחה' });
     const testNumber = page.locator('span[dir="ltr"]').filter({ hasText: /^\d{8}$/ });
     await expect(testNumber).toBeVisible();
-    await expect(page.getByRole('button', { name: /העתק/ }).first()).toBeVisible();
-    await expect(page.getByText('סגור', { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'העתק מספר מבדק' })).toHaveCount(1);
+    await expect(dialog.getByText('סגור', { exact: true })).toBeVisible();
+  });
+});
+
+test.describe('clinician desktop density UX', () => {
+  test.skip(!SUPABASE_ANON_KEY, 'Local Supabase anon key is required for clinician UX E2E.');
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  test.beforeAll(async ({ request }) => {
+    if (!SUPABASE_ANON_KEY) return;
+    const response = await request.get(`${SUPABASE_URL}/auth/v1/settings`, {
+      headers: { apikey: SUPABASE_ANON_KEY },
+    });
+    if (!response.ok()) {
+      throw new Error(`Local Supabase is not reachable at ${SUPABASE_URL}.`);
+    }
+  });
+
+  test('login, dashboard, and profile keep primary controls above the laptop fold', async ({ page, request }) => {
+    const runId = Date.now();
+    const email = `ux-density-${runId}@example.test`;
+    const clinician = await createClinician(request, email);
+    const patient = await createCase(request, clinician.accessToken, `UX-DENSITY-${runId}`);
+
+    await page.goto('/#/clinician/auth');
+    const loginSubmit = page.getByRole('button', { name: /כניסה לקלינאים/ });
+    await expect(loginSubmit).toBeVisible();
+    await expectElementInsideViewport(page, loginSubmit);
+
+    await signInClinician(page, email);
+    const caseRow = page.getByRole('button', { name: new RegExp(patient.case_id) });
+    await expect(caseRow).toBeVisible();
+    await expectElementInsideViewport(page, caseRow);
+
+    await caseRow.click();
+    await expect(page.getByRole('heading', { name: `תיק ${patient.case_id}` })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'פתח מבדק' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'מבדק חדש' })).toHaveCount(0);
   });
 });
 
@@ -256,6 +294,13 @@ async function elementsOverlap(page: Page, firstSelector: string, secondSelector
     const b = secondElement.getBoundingClientRect();
     return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   }, [firstSelector, secondSelector]);
+}
+
+async function expectElementInsideViewport(page: Page, locator: Locator) {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
 }
 
 async function signInClinician(page: Page, email: string) {

@@ -73,7 +73,9 @@ describe('OrderAssessmentModal', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'צור מספר מבדק' }));
 
-    await waitFor(() => expect(screen.getByText('המבדק נוצר בהצלחה.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'המבדק נוצר בהצלחה' })).toBeInTheDocument());
+    expect(screen.getAllByRole('button', { name: /העתק מספר מבדק/ })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'סגור' })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/functions/v1/create-session'),
       expect.objectContaining({

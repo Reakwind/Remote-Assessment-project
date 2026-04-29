@@ -138,19 +138,22 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
     <div
       dir="rtl"
       className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-6 font-['Heebo',sans-serif]"
-      onClick={onClose}
+      onClick={result ? undefined : onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-200 p-5 sm:p-8 max-h-[92vh] overflow-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="order-assessment-title"
+        className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-gray-200 p-5 sm:p-6 max-h-[92vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 mb-6">
+        <div className="flex items-start justify-between gap-4 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-black text-white flex items-center justify-center shrink-0">
-              <Stethoscope className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center shrink-0">
+              <Stethoscope className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-xl sm:text-2xl font-extrabold text-black">
+              <h2 id="order-assessment-title" className="text-xl font-extrabold text-black">
                 {result ? "המבדק נוצר בהצלחה" : "פתיחת מבדק חדש"}
               </h2>
               <p className="text-gray-500 text-sm">
@@ -158,25 +161,27 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center"
-            aria-label="סגור"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {!result && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center"
+              aria-label="סגור"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {!result && (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-bold text-gray-600 mb-1">מבדק</label>
                 <select
                   value={assessmentType}
                   onChange={(e) => setAssessmentType(e.target.value)}
-                  className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+                  className="w-full h-11 px-3 text-base border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
                 >
                   <option value="moca">MoCA</option>
                 </select>
@@ -186,7 +191,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+                  className="w-full h-11 px-3 text-base border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
                 >
                   <option value="he">עברית</option>
                 </select>
@@ -196,7 +201,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
                 <select
                   value={mocaVersion}
                   onChange={(e) => setMocaVersion(e.target.value)}
-                  className="w-full h-12 px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+                  className="w-full h-11 px-3 text-base border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
                 >
                   <option value="8.1">MoCA 8.1</option>
                   <option value="8.2">MoCA 8.2</option>
@@ -205,19 +210,19 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
               </div>
             </div>
 
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
               גיל, שנות לימוד ושאר נתוני הרקע יילקחו מפרטי התיק השמורים. ייווצר מספר מבדק להעתקה ושליחה למטופל.
             </div>
 
             {missingClinicalFields.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-sm font-bold">
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-3 text-sm font-bold">
                 <div>יש להשלים פרטי רקע לפני פתיחת מבדק:</div>
                 <div className="mt-1 font-medium">{missingClinicalFields.join(" · ")}</div>
               </div>
             )}
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 font-bold" role="alert">
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm font-bold" role="alert">
                 {error}
               </div>
             )}
@@ -226,14 +231,14 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 h-14 rounded-xl border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50"
+                className="flex-1 h-11 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-gray-50"
               >
                 ביטול
               </button>
               <button
                 type="submit"
                 disabled={!canCreateSession}
-                className="flex-1 h-14 rounded-xl bg-black text-white font-bold hover:bg-gray-800 disabled:opacity-60"
+                className="flex-1 h-11 rounded-lg bg-black text-white font-bold hover:bg-gray-800 disabled:opacity-60"
               >
                 {submitting ? "יוצר..." : "צור מספר מבדק"}
               </button>
@@ -242,36 +247,27 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
         )}
 
         {result && (
-          <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-green-50 border border-green-200 rounded-xl p-4 text-green-800 font-bold">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6" />
-                <span>המבדק נוצר בהצלחה.</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => copy(result.testNumber, "testNumber")}
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-extrabold text-green-900 shadow-sm hover:bg-green-100"
-              >
-                <Copy className="w-4 h-4" />
-                {copied === "testNumber" ? "הועתק" : "העתק מספר"}
-              </button>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-bold text-green-800">
+              <CheckCircle2 className="w-5 h-5" />
+              <span>המבדק נוצר. הסטטוס כעת: ממתין למטופל.</span>
             </div>
 
             <div className="space-y-3">
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
                 <div className="text-xs font-bold text-gray-500 mb-1">מספר מבדק</div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <span dir="ltr" className="font-mono text-3xl sm:text-4xl tabular-nums tracking-[0.18em] sm:tracking-[0.25em] text-left">
+                <div className="flex flex-col items-center gap-4">
+                  <span dir="ltr" className="font-mono text-4xl tabular-nums tracking-[0.18em] text-center">
                     {result.testNumber}
                   </span>
                   <button
                     type="button"
                     onClick={() => copy(result.testNumber, "testNumber")}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold text-sm"
+                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-black px-5 font-bold text-white hover:bg-gray-800"
+                    aria-label="העתק מספר מבדק"
                   >
                     <Copy className="w-4 h-4" />
-                    {copied === "testNumber" ? "הועתק" : "העתק"}
+                    {copied === "testNumber" ? "הועתק" : "העתק מספר מבדק"}
                   </button>
                 </div>
                 <p className="text-sm text-gray-600 mt-3">
@@ -283,7 +279,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             <button
               type="button"
               onClick={onClose}
-              className="w-full h-14 rounded-xl bg-black text-white font-bold hover:bg-gray-800"
+              className="w-full h-11 rounded-lg border border-gray-300 bg-white text-gray-800 font-bold hover:bg-gray-50"
             >
               סגור
             </button>
