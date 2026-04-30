@@ -1,4 +1,5 @@
 import { writeAuditEvent } from '../_shared/audit.ts';
+import { insertMissingDrawingReviews } from '../_shared/drawing-reviews.ts';
 import { corsResponse, json, methodNotAllowed } from '../_shared/http.ts';
 import {
   notifyClinicianSessionCompleted,
@@ -74,17 +75,15 @@ export async function handleCompleteSession(req: Request, deps: CompleteSessionD
   if (resultsError) return json({ error: 'Failed to load task results' }, 500, req);
 
   const results = Object.fromEntries((taskResults ?? []).map((result: any) => [result.task_type, result.raw_data]));
-  const { error: drawingReviewError } = await supabase
-    .from('drawing_reviews')
-    .upsert(
-      DRAWING_TASKS.map(taskId => ({
-        session_id: session.id,
-        task_name: TASK_ID_TO_TASK_NAME[taskId],
-        task_id: taskId,
-        strokes_data: [],
-      })),
-      { onConflict: 'session_id,task_id', ignoreDuplicates: true },
-    );
+  const { error: drawingReviewError } = await insertMissingDrawingReviews(
+    supabase,
+    DRAWING_TASKS.map(taskId => ({
+      session_id: session.id,
+      task_name: TASK_ID_TO_TASK_NAME[taskId],
+      task_id: taskId,
+      strokes_data: [],
+    })),
+  );
 
   if (drawingReviewError) {
     console.error('Drawing review placeholder upsert failed:', drawingReviewError);

@@ -36,8 +36,8 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 | Netlify hosting setup | Codex | Done | Provider config and runbook exist for separate patient staging and clinician hosts. |
 | Hosted Netlify deployment | Codex | Done | Current patient and clinician Netlify URLs are live and smoke-tested. |
 | Licensed hosted stimuli | Codex | Done | Hosted Supabase `stimuli` bucket was verified for MoCA 8.1, 8.2, and 8.3. |
-| Physical-device QA | User | Not Started | Installed iPad/tablet PWA and phone fallback checks still need real-device execution. |
-| Pilot readiness | Both | Blocked | Blocked only on physical-device evidence unless new regressions appear. |
+| Physical-device QA | User | In Progress | iPad installed-PWA testing started on 2026-04-30; the first blocker is a drawing save failure on the letter-number sequence. |
+| Pilot readiness | Both | Blocked | Blocked on the iPad drawing-save failure plus remaining tablet browser and phone fallback evidence. |
 
 ## Current Evidence
 
@@ -48,6 +48,8 @@ Status values: `Not Started`, `In Progress`, `Blocked`, `Done`.
 - Physical-device evidence template: `docs/PATIENT_PWA_REAL_DEVICE_EVIDENCE.netlify-template.json`
 
 ## Active Blocker
+
+iPad installed-PWA real-device testing started on 2026-04-30. The current observed blocker is that the letter-number sequence drawing task reports `Failed to save drawing review` and does not advance to the next task.
 
 Fill and validate the real-device evidence template after testing:
 

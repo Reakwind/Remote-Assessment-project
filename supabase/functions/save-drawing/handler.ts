@@ -1,5 +1,6 @@
 import { decode } from 'https://deno.land/std@0.198.0/encoding/base64.ts';
 import { writeAuditEvent } from '../_shared/audit.ts';
+import { saveDrawingReview, type DrawingReviewPayload } from '../_shared/drawing-reviews.ts';
 import { corsResponse, json, methodNotAllowed } from '../_shared/http.ts';
 import { DRAWING_TASKS } from '../_shared/tasks.ts';
 
@@ -71,7 +72,7 @@ export async function handleSaveDrawing(req: Request, deps: SaveDrawingDeps): Pr
     }
   }
 
-  const payload: Record<string, unknown> = {
+  const payload: DrawingReviewPayload = {
     session_id: sessionId,
     task_name: TASK_ID_TO_TASK_NAME[taskId],
     task_id: taskId,
@@ -79,9 +80,7 @@ export async function handleSaveDrawing(req: Request, deps: SaveDrawingDeps): Pr
   };
   if (storagePath) payload.storage_path = storagePath;
 
-  const { error: upsertError } = await supabase
-    .from('drawing_reviews')
-    .upsert(payload, { onConflict: 'session_id,task_id' });
+  const { error: upsertError } = await saveDrawingReview(supabase, payload);
 
   if (upsertError) {
     console.error('Drawing review upsert failed:', upsertError);

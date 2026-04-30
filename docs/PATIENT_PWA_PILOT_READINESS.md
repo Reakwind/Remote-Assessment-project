@@ -102,7 +102,7 @@ The hosted smoke requires HTTPS, checks the patient staging banner, validates ma
 
 ## Real-Device Gate
 
-Real-device checks stay blocked until the user tests the installed PWA on the target device.
+Real-device checks are now in progress. iPad installed-PWA testing started on 2026-04-30 and exposed a completion-blocking drawing save failure on the letter-number sequence. Do not mark the iPad run as passing until that blocker is fixed and the full installed-PWA flow completes.
 
 Minimum device matrix:
 
@@ -142,4 +142,4 @@ The pilot is ready only when:
 - Real-device gate passes on the target iPad/tablet plus phone fallback.
 - No completion-blocking autosave, drawing, audio, or stimulus-fetch issues remain open.
 
-Current status: hosted staging and licensed stimuli are recorded as passing; physical iPad/tablet installed-PWA and phone fallback evidence remains the active blocker.
+Current status: hosted staging and licensed stimuli are recorded as passing; physical real-device testing has started. Pilot readiness remains blocked by the iPad letter-number drawing-save failure and the remaining tablet browser plus phone fallback evidence.
