@@ -3,6 +3,7 @@ import { Users } from "lucide-react";
 import { clsx } from "clsx";
 import { useClinicianAuth } from "./auth/useClinicianAuth";
 import { supabase } from "../../lib/supabase";
+import { useDocumentAppSurface } from "../useDocumentAppSurface";
 
 interface DashboardNavItem {
   name: string;
@@ -13,6 +14,7 @@ interface DashboardNavItem {
 }
 
 export function ClinicianDashboardLayout() {
+  useDocumentAppSurface("clinician");
   const navigate = useNavigate();
   const { profile } = useClinicianAuth();
   const navItems: DashboardNavItem[] = [
@@ -25,7 +27,10 @@ export function ClinicianDashboardLayout() {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen flex flex-col lg:flex-row bg-gray-50 text-black font-['Heebo',sans-serif]">
+    <div
+      dir="rtl"
+      className="min-h-screen flex flex-col lg:flex-row bg-gray-50 text-black font-['Heebo',sans-serif]"
+    >
       <header className="lg:hidden bg-[#0a0a0a] text-white border-b border-gray-800">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
@@ -48,9 +53,7 @@ export function ClinicianDashboardLayout() {
               className={({ isActive }) =>
                 clsx(
                   "inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors",
-                  isActive
-                    ? "bg-white text-black"
-                    : "bg-white/10 text-gray-200 hover:bg-white/15"
+                  isActive ? "bg-white text-black" : "bg-white/10 text-gray-200 hover:bg-white/15",
                 )
               }
             >
@@ -62,13 +65,13 @@ export function ClinicianDashboardLayout() {
       </header>
 
       {/* Sidebar */}
-      <aside className="hidden lg:flex w-[240px] bg-[#0a0a0a] text-white flex-col h-screen sticky top-0">
-        <div className="p-6 mb-4 border-b border-gray-800">
-          <div className="font-bold text-xl">Remote Check</div>
+      <aside className="hidden lg:flex w-[220px] bg-[#0a0a0a] text-white flex-col h-screen sticky top-0">
+        <div className="p-5 mb-3 border-b border-gray-800">
+          <div className="font-bold text-lg">Remote Check</div>
           <div className="text-gray-400 text-xs mt-1 tracking-wider">CLINICIAN PORTAL</div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-3 space-y-1.5">
           {navItems.map((item) => (
             <NavLink
               key={item.name}
@@ -76,15 +79,15 @@ export function ClinicianDashboardLayout() {
               end={item.end}
               className={({ isActive }) =>
                 clsx(
-                  "flex items-center justify-between px-4 py-3 rounded-lg font-medium transition-colors",
+                  "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-bold transition-colors",
                   isActive
                     ? "bg-white/10 text-white"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    : "text-gray-400 hover:text-white hover:bg-white/5",
                 )
               }
             >
               <div className="flex items-center gap-3">
-                <item.icon className="w-5 h-5" />
+                <item.icon className="w-4 h-4" />
                 <span>{item.name}</span>
               </div>
               {item.badge && (
@@ -96,27 +99,29 @@ export function ClinicianDashboardLayout() {
           ))}
         </nav>
 
-        <div className="p-4 mt-auto">
+        <div className="p-3 mt-auto">
           <button
             onClick={handleSignOut}
-            className="w-full mb-3 h-10 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-colors text-sm font-bold"
+            className="w-full mb-3 h-9 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-colors text-sm font-bold"
           >
             התנתקות
           </button>
-          <div className="bg-white/10 rounded-xl p-4 flex min-w-0 items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center">
+          <div className="bg-white/10 rounded-lg p-3 flex min-w-0 items-center gap-3">
+            <div className="w-9 h-9 shrink-0 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center">
               {(profile?.full_name?.[0] || "ד").toUpperCase()}
             </div>
             <div className="min-w-0">
               <div className="truncate font-bold text-sm">{profile?.full_name || "ד״ר קלינאי"}</div>
-              <div className="truncate text-gray-400 text-xs">{profile?.clinic_name || "Remote Check Clinic"}</div>
+              <div className="truncate text-gray-400 text-xs">
+                {profile?.clinic_name || "Remote Check Clinic"}
+              </div>
             </div>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-[28px] overflow-auto min-w-0">
+      <main className="flex-1 p-4 sm:p-5 lg:p-5 xl:p-6 overflow-auto min-w-0">
         <Outlet />
       </main>
     </div>

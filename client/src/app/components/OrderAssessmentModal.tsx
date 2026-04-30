@@ -25,7 +25,7 @@ async function readJsonPayload(res: Response): Promise<Record<string, unknown> |
   try {
     const payload = await res.json();
     return payload && typeof payload === "object" && !Array.isArray(payload)
-      ? payload as Record<string, unknown>
+      ? (payload as Record<string, unknown>)
       : null;
   } catch {
     return null;
@@ -40,7 +40,12 @@ function orderAssessmentErrorMessage(err: unknown): string {
   return err.message || "פתיחת מבדק נכשלה.";
 }
 
-export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: OrderAssessmentModalProps) {
+export function OrderAssessmentModal({
+  open,
+  onClose,
+  patient,
+  onOrdered,
+}: OrderAssessmentModalProps) {
   const [assessmentType, setAssessmentType] = useState("moca");
   const [language, setLanguage] = useState(patient.language ?? "he");
   const [mocaVersion, setMocaVersion] = useState("8.3");
@@ -144,20 +149,22 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
         role="dialog"
         aria-modal="true"
         aria-labelledby="order-assessment-title"
-        className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-gray-200 p-5 sm:p-6 max-h-[92vh] overflow-auto"
+        className="w-full max-w-lg bg-white rounded-xl shadow-xl border border-gray-200 p-5 max-h-[92vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center shrink-0">
-              <Stethoscope className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center shrink-0">
+              <Stethoscope className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <h2 id="order-assessment-title" className="text-xl font-extrabold text-black">
                 {result ? "המבדק נוצר בהצלחה" : "פתיחת מבדק חדש"}
               </h2>
               <p className="text-gray-500 text-sm">
-                {result ? "העתק את מספר המבדק ושלח אותו למטופל" : `עבור תיק ${caseDisplay(patient)}`}
+                {result
+                  ? "העתק את מספר המבדק ושלח אותו למטופל"
+                  : `עבור תיק ${caseDisplay(patient)}`}
               </p>
             </div>
           </div>
@@ -165,7 +172,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             <button
               type="button"
               onClick={onClose}
-              className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center"
+              className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center"
               aria-label="סגור"
             >
               <X className="w-5 h-5" />
@@ -181,7 +188,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
                 <select
                   value={assessmentType}
                   onChange={(e) => setAssessmentType(e.target.value)}
-                  className="w-full h-11 px-3 text-base border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+                  className="w-full h-10 px-3 text-sm border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
                 >
                   <option value="moca">MoCA</option>
                 </select>
@@ -191,7 +198,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full h-11 px-3 text-base border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+                  className="w-full h-10 px-3 text-sm border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
                 >
                   <option value="he">עברית</option>
                 </select>
@@ -201,7 +208,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
                 <select
                   value={mocaVersion}
                   onChange={(e) => setMocaVersion(e.target.value)}
-                  className="w-full h-11 px-3 text-base border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
+                  className="w-full h-10 px-3 text-sm border border-gray-300 rounded-lg focus:border-black focus:ring-4 focus:ring-black/10 outline-none bg-white"
                 >
                   <option value="8.1">MoCA 8.1</option>
                   <option value="8.2">MoCA 8.2</option>
@@ -211,7 +218,8 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
-              גיל, שנות לימוד ושאר נתוני הרקע יילקחו מפרטי התיק השמורים. ייווצר מספר מבדק להעתקה ושליחה למטופל.
+              גיל, שנות לימוד ושאר נתוני הרקע יילקחו מפרטי התיק השמורים. ייווצר מספר מבדק להעתקה
+              ושליחה למטופל.
             </div>
 
             {missingClinicalFields.length > 0 && (
@@ -222,7 +230,10 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             )}
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm font-bold" role="alert">
+              <div
+                className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm font-bold"
+                role="alert"
+              >
                 {error}
               </div>
             )}
@@ -231,14 +242,14 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 h-11 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-gray-50"
+                className="flex-1 h-10 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-gray-50"
               >
                 ביטול
               </button>
               <button
                 type="submit"
                 disabled={!canCreateSession}
-                className="flex-1 h-11 rounded-lg bg-black text-white font-bold hover:bg-gray-800 disabled:opacity-60"
+                className="flex-1 h-10 rounded-lg bg-black text-white font-bold hover:bg-gray-800 disabled:opacity-60"
               >
                 {submitting ? "יוצר..." : "צור מספר מבדק"}
               </button>
@@ -257,13 +268,16 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
               <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
                 <div className="text-xs font-bold text-gray-500 mb-1">מספר מבדק</div>
                 <div className="flex flex-col items-center gap-4">
-                  <span dir="ltr" className="font-mono text-4xl tabular-nums tracking-[0.18em] text-center">
+                  <span
+                    dir="ltr"
+                    className="font-mono text-3xl tabular-nums tracking-[0.18em] text-center"
+                  >
                     {result.testNumber}
                   </span>
                   <button
                     type="button"
                     onClick={() => copy(result.testNumber, "testNumber")}
-                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-black px-5 font-bold text-white hover:bg-gray-800"
+                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-black px-4 font-bold text-white hover:bg-gray-800"
                     aria-label="העתק מספר מבדק"
                   >
                     <Copy className="w-4 h-4" />
@@ -279,7 +293,7 @@ export function OrderAssessmentModal({ open, onClose, patient, onOrdered }: Orde
             <button
               type="button"
               onClick={onClose}
-              className="w-full h-11 rounded-lg border border-gray-300 bg-white text-gray-800 font-bold hover:bg-gray-50"
+              className="w-full h-10 rounded-lg border border-gray-300 bg-white text-gray-800 font-bold hover:bg-gray-50"
             >
               סגור
             </button>
@@ -297,9 +311,15 @@ function clinicalContextGaps(patient: PatientSummary): string[] {
   if (!patient.date_of_birth) gaps.push("תאריך לידה");
   if (patient.gender !== "male" && patient.gender !== "female") gaps.push("מין");
   if (patient.language !== "he") gaps.push("שפת המבדק");
-  if (!["right", "left", "ambidextrous"].includes(patient.dominant_hand ?? "")) gaps.push("יד דומיננטית");
+  if (!["right", "left", "ambidextrous"].includes(patient.dominant_hand ?? ""))
+    gaps.push("יד דומיננטית");
   const educationYears = patient.education_years;
-  if (typeof educationYears !== "number" || !Number.isInteger(educationYears) || educationYears < 0 || educationYears > 40) {
+  if (
+    typeof educationYears !== "number" ||
+    !Number.isInteger(educationYears) ||
+    educationYears < 0 ||
+    educationYears > 40
+  ) {
     gaps.push("שנות לימוד");
   }
   return gaps;

@@ -1,7 +1,13 @@
 import { AlertTriangle, CheckCircle2, Clock3, Circle, type LucideIcon } from "lucide-react";
 import { clsx } from "clsx";
 
-export type StatusPillValue = "new" | "pending" | "in_progress" | "review" | "awaiting_review" | "completed";
+export type StatusPillValue =
+  | "new"
+  | "pending"
+  | "in_progress"
+  | "review"
+  | "awaiting_review"
+  | "completed";
 
 const STATUS_CONFIG: Record<
   StatusPillValue,
@@ -54,7 +60,7 @@ export function StatusPill({
   return (
     <span
       className={clsx(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
         config.className,
         className,
       )}

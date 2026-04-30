@@ -17,7 +17,7 @@
   --ink-900: #111827;
   --shadow-focus: 0 0 0 3px var(--accent-focus);
   --r-lg: 0.5rem;
-  
+
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -55,6 +55,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+html[data-app-surface="clinician"] {
+  --font-size-base: 16px;
+  --target-size: 44px;
 }
 
 .dark {
@@ -143,7 +148,7 @@
   html {
     direction: rtl;
     font-size: var(--font-size-base);
-    font-family: 'Heebo', system-ui, sans-serif;
+    font-family: "Heebo", system-ui, sans-serif;
   }
 
   body {

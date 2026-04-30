@@ -86,7 +86,10 @@ function reviewActionLabel(status: PatientSession["status"]): string {
 }
 
 function sessionNeedsReview(session: PatientSession): boolean {
-  return session.status === "awaiting_review" || relationArray(session.scoring_reports).some(reportNeedsReview);
+  return (
+    session.status === "awaiting_review" ||
+    relationArray(session.scoring_reports).some(reportNeedsReview)
+  );
 }
 
 function scoreLabel(report: ScoringSummary | null | undefined): string {
@@ -118,47 +121,52 @@ export function PatientProfilePage() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [copiedAccessCode, setCopiedAccessCode] = useState<string | null>(null);
 
-  const loadPatient = useCallback(async (options?: { background?: boolean }) => {
-    if (!patientId) return;
-    const background = Boolean(options?.background);
-    if (!background) setLoading(true);
+  const loadPatient = useCallback(
+    async (options?: { background?: boolean }) => {
+      if (!patientId) return;
+      const background = Boolean(options?.background);
+      if (!background) setLoading(true);
 
-    try {
-      const { data: patientData, error: patientError } = await supabase
-        .from("patients")
-        .select("id, case_id, full_name, phone, date_of_birth, gender, language, dominant_hand, education_years, created_at")
-        .eq("id", patientId)
-        .maybeSingle();
+      try {
+        const { data: patientData, error: patientError } = await supabase
+          .from("patients")
+          .select(
+            "id, case_id, full_name, phone, date_of_birth, gender, language, dominant_hand, education_years, created_at",
+          )
+          .eq("id", patientId)
+          .maybeSingle();
 
-      if (patientError || !patientData) {
+        if (patientError || !patientData) {
+          setNotFound(true);
+          return;
+        }
+
+        setPatient(patientData as PatientRecord);
+
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from("sessions")
+          .select(
+            "id, case_id, status, assessment_type, created_at, completed_at, access_code, scoring_reports(total_adjusted, total_provisional, total_score, needs_review)",
+          )
+          .eq("patient_id", patientId)
+          .order("created_at", { ascending: false });
+
+        if (sessionsError) {
+          console.error("Failed to fetch patient sessions", sessionsError);
+          setSessions([]);
+          return;
+        }
+
+        setSessions((sessionsData ?? []) as PatientSession[]);
+      } catch (error) {
+        console.error("Failed to load patient profile", error);
         setNotFound(true);
-        return;
+      } finally {
+        if (!background) setLoading(false);
       }
-
-      setPatient(patientData as PatientRecord);
-
-      const { data: sessionsData, error: sessionsError } = await supabase
-        .from("sessions")
-        .select(
-          "id, case_id, status, assessment_type, created_at, completed_at, access_code, scoring_reports(total_adjusted, total_provisional, total_score, needs_review)",
-        )
-        .eq("patient_id", patientId)
-        .order("created_at", { ascending: false });
-
-      if (sessionsError) {
-        console.error("Failed to fetch patient sessions", sessionsError);
-        setSessions([]);
-        return;
-      }
-
-      setSessions((sessionsData ?? []) as PatientSession[]);
-    } catch (error) {
-      console.error("Failed to load patient profile", error);
-      setNotFound(true);
-    } finally {
-      if (!background) setLoading(false);
-    }
-  }, [patientId]);
+    },
+    [patientId],
+  );
 
   useEffect(() => {
     loadPatient();
@@ -177,7 +185,10 @@ export function PatientProfilePage() {
       <div className="max-w-3xl mx-auto text-center py-24">
         <h1 className="text-3xl font-extrabold text-black mb-3">התיק לא נמצא</h1>
         <p className="text-gray-500 mb-6">ייתכן שהקישור שגוי או שאין לך גישה לרשומה.</p>
-        <Link to="/dashboard" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-black text-white font-bold">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-black text-white font-bold"
+        >
           חזרה לרשימת התיקים
         </Link>
       </div>
@@ -212,8 +223,8 @@ export function PatientProfilePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-16">
-      <div className="mb-4">
+    <div className="max-w-[1240px] mx-auto pb-12">
+      <div className="mb-3">
         <Link
           to="/dashboard"
           className="text-gray-500 font-bold hover:text-black flex items-center gap-2 transition-colors w-fit"
@@ -223,14 +234,16 @@ export function PatientProfilePage() {
         </Link>
       </div>
 
-      <div className="bg-white p-5 sm:p-6 rounded-xl border border-gray-200 shadow-sm mb-5">
-        <div className="flex items-start justify-between gap-6 flex-wrap">
+      <div className="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm mb-4">
+        <div className="flex items-start justify-between gap-5 flex-wrap">
           <div className="flex items-center gap-4 min-w-0">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-xl sm:text-2xl shrink-0">
+            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-lg shrink-0">
               {caseLabel(patient).trim()[0]?.toUpperCase() || "ת"}
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-extrabold text-black mb-1 truncate">תיק {caseLabel(patient)}</h1>
+              <h1 className="text-xl font-extrabold text-black mb-1 truncate">
+                תיק {caseLabel(patient)}
+              </h1>
               <div className="flex gap-4 text-gray-500 font-bold text-sm flex-wrap">
                 <span className="inline-flex items-center gap-2">
                   <Hash className="w-4 h-4" />
@@ -244,154 +257,177 @@ export function PatientProfilePage() {
             <button
               type="button"
               onClick={handlePrimaryAction}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-black px-4 font-bold text-white shadow-sm transition-colors hover:bg-gray-800"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-black px-3 font-bold text-white shadow-sm transition-colors hover:bg-gray-800"
             >
-              {nextReviewSession ? <FileText className="h-5 w-5" /> : <Stethoscope className="h-5 w-5" />}
+              {nextReviewSession ? (
+                <FileText className="h-4 w-4" />
+              ) : (
+                <Stethoscope className="h-4 w-4" />
+              )}
               {nextReviewSession ? "סקור מבדק" : "פתח מבדק"}
             </button>
-            {nextReviewSession && (
-              <button
-                type="button"
-                onClick={() => setOrderOpen(true)}
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-bold text-gray-800 transition-colors hover:bg-gray-50"
-              >
-                <Plus className="h-4 w-4" />
-                מבדק חדש
-              </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="min-w-0 space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+              <div className="text-xs font-bold text-gray-500 mb-1">סה״כ מבדקים</div>
+              <div className="text-xl font-extrabold text-black tabular-nums">
+                {sessions.length}
+              </div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+              <div className="text-xs font-bold text-gray-500 mb-1">הושלמו</div>
+              <div className="text-xl font-extrabold text-black tabular-nums">{completedCount}</div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+              <div className="text-xs font-bold text-gray-500 mb-1">ציון MoCA סופי אחרון</div>
+              <div className="text-xl font-extrabold text-black tabular-nums">
+                {latestFinalScore != null ? `${latestFinalScore}/30` : "—"}
+              </div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+              <div className="text-xs font-bold text-gray-500 uppercase mb-1">שנות לימוד</div>
+              <div className="text-xl font-extrabold text-black tabular-nums">
+                {patient.education_years ?? "—"}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
+              <h2 className="text-base font-extrabold text-black">היסטוריית מבדקים</h2>
+              {nextReviewSession && (
+                <button
+                  type="button"
+                  onClick={() => setOrderOpen(true)}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-bold text-gray-800 transition-colors hover:bg-gray-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  מבדק חדש
+                </button>
+              )}
+            </div>
+
+            {sessions.length === 0 ? (
+              <div className="px-6 py-12 text-center text-gray-500">
+                <Activity className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                עדיין לא נפתחו מבדקים לתיק זה. לחץ "פתח מבדק" כדי להתחיל.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[860px] text-right">
+                  <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 font-bold">
+                    <tr>
+                      <th className="px-4 py-2.5">מזהה</th>
+                      <th className="px-4 py-2.5">סוג</th>
+                      <th className="px-4 py-2.5">סטטוס</th>
+                      <th className="px-4 py-2.5">ציון</th>
+                      <th className="px-4 py-2.5">נפתח</th>
+                      <th className="px-4 py-2.5">הושלם</th>
+                      <th className="px-4 py-2.5">מספר</th>
+                      <th className="px-4 py-2.5">סקירה</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessions.map((s) => (
+                      <tr
+                        key={s.id}
+                        onClick={() => navigate(`/dashboard/session/${s.id}`)}
+                        className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-4 py-3 font-mono text-sm text-gray-700">{s.case_id}</td>
+                        <td className="px-4 py-3 font-bold text-black">
+                          {assessmentLabel(s.assessment_type)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusPill status={s.status} />
+                        </td>
+                        <td className="px-4 py-3 font-extrabold tabular-nums text-black">
+                          {scoreLabel(relationArray(s.scoring_reports)[0])}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 tabular-nums">
+                          {formatDate(s.created_at)}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 tabular-nums">
+                          {formatDate(s.completed_at)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {s.access_code ? (
+                            <div className="inline-flex items-center gap-2">
+                              <span className="font-mono text-gray-700 tabular-nums">
+                                {s.access_code}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(event) => copyAccessCode(event, s.access_code!)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-xs font-extrabold text-gray-700 hover:bg-gray-200"
+                                aria-label="העתק מספר מבדק"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                                {copiedAccessCode === s.access_code ? "הועתק" : "העתק"}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link
+                            to={`/dashboard/session/${s.id}`}
+                            onClick={(event) => event.stopPropagation()}
+                            className={clsx(
+                              "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-extrabold transition-colors",
+                              s.status === "awaiting_review"
+                                ? "bg-black text-white hover:bg-gray-800"
+                                : "bg-gray-100 text-gray-800 hover:bg-gray-200",
+                            )}
+                          >
+                            <FileText className="h-4 w-4" />
+                            {reviewActionLabel(s.status)}
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-      </div>
+        </section>
 
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-bold text-gray-500 mb-1">סה״כ מבדקים</div>
-          <div className="text-2xl font-extrabold text-black tabular-nums">{sessions.length}</div>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-bold text-gray-500 mb-1">הושלמו</div>
-          <div className="text-2xl font-extrabold text-black tabular-nums">{completedCount}</div>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-bold text-gray-500 mb-1">ציון MoCA סופי אחרון</div>
-          <div className="text-2xl font-extrabold text-black tabular-nums">
-            {latestFinalScore != null ? `${latestFinalScore}/30` : "—"}
+        <aside className="space-y-4">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+            <h2 className="text-base font-extrabold text-black mb-3">פרטי רקע קליניים</h2>
+            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5 2xl:grid-cols-1">
+              <div>
+                <div className="font-bold text-gray-500 mb-1">טלפון</div>
+                <div className="font-mono text-gray-900">{patient.phone ?? "—"}</div>
+              </div>
+              <div>
+                <div className="font-bold text-gray-500 mb-1">תאריך לידה</div>
+                <div className="text-gray-900">{formatDate(patient.date_of_birth)}</div>
+              </div>
+              <div>
+                <div className="font-bold text-gray-500 mb-1">מין</div>
+                <div className="text-gray-900">{formatGender(patient.gender)}</div>
+              </div>
+              <div>
+                <div className="font-bold text-gray-500 mb-1">שפה</div>
+                <div className="text-gray-900">
+                  {patient.language === "he" ? "עברית" : (patient.language ?? "—")}
+                </div>
+              </div>
+              <div>
+                <div className="font-bold text-gray-500 mb-1">יד דומיננטית</div>
+                <div className="text-gray-900">{formatDominantHand(patient.dominant_hand)}</div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-bold text-gray-500 uppercase mb-1">שנות לימוד</div>
-          <div className="text-2xl font-extrabold text-black tabular-nums">{patient.education_years ?? "—"}</div>
-        </div>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-5">
-        <h2 className="text-base font-extrabold text-black mb-3">פרטי רקע קליניים</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <div className="font-bold text-gray-500 mb-1">טלפון</div>
-            <div className="font-mono text-gray-900">{patient.phone ?? "—"}</div>
-          </div>
-          <div>
-            <div className="font-bold text-gray-500 mb-1">תאריך לידה</div>
-            <div className="text-gray-900">{formatDate(patient.date_of_birth)}</div>
-          </div>
-          <div>
-            <div className="font-bold text-gray-500 mb-1">מין</div>
-            <div className="text-gray-900">{formatGender(patient.gender)}</div>
-          </div>
-          <div>
-            <div className="font-bold text-gray-500 mb-1">שפה</div>
-            <div className="text-gray-900">{patient.language === "he" ? "עברית" : patient.language ?? "—"}</div>
-          </div>
-          <div>
-            <div className="font-bold text-gray-500 mb-1">יד דומיננטית</div>
-            <div className="text-gray-900">{formatDominantHand(patient.dominant_hand)}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-          <h2 className="text-lg font-extrabold text-black">היסטוריית מבדקים</h2>
-        </div>
-
-        {sessions.length === 0 ? (
-          <div className="px-6 py-12 text-center text-gray-500">
-            <Activity className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-            עדיין לא נפתחו מבדקים לתיק זה. לחץ "פתח מבדק" כדי להתחיל.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-right">
-            <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 font-bold">
-              <tr>
-                <th className="px-6 py-3">מזהה</th>
-                <th className="px-6 py-3">סוג</th>
-                <th className="px-6 py-3">סטטוס</th>
-                <th className="px-6 py-3">ציון</th>
-                <th className="px-6 py-3">נפתח</th>
-                <th className="px-6 py-3">הושלם</th>
-                <th className="px-6 py-3">מספר</th>
-                <th className="px-6 py-3">סקירה</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((s) => (
-                <tr
-                    key={s.id}
-                    onClick={() => navigate(`/dashboard/session/${s.id}`)}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer transition-colors"
-                  >
-                    <td className="px-6 py-4 font-mono text-sm text-gray-700">{s.case_id}</td>
-                    <td className="px-6 py-4 font-bold text-black">{assessmentLabel(s.assessment_type)}</td>
-                    <td className="px-6 py-4">
-                      <StatusPill status={s.status} />
-                    </td>
-                    <td className="px-6 py-4 font-extrabold tabular-nums text-black">
-                      {scoreLabel(relationArray(s.scoring_reports)[0])}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 tabular-nums">{formatDate(s.created_at)}</td>
-                    <td className="px-6 py-4 text-gray-600 tabular-nums">{formatDate(s.completed_at)}</td>
-                    <td className="px-6 py-4">
-                      {s.access_code ? (
-                        <div className="inline-flex items-center gap-2">
-                          <span className="font-mono text-gray-700 tabular-nums">{s.access_code}</span>
-                          <button
-                            type="button"
-                            onClick={(event) => copyAccessCode(event, s.access_code!)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-xs font-extrabold text-gray-700 hover:bg-gray-200"
-                            aria-label="העתק מספר מבדק"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                            {copiedAccessCode === s.access_code ? "הועתק" : "העתק"}
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        to={`/dashboard/session/${s.id}`}
-                        onClick={(event) => event.stopPropagation()}
-                        className={clsx(
-                          "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-extrabold transition-colors",
-                          s.status === "awaiting_review"
-                            ? "bg-black text-white hover:bg-gray-800"
-                            : "bg-gray-100 text-gray-800 hover:bg-gray-200",
-                        )}
-                      >
-                        <FileText className="h-4 w-4" />
-                        {reviewActionLabel(s.status)}
-                      </Link>
-                    </td>
-                  </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        )}
+        </aside>
       </div>
 
       {orderOpen && (
