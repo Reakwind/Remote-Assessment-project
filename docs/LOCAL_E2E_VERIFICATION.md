@@ -162,6 +162,15 @@ npm run e2e:browser
 
 This starts or reuses Vite and expects local Supabase plus Edge Functions to already be running.
 
+For a narrower cross-app smoke while debugging session flow, run:
+
+```bash
+cd client
+npm run e2e:smoke
+```
+
+This includes the clinician UI creating a test number and the patient UI completing every task before clinician review assertions run.
+
 ## Known Clinical Blockers
 
 - Official licensed MoCA visual stimuli are still required before clinical pilot use and must not be committed to this repository.

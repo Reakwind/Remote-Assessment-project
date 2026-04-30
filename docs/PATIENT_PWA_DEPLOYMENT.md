@@ -121,6 +121,22 @@ npm run build:surfaces
 npm run verify:surface-builds
 ```
 
+## Local iPad Review Server
+
+Use the local review server when testing patient or clinician changes on a real device before Netlify deployment:
+
+```bash
+node scripts/review-server.mjs --surface patient
+```
+
+The script starts local Supabase if needed, serves all Edge Functions, starts the patient Vite server on the local network, and prints:
+
+- a Mac URL,
+- an iPad URL,
+- the local Supabase proxy used by the browser.
+
+Open the iPad URL on a device connected to the same Wi-Fi network. This is an HTTP browser review server; installed-PWA behavior still requires HTTPS through Netlify or a trusted HTTPS tunnel/certificate.
+
 To smoke-test deployed staging hosts after publication:
 
 ```bash

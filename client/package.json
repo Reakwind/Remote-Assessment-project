@@ -24,6 +24,7 @@
     "test:coverage:app": "vitest run --coverage --config vitest.app-coverage.config.ts",
     "test:watch": "vitest",
     "e2e:browser": "playwright test",
+    "e2e:smoke": "E2E_WEB_SERVER_URL=http://127.0.0.1:5175 E2E_WEB_SERVER_COMMAND=\"npm run dev -- --host 127.0.0.1 --port 5175 --strictPort\" playwright test pilot-mvp.spec.ts",
     "e2e:patient-pwa": "E2E_EXPECT_PATIENT_SURFACE=1 E2E_APP_URL=http://127.0.0.1:4173 playwright test patient-flow.spec.ts",
     "e2e:hosted-pwa": "E2E_NO_WEB_SERVER=1 playwright test hosted-pwa.spec.ts",
     "prepare": "husky"

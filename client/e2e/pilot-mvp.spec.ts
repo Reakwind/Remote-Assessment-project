@@ -70,6 +70,27 @@ test('pilot MVP browser flow: patient completes and clinician review APIs finali
   expect(final.session.scoring_report.total_provisional).toBe(false);
 });
 
+test('cross-app smoke: clinician UI creates a test number and patient completes every task', async ({ page, request }) => {
+  const runId = Date.now();
+  const email = `app-smoke-${runId}@example.test`;
+  const clinician = await createClinician(request, email);
+  const patient = await createCase(request, clinician.accessToken, `APP-SMOKE-${runId}`);
+
+  await signInClinicianUi(page, email);
+  const testNumber = await createTestNumberFromClinicianUi(page, patient.case_id);
+
+  await page.evaluate(() => window.localStorage.clear());
+  await runPatientFromTestNumberClickThrough(page, testNumber);
+
+  const sessionId = await findSessionIdByTestNumber(request, clinician.accessToken, testNumber);
+  const provisional = await getSession(request, clinician.accessToken, sessionId);
+  expect(provisional.session.status).toBe('awaiting_review');
+  expect(provisional.session.drawings).toHaveLength(3);
+  expect(provisional.session.task_results.length).toBeGreaterThanOrEqual(12);
+  expect(provisional.session.scoring_reviews.length).toBeGreaterThan(0);
+  expect(provisional.session.audio_evidence_reviews.length).toBeGreaterThan(0);
+});
+
 test('review regression: session creation exposes test number but not patient bearer token', async ({ request }) => {
   const runId = Date.now();
   const clinician = await createClinician(request, `browser-token-${runId}@example.test`);
@@ -172,6 +193,35 @@ async function createCase(request: APIRequestContext, accessToken: string, caseI
   return body[0] as { id: string; case_id: string };
 }
 
+async function signInClinicianUi(page: Page, email: string) {
+  await page.goto('/#/clinician/auth');
+  await page.getByPlaceholder('אימייל').fill(email);
+  await page.getByPlaceholder('סיסמה').fill(PASSWORD);
+  await page.getByRole('button', { name: /כניסה לקלינאים/ }).click();
+  await expect(page.getByRole('heading', { name: 'תיקים' })).toBeVisible();
+}
+
+async function createTestNumberFromClinicianUi(page: Page, caseId: string) {
+  await page.getByRole('button', { name: new RegExp(caseId) }).click();
+  await expect(page.getByRole('heading', { name: `תיק ${caseId}` })).toBeVisible();
+  await page.getByRole('button', { name: 'פתח מבדק' }).click();
+  await page.getByRole('button', { name: 'צור מספר מבדק' }).click();
+  await expect(page.getByRole('heading', { name: 'המבדק נוצר בהצלחה' })).toBeVisible();
+  const testNumber = page.locator('span[dir="ltr"]').filter({ hasText: /^\d{8}$/ }).first();
+  await expect(testNumber).toBeVisible();
+  return (await testNumber.textContent())!.replace(/\s/g, '');
+}
+
+async function findSessionIdByTestNumber(request: APIRequestContext, accessToken: string, testNumber: string) {
+  const response = await request.get(`${SUPABASE_URL}/rest/v1/sessions?select=id&access_code=eq.${testNumber}`, {
+    headers: clinicianHeaders(accessToken),
+  });
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  expect(body[0]?.id).toBeTruthy();
+  return body[0].id as string;
+}
+
 async function createSession(request: APIRequestContext, accessToken: string, patientId: string) {
   const response = await request.post(`${SUPABASE_URL}/functions/v1/create-session`, {
     headers: clinicianHeaders(accessToken),
@@ -219,52 +269,21 @@ async function runPatientClickThrough(
       tasks: {},
     }));
 
-    Object.defineProperty(navigator, 'mediaDevices', {
-      configurable: true,
-      value: {
-        getUserMedia: async () => ({
-          getTracks: () => [{ stop: () => undefined }],
-        }),
-      },
-    });
-
-    Object.defineProperty(window.speechSynthesis, 'getVoices', {
-      configurable: true,
-      value: () => [{ lang: 'he-IL', name: 'Hebrew test voice' }],
-    });
-    Object.defineProperty(window.speechSynthesis, 'speak', {
-      configurable: true,
-      value: (utterance: SpeechSynthesisUtterance) => {
-        window.setTimeout(() => utterance.onend?.(new Event('end') as SpeechSynthesisEvent), 0);
-      },
-    });
-    Object.defineProperty(window.speechSynthesis, 'cancel', {
-      configurable: true,
-      value: () => undefined,
-    });
-
-    class MockMediaRecorder {
-      mimeType = 'audio/webm';
-      ondataavailable: ((event: { data: Blob }) => void) | null = null;
-      onstop: (() => void) | null = null;
-
-      start() {}
-
-      stop() {
-        this.ondataavailable?.({ data: new Blob(['audio'], { type: 'audio/webm' }) });
-        this.onstop?.();
-      }
-    }
-
-    Object.defineProperty(window, 'MediaRecorder', {
-      configurable: true,
-      value: MockMediaRecorder,
-    });
   }, { linkToken, startedSession: started });
 
+  await installPatientMediaMocks(page);
   await page.goto('/#/patient/welcome');
-  await expect(page.getByRole('heading', { name: /ברוך הבא להערכה קוגניטיבית/ })).toBeVisible();
+  await completePatientAssessmentFromWelcome(page);
+}
 
+async function runPatientFromTestNumberClickThrough(page: Page, testNumber: string) {
+  await installPatientMediaMocks(page);
+  await page.goto(`/#/session/${testNumber}`);
+  await completePatientAssessmentFromWelcome(page);
+}
+
+async function completePatientAssessmentFromWelcome(page: Page) {
+  await expect(page.getByRole('heading', { name: /ברוך הבא להערכה קוגניטיבית/ })).toBeVisible();
   await page.getByRole('button', { name: /בדיקת שמע בעברית/ }).click();
   await expect(page.getByText(/השמעת ההוראות בעברית עובדת/)).toBeVisible();
   await page.getByRole('button', { name: /בדיקת מיקרופון/ }).click();
@@ -321,6 +340,55 @@ async function runPatientClickThrough(
   const completed = await completionResponse;
   expect(completed.ok()).toBeTruthy();
   await expect(page.getByRole('heading', { name: /המבדק הושלם/ })).toBeVisible();
+}
+
+async function installPatientMediaMocks(page: Page) {
+  const installMocks = () => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: async () => ({
+          getTracks: () => [{ stop: () => undefined }],
+        }),
+      },
+    });
+
+    Object.defineProperty(window.speechSynthesis, 'getVoices', {
+      configurable: true,
+      value: () => [{ lang: 'he-IL', name: 'Hebrew test voice' }],
+    });
+    Object.defineProperty(window.speechSynthesis, 'speak', {
+      configurable: true,
+      value: (utterance: SpeechSynthesisUtterance) => {
+        window.setTimeout(() => utterance.onend?.(new Event('end') as SpeechSynthesisEvent), 0);
+      },
+    });
+    Object.defineProperty(window.speechSynthesis, 'cancel', {
+      configurable: true,
+      value: () => undefined,
+    });
+
+    class MockMediaRecorder {
+      mimeType = 'audio/webm';
+      ondataavailable = null;
+      onstop = null;
+
+      start() {}
+
+      stop() {
+        this.ondataavailable?.({ data: new Blob(['audio'], { type: 'audio/webm' }) });
+        this.onstop?.();
+      }
+    }
+
+    Object.defineProperty(window, 'MediaRecorder', {
+      configurable: true,
+      value: MockMediaRecorder,
+    });
+  };
+
+  await page.addInitScript(installMocks);
+  await page.evaluate(installMocks);
 }
 
 async function clickContinue(page: Page) {

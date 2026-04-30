@@ -72,6 +72,8 @@ export default defineConfig(({ mode }) => {
   const surface = env.VITE_APP_SURFACE ?? 'combined';
   const deployEnvironment = env.VITE_DEPLOY_ENV ?? 'local';
   const outDir = env.VITE_BUILD_OUT_DIR ?? 'dist';
+  const localSupabaseProxy = env.VITE_LOCAL_SUPABASE_PROXY === '1';
+  const localSupabaseProxyTarget = env.VITE_LOCAL_SUPABASE_PROXY_TARGET ?? 'http://127.0.0.1:54321';
 
   return {
     build: {
@@ -103,6 +105,17 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    server: localSupabaseProxy
+      ? {
+          proxy: {
+            '/supabase': {
+              target: localSupabaseProxyTarget,
+              changeOrigin: true,
+              rewrite: (requestPath) => requestPath.replace(/^\/supabase/, ''),
+            },
+          },
+        }
+      : undefined,
     assetsInclude: ['**/*.svg', '**/*.csv'],
   };
 });

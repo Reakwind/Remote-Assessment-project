@@ -65,7 +65,7 @@ The `Deploy Hosted Backend` workflow runs after successful `CI` runs on `main`, 
 - runs hosted data-contract smoke and Netlify shell smoke after frontend, Netlify, Edge Function, or migration changes,
 - retries hosted smoke to absorb normal Netlify deploy lag.
 
-The hosted data-contract smoke is `node scripts/hosted-backend-smoke.mjs`. It creates a confirmed smoke clinician, inserts a complete patient profile, calls `create-session`, verifies the returned 8-digit patient test number, calls `start-session`, checks the stored hosted session contract, and then cleans up its smoke records. Use `--keep-records` only when debugging a failed hosted smoke run.
+The hosted data-contract smoke is `node scripts/hosted-backend-smoke.mjs`. It creates a confirmed smoke clinician, inserts a complete patient profile, calls `create-session`, verifies the returned 8-digit patient test number, calls `start-session`, submits the full patient assessment contract across all MoCA task types, completes the session, verifies the clinician review queue, finalizes drawing/scoring review, and then cleans up its smoke records. Use `--keep-records` only when debugging a failed hosted smoke run.
 
 The `Hosted Smoke` workflow is still manual. Use it for ad hoc rechecks or before pilot-readiness handoff. Keep `run_backend_data_smoke=true` unless you intentionally only want the Netlify shell/PWA smoke; the backend data smoke needs anon and service-role secrets.
 
