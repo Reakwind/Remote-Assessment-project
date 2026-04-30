@@ -220,7 +220,7 @@ describe('patient resume state', () => {
     expect(input).toHaveValue('1234-5678');
     expect(screen.getByText('המספר מלא. אפשר להתחיל.')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /התחלת המבדק/ }));
+    await userEvent.click(screen.getByRole('button', { name: /התחל מבדק/ }));
 
     expect(router.state.location.pathname).toBe('/session/12345678');
   });

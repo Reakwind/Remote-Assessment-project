@@ -40,13 +40,11 @@ export function TrailMakingTask() {
 
       <div className="relative flex min-w-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-gray-50 p-3 sm:rounded-2xl sm:p-6">
         {!isLoading && !trailTemplate?.signedUrl && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="flex w-full max-w-[600px] flex-col items-center gap-4 opacity-70 px-3">
-              <div className="w-full aspect-[3/2] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-center text-gray-400 font-bold italic text-xs sm:text-base">
-                [תבנית חיבור נקודות: 1-א-2-ב-3-ג-4-ד-5-ה]
-              </div>
-              <DevStimulusNotice className="pointer-events-auto" />
+          <div className="mb-3 flex w-full max-w-[660px] flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white p-3 text-center sm:p-4">
+            <div className="text-sm font-extrabold text-gray-400 sm:text-base">
+              [תבנית חיבור נקודות: 1-א-2-ב-3-ג-4-ד-5-ה]
             </div>
+            <DevStimulusNotice className="w-full" />
           </div>
         )}
 

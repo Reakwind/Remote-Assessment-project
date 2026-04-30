@@ -237,12 +237,12 @@ export function BaseCanvas({
         />
       </div>
       
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full justify-center">
+      <div className="flex w-full flex-col justify-center gap-3 sm:flex-row sm:gap-4">
         <button 
           onClick={handleUndo} 
           disabled={strokes.length === 0}
           className={clsx(
-            "px-5 sm:px-6 py-3 rounded-lg font-bold text-base sm:text-lg border-2 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50",
+            "inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border-2 px-5 py-3 text-base font-bold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50 sm:px-6 sm:text-lg",
             strokes.length === 0 
               ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" 
               : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50 active:bg-gray-100"
@@ -255,7 +255,7 @@ export function BaseCanvas({
           onClick={handleClear}
           disabled={strokes.length === 0}
           className={clsx(
-            "px-5 sm:px-6 py-3 rounded-lg font-bold text-base sm:text-lg border-2 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50",
+            "inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border-2 px-5 py-3 text-base font-bold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50 sm:px-6 sm:text-lg",
             strokes.length === 0 
               ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" 
               : "border-gray-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-200 active:bg-red-100"

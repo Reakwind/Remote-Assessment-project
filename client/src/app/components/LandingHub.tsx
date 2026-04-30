@@ -22,7 +22,7 @@ export function LandingHub() {
   const isCompleteTestNumber = normalizedToken.length === 8;
   const title = isPatientSurface ? "הערכה קוגניטיבית" : "Remote Check";
   const subtitle = isPatientSurface ? "מבדק מרחוק" : "הערכה נוירופסיכולוגית ממוחשבת";
-  const shellSpacing = isPatientSurface && isStagingDeploy ? "pb-3 pt-12 sm:py-6" : "py-3";
+  const shellSpacing = isPatientSurface && isStagingDeploy ? "pb-4 pt-10 sm:py-6" : "py-4";
 
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,15 +49,15 @@ export function LandingHub() {
   return (
     <div
       dir="rtl"
-      className={`min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 ${shellSpacing} sm:px-6 font-['Heebo',sans-serif]`}
+      className={`min-h-[100dvh] bg-gray-50 flex flex-col items-center justify-center px-4 ${shellSpacing} sm:px-6 font-['Heebo',sans-serif]`}
     >
       <div className="w-full max-w-xl">
-        <div className="mb-3 flex items-center justify-center gap-3 text-right">
-          <div className="w-11 h-11 shrink-0 bg-black text-white rounded-xl flex items-center justify-center text-base font-bold">
+        <div className="mb-3 flex items-center justify-center gap-3 text-right sm:mb-4">
+          <div className="w-10 h-10 shrink-0 bg-black text-white rounded-xl flex items-center justify-center text-sm font-bold sm:h-11 sm:w-11 sm:text-base">
             RC
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-black leading-tight">
+            <h1 className="text-[1.45rem] sm:text-3xl font-extrabold text-black leading-tight">
               {title}
             </h1>
             <p className="text-sm text-gray-500 font-medium">
@@ -66,11 +66,11 @@ export function LandingHub() {
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-gray-200 shadow-lg text-center relative overflow-hidden">
-          <h2 className="text-2xl font-extrabold text-black mb-1">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-lg text-center relative overflow-hidden">
+          <h2 className="text-[1.35rem] sm:text-2xl font-extrabold text-black mb-1">
             כניסת מטופל
           </h2>
-          <p className="text-base text-gray-600 mb-4">
+          <p className="text-sm text-gray-600 mb-4 sm:text-base">
             הזן את מספר המבדק שקיבלת מהקלינאי
           </p>
 
@@ -80,13 +80,13 @@ export function LandingHub() {
                 type="text"
                 value={formattedToken}
                 onChange={(e) => setToken(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="הזן מספר מבדק..."
+                placeholder="0000-0000"
                 inputMode="numeric"
                 maxLength={9}
                 aria-label="מספר מבדק בן 8 ספרות"
                 aria-describedby="test-number-help"
                 dir="ltr"
-                className="w-full h-14 sm:h-16 text-center text-2xl sm:text-3xl font-mono font-bold tabular-nums border-2 border-black rounded-2xl shadow-sm focus:border-black focus:ring-4 focus:ring-black/10 outline-none transition-all placeholder:text-gray-500 placeholder:font-normal"
+                className="w-full h-14 sm:h-16 text-center text-2xl sm:text-3xl font-mono font-bold tabular-nums border-2 border-black rounded-xl shadow-sm focus:border-black focus:ring-4 focus:ring-black/10 outline-none transition-all placeholder:text-gray-300 placeholder:font-bold"
               />
               <div className="space-y-1.5">
                 <div className="flex justify-center gap-2" dir="ltr" aria-hidden="true">
@@ -112,9 +112,9 @@ export function LandingHub() {
               <button
                 type="submit"
                 disabled={!isCompleteTestNumber}
-                className="w-full h-14 sm:h-16 bg-black text-white text-xl sm:text-2xl font-bold rounded-2xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-4 focus:ring-4 focus:ring-black/20 outline-none"
+                className="w-full h-14 sm:h-16 bg-black text-white text-lg sm:text-2xl font-bold rounded-xl hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 focus:ring-4 focus:ring-black/20 outline-none"
               >
-                התחלת המבדק
+                התחל מבדק
                 <ArrowLeft className="w-7 h-7" />
               </button>
             </div>

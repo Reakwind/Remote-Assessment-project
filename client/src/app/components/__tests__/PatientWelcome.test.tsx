@@ -116,7 +116,7 @@ describe('PatientWelcome', () => {
   it('requires audio, microphone, and readiness acknowledgement before starting tasks', async () => {
     const router = renderWelcome();
 
-    expect(screen.getByRole('button', { name: /התחלת המבדק/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /התחל מבדק/ })).toBeDisabled();
     expect(screen.getByText(/בטלפון מומלץ לסובב לרוחב לפני הציור/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /בדיקת שמע בעברית/ }));
@@ -125,10 +125,10 @@ describe('PatientWelcome', () => {
     await userEvent.click(screen.getByRole('button', { name: /בדיקת מיקרופון/ }));
     await waitFor(() => expect(screen.getByText('המיקרופון זמין להקלטת תשובות.')).toBeInTheDocument());
 
-    expect(screen.getByRole('button', { name: /התחלת המבדק/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /התחל מבדק/ })).toBeDisabled();
 
     await userEvent.click(screen.getByRole('checkbox'));
-    await userEvent.click(screen.getByRole('button', { name: /התחלת המבדק/ }));
+    await userEvent.click(screen.getByRole('button', { name: /התחל מבדק/ }));
 
     await screen.findByText('Trail task');
     expect(router.state.location.pathname).toBe('/patient/trail-making');

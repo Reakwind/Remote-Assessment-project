@@ -270,8 +270,8 @@ async function runPatientClickThrough(
   await page.getByRole('button', { name: /בדיקת מיקרופון/ }).click();
   await expect(page.getByText(/המיקרופון זמין/)).toBeVisible();
   await page.getByRole('checkbox').check();
-  await expect(page.getByRole('button', { name: /התחלת המבדק/ })).toBeEnabled();
-  await page.getByRole('button', { name: /התחלת המבדק/ }).click();
+  await expect(page.getByRole('button', { name: /התחל מבדק/ })).toBeEnabled();
+  await page.getByRole('button', { name: /התחל מבדק/ }).click();
   await expect(page.getByText(/שלב 1 מתוך/)).toBeVisible();
 
   const completionResponse = page.waitForResponse(resp =>

@@ -6,7 +6,7 @@ test('patient entry loads from the configured app URL', async ({ page }) => {
   await expect(page).toHaveTitle(/Remote (Assessment|Check)/);
   await expect(page.getByRole('heading', { name: 'כניסת מטופל' })).toBeVisible();
   await expect(page.getByLabel('מספר מבדק בן 8 ספרות')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'התחלת המבדק' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'התחל מבדק' })).toBeDisabled();
 });
 
 test.describe('patient PWA deploy preview', () => {

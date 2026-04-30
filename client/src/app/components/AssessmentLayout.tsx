@@ -225,24 +225,40 @@ export function AssessmentLayout() {
     <StimuliManifestProvider>
       <div dir="rtl" className="flex min-h-[100dvh] flex-col overflow-x-hidden bg-white text-black font-['Heebo',sans-serif]">
       {/* Header */}
-      <header className="z-10 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:gap-4 sm:px-6 lg:px-10">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="w-10 h-10 shrink-0 bg-black rounded-lg flex items-center justify-center text-white font-bold text-xl">
-            RC
+      <header className="z-10 border-b border-gray-200 bg-white px-4 py-2.5 sm:px-6 sm:py-3 lg:px-10">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black text-base font-bold text-white sm:h-10 sm:w-10 sm:text-xl">
+              RC
+            </div>
+            <div className="hidden min-w-0 sm:block">
+              <div className="truncate text-base font-bold leading-tight sm:text-lg">Remote Check</div>
+              <div className="truncate text-xs text-gray-500 sm:text-sm">הערכה נוירופסיכולוגית</div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <div className="font-bold text-lg leading-tight">Remote Check</div>
-            <div className="text-sm text-gray-500">הערכה נוירופסיכולוגית</div>
+
+          <div className="shrink-0 text-center">
+            <h1 className="text-base font-bold leading-tight sm:text-xl">MoCA - עברית</h1>
+            <div className="text-xs font-medium text-gray-500 sm:text-sm">גרסה {mocaVersion}</div>
           </div>
-        </div>
 
-        <div className="order-3 w-full text-right sm:order-none sm:w-auto sm:text-center">
-          <h1 className="font-bold text-lg sm:text-xl">MoCA - עברית</h1>
-          <div className="text-sm text-gray-500">גרסה {mocaVersion}</div>
-        </div>
-
-        <div className="font-mono text-base sm:text-lg font-medium tabular-nums" style={{ fontVariantNumeric: "tabular-nums" }}>
-          {isEndScreen ? "סיום" : `שלב ${currentStep} מתוך ${totalSteps}`}
+          <div
+            className="shrink-0 text-left font-mono text-base font-extrabold tabular-nums sm:text-lg"
+            data-testid="patient-step-indicator"
+            style={{ fontVariantNumeric: "tabular-nums" }}
+          >
+            <div className="inline-flex min-w-14 items-center justify-center rounded-full bg-gray-100 px-3 py-1 text-gray-950 sm:bg-transparent sm:px-0 sm:py-0">
+              {isEndScreen ? (
+                "סיום"
+              ) : (
+                <>
+                  <span className="sm:hidden">{currentStep}/{totalSteps}</span>
+                  <span className="hidden sm:inline">שלב {currentStep} מתוך {totalSteps}</span>
+                </>
+              )}
+            </div>
+            {!isEndScreen && <div className="mt-0.5 text-center text-[0.65rem] font-bold text-gray-500 sm:hidden">שלב</div>}
+          </div>
         </div>
       </header>
       <StimulusReadinessBanner />
@@ -256,7 +272,7 @@ export function AssessmentLayout() {
       </div>
 
       {/* Main Content */}
-      <main className="mx-auto flex w-full max-w-[1100px] min-w-0 flex-1 flex-col px-3 py-4 sm:px-6 sm:py-6 lg:px-10 lg:py-6">
+      <main className="mx-auto flex w-full max-w-[1100px] min-w-0 flex-1 flex-col px-3 py-4 sm:px-6 sm:py-5 lg:px-10 lg:py-6">
         <Outlet />
       </main>
 
@@ -264,18 +280,18 @@ export function AssessmentLayout() {
       {!isEndScreen && (
         <>
         <footer
-          className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-4 shadow-[0_-8px_20px_rgba(15,23,42,0.04)] sm:px-6 lg:px-10 lg:py-5"
+          className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.45fr)] items-center gap-3 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-8px_20px_rgba(15,23,42,0.04)] sm:flex sm:flex-wrap sm:justify-between sm:px-6 sm:py-4 lg:px-10 lg:py-5"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
           <button
             onClick={() => navigate(currentStepConfig.prev)}
-            className="flex items-center justify-center gap-2 min-h-14 sm:min-h-16 px-4 sm:px-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-black font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 text-base font-semibold text-black transition-colors hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50 sm:min-h-16 sm:px-8 sm:text-xl"
           >
             <ArrowRight className="w-6 h-6" />
             <span>חזרה</span>
           </button>
 
-          <div className="flex flex-1 flex-col items-stretch gap-2 sm:flex-none sm:items-end">
+          <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-none sm:items-end">
             {validationMessage && (
               <div
                 id="continue-state"
@@ -318,7 +334,7 @@ export function AssessmentLayout() {
               onClick={handleNext}
               aria-disabled={!canContinue}
               aria-describedby={continueStateId}
-              className="flex items-center justify-center gap-2 min-h-14 sm:min-h-16 px-5 sm:px-10 rounded-lg bg-black hover:bg-gray-900 text-white font-semibold text-base sm:text-xl transition-colors min-w-[var(--target-size)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50"
+              className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-black px-4 text-base font-semibold text-white transition-colors hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-opacity-50 sm:min-h-16 sm:px-10 sm:text-xl"
             >
               {currentSaveStatus?.status === "saving" ? (
                 <>

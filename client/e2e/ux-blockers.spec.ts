@@ -15,7 +15,9 @@ test.describe('patient mobile UX', () => {
 
     await expect(page.getByRole('heading', { name: /מתח קו בין מספר לאות בסדר עולה/ })).toBeVisible();
     await expect(page.locator('footer')).toHaveCSS('position', 'static');
+    await expect(page.getByTestId('patient-step-indicator')).toHaveText(/1\/12/);
     await expectNoHorizontalOverflow(page);
+    await expectElementHeightAtMost(page, 'header', 120);
 
     const canvas = page.getByTestId('drawing-canvas').first();
     await canvas.scrollIntoViewIfNeeded();
@@ -43,8 +45,8 @@ test.describe('landing test number entry', () => {
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
 
-    const input = page.getByPlaceholder(/הזן מספר מבדק/);
-    const submit = page.getByRole('button', { name: /התחלת המבדק/ });
+    const input = page.getByLabel('מספר מבדק בן 8 ספרות');
+    const submit = page.getByRole('button', { name: /התחל מבדק/ });
 
     await expect(submit).toBeDisabled();
     await input.fill('1234567');
@@ -301,6 +303,11 @@ async function expectElementInsideViewport(page: Page, locator: Locator) {
   expect(box).not.toBeNull();
   expect(box!.y).toBeGreaterThanOrEqual(0);
   expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+}
+
+async function expectElementHeightAtMost(page: Page, selector: string, maxHeight: number) {
+  const height = await page.locator(selector).first().evaluate((element) => element.getBoundingClientRect().height);
+  expect(height).toBeLessThanOrEqual(maxHeight);
 }
 
 async function signInClinician(page: Page, email: string) {
