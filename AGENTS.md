@@ -102,6 +102,14 @@ deno check --frozen $(node scripts/edge-functions.mjs deno-check-args)
 node scripts/local-e2e.mjs --all-versions
 ```
 
+Preferred local-only regression shortcut:
+
+```bash
+node scripts/local-test-shell.mjs
+```
+
+This script disables hosted Supabase/Netlify environment variables for child commands, writes `client/.env.local` with local Supabase values, starts local Edge Functions when needed, then runs the CI-style local checks plus browser and scripted local E2E. Use `--unit-only` for checks that do not require local Supabase, and `--skip-licensed-pdf-check` only for non-clinical contract checks.
+
 Record skipped local E2E checks and the reason in the PR body.
 
 CI may use `node scripts/local-e2e.mjs --all-versions --skip-licensed-pdf-check` because licensed MoCA PDFs must stay outside GitHub-hosted runners. Do not use that flag for clinical-readiness validation; local clinical checks should verify the licensed PDFs and private Storage manifests.

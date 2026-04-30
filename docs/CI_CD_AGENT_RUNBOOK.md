@@ -34,7 +34,7 @@ Do not put Supabase service-role keys, Netlify auth tokens, Resend keys, Twilio 
 | Docs-only | Link/search verification for touched docs. |
 | Frontend-only | `cd client && npm test && npm run lint && npm run build`; add `npm run build:surfaces && npm run verify:surface-builds` for surface/deploy changes. |
 | Patient PWA | Frontend checks plus `npm run e2e:patient-pwa` against a patient preview when installability, cache, routing, or task UX changed. |
-| Backend/session/storage/review/scoring | GitHub CI baseline locally where practical: Deno check, Edge Function tests, local Supabase, `node scripts/local-e2e.mjs --all-versions`, and `cd client && npm run e2e:browser`. |
+| Backend/session/storage/review/scoring | Prefer `node scripts/local-test-shell.mjs` before hosted work. It disables hosted Supabase/Netlify env vars for child commands, uses local Supabase, and runs the CI-style local checks, browser E2E, and scripted local E2E. |
 | Hosted Supabase Edge Functions | Merges to `main` run `Deploy Hosted Backend` after `CI` succeeds when `supabase/functions/**`, `supabase/config.toml`, or `scripts/edge-functions.mjs` changed. |
 | Hosted Supabase migrations | Use `Deploy Hosted Backend` manually with `deploy_migrations=true`; keep the `supabase-production-migrations` environment approval gate enabled. |
 | Hosted frontend/backend smoke | `Deploy Hosted Backend` runs a hosted Supabase create/start data smoke and Netlify PWA shell smoke after frontend or hosted backend code changes. The manual `Hosted Smoke` workflow remains available for ad hoc rechecks. |
