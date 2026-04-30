@@ -25,6 +25,23 @@ VITE_SUPABASE_ANON_KEY=<local anon key from supabase status>
 
 ## Backend
 
+For the full local-only regression path, prefer the checked-in runner:
+
+```bash
+node scripts/local-test-shell.mjs
+```
+
+It disables hosted Supabase and Netlify environment variables for child commands, writes `client/.env.local` with local Supabase values, starts local Edge Functions when needed, then runs client unit/coverage/lint/build checks, Deno checks/tests, Playwright browser E2E, and `scripts/local-e2e.mjs --all-versions`.
+
+Useful variants:
+
+```bash
+node scripts/local-test-shell.mjs --unit-only
+node scripts/local-test-shell.mjs --skip-licensed-pdf-check
+```
+
+`--unit-only` avoids local Supabase. `--skip-licensed-pdf-check` is only for non-clinical contract checks.
+
 From the repo root:
 
 ```bash

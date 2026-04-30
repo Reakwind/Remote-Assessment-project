@@ -141,6 +141,7 @@ npm run lint
 Backend/local E2E:
 
 ```bash
+node scripts/local-test-shell.mjs
 supabase start
 supabase functions serve $(node scripts/edge-functions.mjs serve-args) --env-file /dev/null
 node scripts/local-e2e.mjs --all-versions
@@ -148,6 +149,8 @@ node scripts/bulk-flow-qa.mjs --batch FLOWQA --patients 50 --clinicians 50 --tes
 node scripts/bulk-flow-qa.mjs --report-batch FLOWQA
 node scripts/bulk-flow-qa.mjs --cleanup-batch FLOWQA
 ```
+
+Use `node scripts/local-test-shell.mjs` for the local-only regression path before worrying about hosted Supabase or Netlify. It points child commands at local Supabase, disables hosted/Netlify environment variables, starts Edge Functions when needed, and runs the CI-style local checks. Use `--unit-only` when you need checks that do not require local Supabase.
 
 Licensed stimulus readiness:
 

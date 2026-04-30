@@ -20,6 +20,7 @@
     "verify:surface-builds": "node ../scripts/verify-surface-builds.mjs",
     "verify:patient-pwa-readiness": "node ../scripts/patient-pwa-readiness.mjs",
     "test": "vitest run",
+    "test:local": "node ../scripts/local-test-shell.mjs",
     "test:coverage": "vitest run --coverage",
     "test:coverage:app": "vitest run --coverage --config vitest.app-coverage.config.ts",
     "test:watch": "vitest",
