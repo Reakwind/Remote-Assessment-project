@@ -97,7 +97,7 @@ export function buildEvidence({ mode, sha, publicHost, patientUrl, clinicianUrl 
     health: Object.fromEntries(healthKeys.map((key) => [key, 'pending'])),
     automatedChecks: [],
     manualChecks: Object.fromEntries(
-      manualCheckKeys.map((key) => [key, { result: 'pending' }]),
+      manualCheckKeys.map((key) => [key, { result: 'pending', notes: '' }]),
     ),
     failures: [],
   };
