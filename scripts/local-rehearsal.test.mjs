@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   buildAllowedOrigins,
   buildEvidence,
+  createPendingHealth,
+  mergeHealthResult,
   parseLocalRehearsalArgs,
   requireReadinessResetConfirmation,
 } from './local-rehearsal.mjs';
@@ -72,4 +74,24 @@ test('buildEvidence creates a stable evidence object', () => {
     exports: { result: 'pending', notes: '' },
   });
   assert.deepEqual(evidence.failures, []);
+});
+
+test('createPendingHealth lists required local rehearsal checks', () => {
+  assert.deepEqual(createPendingHealth(), {
+    supabase: 'pending',
+    edgeFunctions: 'pending',
+    patientHttps: 'pending',
+    clinicianHttps: 'pending',
+    supabaseProxy: 'pending',
+  });
+});
+
+test('mergeHealthResult updates one health field immutably', () => {
+  assert.deepEqual(mergeHealthResult(createPendingHealth(), 'patientHttps', 'pass'), {
+    supabase: 'pending',
+    edgeFunctions: 'pending',
+    patientHttps: 'pass',
+    clinicianHttps: 'pending',
+    supabaseProxy: 'pending',
+  });
 });

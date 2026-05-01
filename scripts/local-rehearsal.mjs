@@ -26,13 +26,19 @@ const manualCheckKeys = [
   'clinicianFinalization',
   'exports',
 ];
-const healthKeys = [
-  'supabase',
-  'edgeFunctions',
-  'patientHttps',
-  'clinicianHttps',
-  'supabaseProxy',
-];
+export function createPendingHealth() {
+  return {
+    supabase: 'pending',
+    edgeFunctions: 'pending',
+    patientHttps: 'pending',
+    clinicianHttps: 'pending',
+    supabaseProxy: 'pending',
+  };
+}
+
+export function mergeHealthResult(health, key, value) {
+  return { ...health, [key]: value };
+}
 
 export function parseLocalRehearsalArgs(args) {
   const parsed = {
@@ -83,7 +89,14 @@ export function buildAllowedOrigins({ scheme, publicHost, patientPort, clinician
   ].join(',');
 }
 
-export function buildEvidence({ mode, sha, publicHost, patientUrl, clinicianUrl }) {
+export function buildEvidence({
+  mode,
+  sha,
+  publicHost,
+  patientUrl,
+  clinicianUrl,
+  health = createPendingHealth(),
+}) {
   return {
     schemaVersion: 1,
     mode,
@@ -94,7 +107,7 @@ export function buildEvidence({ mode, sha, publicHost, patientUrl, clinicianUrl 
       patient: patientUrl,
       clinician: clinicianUrl,
     },
-    health: Object.fromEntries(healthKeys.map((key) => [key, 'pending'])),
+    health,
     automatedChecks: [],
     manualChecks: Object.fromEntries(
       manualCheckKeys.map((key) => [key, { result: 'pending', notes: '' }]),
@@ -230,11 +243,17 @@ async function main() {
     });
   }
 
+  const health = await runHealthChecks({
+    apiUrl,
+    patientUrl: patientUrls.publicUrl,
+    clinicianUrl: clinicianUrls.localUrl,
+  });
   const evidencePath = writeEvidenceFile({
     mode: options.mode,
     publicHost,
     patientUrl: patientUrls.publicUrl,
     clinicianUrl: clinicianUrls.localUrl,
+    health,
   });
 
   console.log('');
@@ -268,6 +287,45 @@ async function areEdgeFunctionsReachable(apiUrl, allowedOrigins) {
     origins.map((origin) => isEdgeFunctionReachable(apiUrl, origin)),
   );
   return results.every(Boolean);
+}
+
+async function checkUrl(url, init = {}) {
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(url, init);
+      if (response.status < 500) return true;
+    } catch {
+      // Keep polling until the local server finishes starting.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  return false;
+}
+
+async function runHealthChecks({ apiUrl, patientUrl, clinicianUrl }) {
+  let health = createPendingHealth();
+  health = mergeHealthResult(
+    health,
+    'supabase',
+    await checkUrl(new URL('/auth/v1/settings', apiUrl)) ? 'pass' : 'fail',
+  );
+  health = mergeHealthResult(
+    health,
+    'edgeFunctions',
+    await checkUrl(new URL('/functions/v1/start-session', apiUrl), {
+      method: 'OPTIONS',
+      headers: { Origin: patientUrl },
+    }) ? 'pass' : 'fail',
+  );
+  health = mergeHealthResult(health, 'patientHttps', await checkUrl(patientUrl) ? 'pass' : 'fail');
+  health = mergeHealthResult(health, 'clinicianHttps', await checkUrl(clinicianUrl) ? 'pass' : 'fail');
+  health = mergeHealthResult(
+    health,
+    'supabaseProxy',
+    await checkUrl(`${patientUrl}/supabase/auth/v1/settings`) ? 'pass' : 'fail',
+  );
+  return health;
 }
 
 function ensureLocalSupabase(options) {
@@ -305,9 +363,9 @@ function spawnReviewServer(args) {
   });
 }
 
-function writeEvidenceFile({ mode, publicHost, patientUrl, clinicianUrl }) {
+function writeEvidenceFile({ mode, publicHost, patientUrl, clinicianUrl, health }) {
   const sha = readCommitSha();
-  const evidence = buildEvidence({ mode, sha, publicHost, patientUrl, clinicianUrl });
+  const evidence = buildEvidence({ mode, sha, publicHost, patientUrl, clinicianUrl, health });
   const evidenceDir = path.join(repoRoot, 'local-rehearsal-evidence');
   fs.mkdirSync(evidenceDir, { recursive: true, mode: 0o700 });
   const timestamp = evidence.createdAt.replace(/[:.]/g, '-');
