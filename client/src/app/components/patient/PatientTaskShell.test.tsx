@@ -18,6 +18,7 @@ describe('PatientTaskShell', () => {
         isEndScreen={false}
         hasEvidence={true}
         saveState={{ status: 'error', message: 'offline save failed' }}
+        topBanner={<div data-testid="stimulus-banner">stimulus readiness</div>}
         onNext={onNext}
         onBack={onBack}
       >
@@ -27,6 +28,10 @@ describe('PatientTaskShell', () => {
 
     expect(screen.getByText('cube task')).toBeInTheDocument();
     expect(screen.getByTestId('patient-step-indicator')).toHaveTextContent('2/12');
+    expect(
+      screen.getByTestId('stimulus-banner').compareDocumentPosition(screen.getByTestId('patient-progress-bar')),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByRole('main')).not.toContainElement(screen.getByTestId('stimulus-banner'));
     expect(screen.getByRole('alert')).toHaveTextContent('offline save failed');
 
     await userEvent.click(screen.getByRole('button', { name: /נסה שוב לשמור/ }));

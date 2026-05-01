@@ -72,10 +72,10 @@ export function AssessmentLayout() {
         hasEvidence={hasEvidence}
         saveState={currentSaveStatus}
         validationMessage={validationMessage}
+        topBanner={<StimulusReadinessBanner />}
         onBack={() => navigate(currentStepConfig.prev)}
         onNext={handleNext}
       >
-        <StimulusReadinessBanner />
         <Outlet />
       </PatientTaskShell>
     </StimuliManifestProvider>

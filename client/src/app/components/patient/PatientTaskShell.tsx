@@ -5,6 +5,7 @@ import { SaveStateNotice } from "../shared/SaveStateNotice";
 
 interface PatientTaskShellProps {
   children: ReactNode;
+  topBanner?: ReactNode;
   mocaVersion: string;
   currentStep: number;
   totalSteps: number;
@@ -18,6 +19,7 @@ interface PatientTaskShellProps {
 
 export function PatientTaskShell({
   children,
+  topBanner,
   mocaVersion,
   currentStep,
   totalSteps,
@@ -72,7 +74,9 @@ export function PatientTaskShell({
         </div>
       </header>
 
-      <div className="h-1 w-full bg-gray-100">
+      {topBanner}
+
+      <div className="h-1 w-full bg-gray-100" data-testid="patient-progress-bar">
         <div
           className="h-full bg-black transition-all duration-300 ease-out"
           style={{ width: `${progressPercent}%` }}
