@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  automatedCheckCommands,
   buildAllowedOrigins,
   buildEvidence,
   checkUrl,
@@ -111,4 +112,17 @@ test('checkUrl returns false when a fetch attempt hangs past the deadline', asyn
 
   assert.equal(result, false);
   assert.ok(Date.now() - startedAt < 1_000);
+});
+
+test('automatedCheckCommands includes frontend and backend local checks', () => {
+  assert.deepEqual(automatedCheckCommands({ skipLicensedPdfCheck: true }).map((check) => check.label), [
+    'client unit tests',
+    'client lint',
+    'client build',
+    'client surface builds',
+    'client surface verification',
+    'local regression shell',
+    'Playwright browser E2E',
+    'scripted local Supabase E2E',
+  ]);
 });

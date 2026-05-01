@@ -96,6 +96,7 @@ export function buildEvidence({
   patientUrl,
   clinicianUrl,
   health = createPendingHealth(),
+  automatedChecks = [],
 }) {
   return {
     schemaVersion: 1,
@@ -108,12 +109,34 @@ export function buildEvidence({
       clinician: clinicianUrl,
     },
     health,
-    automatedChecks: [],
+    automatedChecks,
     manualChecks: Object.fromEntries(
       manualCheckKeys.map((key) => [key, { result: 'pending', notes: '' }]),
     ),
     failures: [],
   };
+}
+
+export function automatedCheckCommands({ skipLicensedPdfCheck = false } = {}) {
+  const clientRoot = path.join(repoRoot, 'client');
+  const scriptedLocalE2eArgs = ['scripts/local-e2e.mjs', '--all-versions'];
+  if (skipLicensedPdfCheck) scriptedLocalE2eArgs.push('--skip-licensed-pdf-check');
+
+  return [
+    { label: 'client unit tests', command: 'npm', args: ['test'], cwd: clientRoot },
+    { label: 'client lint', command: 'npm', args: ['run', 'lint'], cwd: clientRoot },
+    { label: 'client build', command: 'npm', args: ['run', 'build'], cwd: clientRoot },
+    { label: 'client surface builds', command: 'npm', args: ['run', 'build:surfaces'], cwd: clientRoot },
+    { label: 'client surface verification', command: 'npm', args: ['run', 'verify:surface-builds'], cwd: clientRoot },
+    { label: 'local regression shell', command: 'node', args: ['scripts/local-test-shell.mjs', '--skip-browser'], cwd: repoRoot },
+    { label: 'Playwright browser E2E', command: 'npm', args: ['run', 'e2e:browser'], cwd: clientRoot },
+    {
+      label: 'scripted local Supabase E2E',
+      command: 'node',
+      args: scriptedLocalE2eArgs,
+      cwd: repoRoot,
+    },
+  ];
 }
 
 function printUsage() {
@@ -129,8 +152,8 @@ function printUsage() {
     '  --host <host>                  Vite host binding. Defaults to 0.0.0.0.',
     '  --https-cert <path>            mkcert certificate file for local HTTPS.',
     '  --https-key <path>             mkcert key file for local HTTPS.',
-    '  --skip-automated-checks        Reserved for later automated check-runner tasks.',
-    '  --skip-licensed-pdf-check      Reserved for later licensed-stimulus check tasks.',
+    '  --skip-automated-checks        Skip automated checks before starting review servers.',
+    '  --skip-licensed-pdf-check      Pass through to scripted local Supabase E2E.',
     '  --help                         Print this usage and exit.',
   ].join('\n'));
 }
@@ -184,6 +207,8 @@ async function main() {
   process.on('exit', () => {
     for (const child of children) child.kill('SIGTERM');
   });
+
+  const automatedChecks = runAutomatedChecks(options);
 
   if (!(await areEdgeFunctionsReachable(apiUrl, allowedOrigins))) {
     const functions = spawnCommand(
@@ -254,6 +279,7 @@ async function main() {
     patientUrl: patientUrls.publicUrl,
     clinicianUrl: clinicianUrls.localUrl,
     health,
+    automatedChecks,
   });
 
   console.log('');
@@ -264,6 +290,28 @@ async function main() {
   console.log('');
   console.log('Keep this terminal open while testing. Press Ctrl+C to stop.');
   console.log('');
+}
+
+function runAutomatedChecks(options) {
+  if (options.skipAutomatedChecks) return [];
+
+  const results = [];
+  for (const check of automatedCheckCommands({
+    skipLicensedPdfCheck: options.skipLicensedPdfCheck,
+  })) {
+    console.log(`==> ${check.label}`);
+    const startedAt = new Date().toISOString();
+    const result = spawnSync(check.command, check.args, {
+      cwd: check.cwd,
+      stdio: 'inherit',
+      env: process.env,
+    });
+    const finishedAt = new Date().toISOString();
+    const passed = result.status === 0;
+    results.push({ label: check.label, passed, startedAt, finishedAt });
+    if (!passed) throw new Error(`${check.label} failed with exit code ${result.status}.`);
+  }
+  return results;
 }
 
 function checkRequiredTools() {
@@ -382,9 +430,17 @@ function spawnReviewServer(args) {
   });
 }
 
-function writeEvidenceFile({ mode, publicHost, patientUrl, clinicianUrl, health }) {
+function writeEvidenceFile({ mode, publicHost, patientUrl, clinicianUrl, health, automatedChecks }) {
   const sha = readCommitSha();
-  const evidence = buildEvidence({ mode, sha, publicHost, patientUrl, clinicianUrl, health });
+  const evidence = buildEvidence({
+    mode,
+    sha,
+    publicHost,
+    patientUrl,
+    clinicianUrl,
+    health,
+    automatedChecks,
+  });
   const evidenceDir = path.join(repoRoot, 'local-rehearsal-evidence');
   fs.mkdirSync(evidenceDir, { recursive: true, mode: 0o700 });
   const timestamp = evidence.createdAt.replace(/[:.]/g, '-');
