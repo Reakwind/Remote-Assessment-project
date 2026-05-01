@@ -42,6 +42,8 @@ node scripts/local-test-shell.mjs --skip-licensed-pdf-check
 
 `--unit-only` avoids local Supabase. `--skip-licensed-pdf-check` is only for non-clinical contract checks.
 
+For physical-device readiness, use `docs/LOCAL_REHEARSAL_GATE.md`. Local browser E2E is required but does not replace installed iPad PWA evidence.
+
 From the repo root:
 
 ```bash

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "mode": "readiness",
+  "commitSha": "example",
+  "createdAt": "2026-05-01T00:00:00.000Z",
+  "macNetworkAddress": "192.168.1.230",
+  "urls": {
+    "patient": "https://192.168.1.230:5176",
+    "clinician": "https://127.0.0.1:5177"
+  },
+  "health": {
+    "supabase": "pass",
+    "edgeFunctions": "pass",
+    "patientHttps": "pass",
+    "clinicianHttps": "pass",
+    "supabaseProxy": "pass"
+  },
+  "automatedChecks": [],
+  "manualChecks": {
+    "ipadInstalledPwa": { "result": "pending", "notes": "" },
+    "microphonePermission": { "result": "pending", "notes": "" },
+    "audioPlayback": { "result": "pending", "notes": "" },
+    "drawingSave": { "result": "pending", "notes": "" },
+    "refreshResume": { "result": "pending", "notes": "" },
+    "offlineRetry": { "result": "pending", "notes": "" },
+    "patientCompletion": { "result": "pending", "notes": "" },
+    "clinicianFinalization": { "result": "pending", "notes": "" },
+    "exports": { "result": "pending", "notes": "" }
+  },
+  "failures": []
+}

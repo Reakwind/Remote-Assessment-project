@@ -121,21 +121,23 @@ npm run build:surfaces
 npm run verify:surface-builds
 ```
 
-## Local iPad Review Server
+## Local HTTPS iPad Rehearsal
 
-Use the local review server when testing patient or clinician changes on a real device before Netlify deployment:
+Use [docs/LOCAL_REHEARSAL_GATE.md](LOCAL_REHEARSAL_GATE.md) for the Mac plus iPad HTTPS installed-PWA rehearsal before deployment readiness. The rehearsal gate runs the local Supabase stack, serves the patient PWA and clinician website over trusted local HTTPS, writes evidence under `local-rehearsal-evidence/`, and distinguishes debug runs from readiness runs.
+
+Use the older local review server only for browser debugging when installed-PWA behavior is not being certified:
 
 ```bash
 node scripts/review-server.mjs --surface patient
 ```
 
-The script starts local Supabase if needed, serves all Edge Functions, starts the patient Vite server on the local network, and prints:
+The script starts local Supabase if needed, serves all Edge Functions, starts the selected Vite surface on the local network, and prints:
 
 - a Mac URL,
 - an iPad URL,
 - the local Supabase proxy used by the browser.
 
-Open the iPad URL on a device connected to the same Wi-Fi network. This is an HTTP browser review server; installed-PWA behavior still requires HTTPS through Netlify or a trusted HTTPS tunnel/certificate.
+Open the iPad URL on a device connected to the same Wi-Fi network. Without `--https-cert` and `--https-key`, this is an HTTP browser-only debugging server; it does not certify installed-PWA readiness.
 
 To smoke-test deployed staging hosts after publication:
 
