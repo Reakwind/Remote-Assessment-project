@@ -2,6 +2,7 @@
 
 import { spawnSync } from 'node:child_process';
 import {
+  buildReviewServerHttpsEnv,
   buildReviewServerUrls,
   edgeFunctionNames,
   filePath,
@@ -16,7 +17,14 @@ import {
 
 const options = parseReviewServerArgs(process.argv.slice(2));
 if (options.help) {
-  console.log('Usage: node scripts/review-server.mjs [--surface patient|clinician|combined] [--port 5173]');
+  console.log([
+    'Usage: node scripts/review-server.mjs [--surface patient|clinician|combined] [--port 5173]',
+    '',
+    'Options:',
+    '  --https-cert <path>       Local HTTPS certificate file for Vite.',
+    '  --https-key <path>        Local HTTPS key file for Vite.',
+    '  --public-scheme <scheme>  Public URL scheme to print and allow, usually http or https.',
+  ].join('\n'));
   process.exit(0);
 }
 const surface = options.surface ?? 'patient';
@@ -28,6 +36,7 @@ const lanIp = options.lanIp ?? findLanIp();
 const publicHost = lanIp ?? '127.0.0.1';
 const scheme = options.publicScheme ?? (options.httpsCert && options.httpsKey ? 'https' : 'http');
 const { localUrl, publicUrl, supabaseProxyUrl } = buildReviewServerUrls({ scheme, publicHost, port });
+const httpsEnv = buildReviewServerHttpsEnv(options);
 
 if (!['patient', 'clinician', 'combined'].includes(surface)) {
   fail(`Unsupported --surface ${surface}. Use patient, clinician, or combined.`);
@@ -95,6 +104,7 @@ const vite = spawnCommand('npm', ['run', scriptName, '--', '--host', host, '--po
     VITE_LOCAL_SUPABASE_PROXY_TARGET: apiUrl,
     VITE_SUPABASE_URL: supabaseProxyUrl,
     VITE_SUPABASE_ANON_KEY: anonKey,
+    ...httpsEnv,
   },
 });
 children.push(vite);

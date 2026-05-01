@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildReviewServerHttpsEnv,
   buildReviewServerUrls,
   parseEnvOutput,
   parseReviewServerArgs,
@@ -49,6 +50,25 @@ test('parseReviewServerArgs parses HTTPS options', () => {
       httpsKey: '.certs/local-key.pem',
     },
   );
+});
+
+test('buildReviewServerHttpsEnv returns Vite HTTPS env when cert and key are present', () => {
+  assert.deepEqual(
+    buildReviewServerHttpsEnv({
+      httpsCert: '.certs/local.pem',
+      httpsKey: '.certs/local-key.pem',
+    }),
+    {
+      VITE_LOCAL_HTTPS_CERT: '.certs/local.pem',
+      VITE_LOCAL_HTTPS_KEY: '.certs/local-key.pem',
+    },
+  );
+});
+
+test('buildReviewServerHttpsEnv omits Vite HTTPS env when cert or key is missing', () => {
+  assert.deepEqual(buildReviewServerHttpsEnv(), {});
+  assert.deepEqual(buildReviewServerHttpsEnv({ httpsCert: '.certs/local.pem' }), {});
+  assert.deepEqual(buildReviewServerHttpsEnv({ httpsKey: '.certs/local-key.pem' }), {});
 });
 
 test('reviewServerScriptName maps surface to npm script', () => {

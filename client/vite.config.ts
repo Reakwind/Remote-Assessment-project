@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import path from 'path';
+import { readFileSync } from 'fs';
 import { rm, writeFile } from 'fs/promises';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -74,6 +75,15 @@ export default defineConfig(({ mode }) => {
   const outDir = env.VITE_BUILD_OUT_DIR ?? 'dist';
   const localSupabaseProxy = env.VITE_LOCAL_SUPABASE_PROXY === '1';
   const localSupabaseProxyTarget = env.VITE_LOCAL_SUPABASE_PROXY_TARGET ?? 'http://127.0.0.1:54321';
+  const localHttpsCert = env.VITE_LOCAL_HTTPS_CERT;
+  const localHttpsKey = env.VITE_LOCAL_HTTPS_KEY;
+  const localHttps =
+    localHttpsCert && localHttpsKey
+      ? {
+          cert: readFileSync(localHttpsCert),
+          key: readFileSync(localHttpsKey),
+        }
+      : undefined;
 
   return {
     build: {
@@ -105,17 +115,21 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-    server: localSupabaseProxy
-      ? {
-          proxy: {
-            '/supabase': {
-              target: localSupabaseProxyTarget,
-              changeOrigin: true,
-              rewrite: (requestPath) => requestPath.replace(/^\/supabase/, ''),
-            },
-          },
-        }
-      : undefined,
+    server:
+      localHttps || localSupabaseProxy
+        ? {
+            https: localHttps,
+            proxy: localSupabaseProxy
+              ? {
+                  '/supabase': {
+                    target: localSupabaseProxyTarget,
+                    changeOrigin: true,
+                    rewrite: (requestPath) => requestPath.replace(/^\/supabase/, ''),
+                  },
+                }
+              : undefined,
+          }
+        : undefined,
     assetsInclude: ['**/*.svg', '**/*.csv'],
   };
 });

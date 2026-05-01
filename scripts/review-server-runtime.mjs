@@ -39,6 +39,14 @@ export function buildReviewServerUrls({ scheme, publicHost, port }) {
   };
 }
 
+export function buildReviewServerHttpsEnv({ httpsCert, httpsKey } = {}) {
+  if (!httpsCert || !httpsKey) return {};
+  return {
+    VITE_LOCAL_HTTPS_CERT: httpsCert,
+    VITE_LOCAL_HTTPS_KEY: httpsKey,
+  };
+}
+
 export function reviewServerScriptName(surface) {
   return surface === 'combined' ? 'dev' : `dev:${surface}`;
 }
