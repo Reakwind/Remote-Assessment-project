@@ -31,9 +31,11 @@ Read focused docs only when touching their area:
 | Netlify patient/clinician hosts | [docs/NETLIFY_HOSTING.md](docs/NETLIFY_HOSTING.md) |
 | Clinical-pilot readiness, licensed stimuli, physical-device gates | [docs/PATIENT_PWA_PILOT_READINESS.md](docs/PATIENT_PWA_PILOT_READINESS.md) |
 | Patient PWA milestone status | [docs/PATIENT_PWA_TRACKER.md](docs/PATIENT_PWA_TRACKER.md) |
+| Frontend readiness, patient/clinician UI rules, verification matrix | [docs/FRONTEND_READINESS.md](docs/FRONTEND_READINESS.md) |
 | Patient-facing copy, clinician labels, status labels, task names, review rubrics | [docs/HEBREW_TERMINOLOGY.md](docs/HEBREW_TERMINOLOGY.md) |
 | GitHub, Netlify, and Supabase delivery flow | [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md) |
 | Local browser/Supabase E2E | [docs/LOCAL_E2E_VERIFICATION.md](docs/LOCAL_E2E_VERIFICATION.md) |
+| Local Mac plus iPad HTTPS rehearsal | [docs/LOCAL_REHEARSAL_GATE.md](docs/LOCAL_REHEARSAL_GATE.md) |
 | Licensed stimulus upload and validation | [docs/STIMULI_ASSET_RUNBOOK.md](docs/STIMULI_ASSET_RUNBOOK.md) |
 | Hosted Supabase inspection or changes | [docs/SUPABASE_RECONCILIATION.md](docs/SUPABASE_RECONCILIATION.md) |
 | Security threat modeling | [docs/security/THREAT_MODEL.md](docs/security/THREAT_MODEL.md) |
@@ -59,7 +61,7 @@ Every agent must use GitHub branch-based version control for all repo changes. T
 - Delete merged/superseded branches only after confirming they are merged or explicitly no longer needed.
 - List verification performed and skipped checks in the PR and final handoff.
 
-Generated local artifacts stay out of Git: `.env.local`, `.playwright-mcp/`, `client/test-results/`, `client/playwright-report/`, `node_modules/`, and `dist/`.
+Generated local artifacts stay out of Git: `.env.local`, `.certs/`, `.playwright-mcp/`, `client/test-results/`, `client/playwright-report/`, `local-rehearsal-evidence/`, `node_modules/`, and `dist/`.
 
 ## Development Process
 

@@ -11,7 +11,8 @@ import type { DBScoringReport, Session as DBSession, TaskResult } from "../../ty
 import { PlaybackCanvas } from "./PlaybackCanvas";
 import { PlaybackAudio } from "./PlaybackAudio";
 import { CsvExportConfirmDialog } from "./CsvExportConfirmDialog";
-import { StatusPill, type StatusPillValue } from "./StatusPill";
+import type { StatusPillValue } from "./StatusPill";
+import { ReviewWorkbenchHeader } from "./clinician/ReviewWorkbenchHeader";
 import {
   DRAWING_TAB_TO_TASK_ID,
   normalizeStrokes,
@@ -1039,75 +1040,55 @@ export function ClinicianDashboardDetail() {
         </Link>
       </div>
 
-      <div className="mb-5 flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex min-w-0 gap-4 items-center">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl font-extrabold text-blue-700 sm:h-16 sm:w-16 sm:text-2xl">
-            {(patientCaseLabel?.trim()[0] ?? sessionRecord?.case_id?.trim()[0] ?? "ת").toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <h1 className="mb-1 break-words text-2xl font-extrabold leading-tight text-black">
-              {patientCaseLabel ? `תיק ${patientCaseLabel}` : sessionRecord?.case_id ? `תיק ${sessionRecord.case_id}` : "תיק"}
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-gray-500">
-              {sessionRecord?.case_id && (
-                <span className="break-all font-mono bg-gray-100 px-2 py-0.5 rounded-md">{sessionRecord.case_id}</span>
-              )}
-              <span>
-                {sessionRecord?.age_band ? `קבוצת גיל ${sessionRecord.age_band}` : "קבוצת גיל לא זמינה"}
-              </span>
-              <span>
-                {sessionRecord?.created_at
-                  ? `נוצר בתאריך ${new Date(sessionRecord.created_at).toLocaleDateString("he-IL")}`
-                  : "תאריך לא זמין"}
-              </span>
-              <StatusPill status={sessionStatusForPill} />
-            </div>
-          </div>
+      <ReviewWorkbenchHeader
+        caseLabel={patientCaseLabel ?? sessionRecord?.case_id ?? null}
+        status={sessionStatusForPill}
+        pendingReviewCount={pendingReviewCount}
+        totalScore={getReportTotal(reportRecord)}
+        totalProvisional={reportRecord?.total_provisional ?? reportNeedsReview}
+        canExportPdf={canExportPdf}
+      >
+        <div className="flex flex-wrap gap-3 sm:gap-4">
+          <button
+            onClick={handlePdfExport}
+            disabled={!canExportPdf}
+            className={clsx(
+              "flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 font-bold text-black transition-colors",
+              canExportPdf ? "hover:border-black" : "opacity-50 cursor-not-allowed",
+            )}
+          >
+            <FileDown className="w-5 h-5" />
+            <span>ייצוא PDF</span>
+          </button>
+          <button
+            onClick={() => setCsvConfirmOpen(true)}
+            disabled={exportingCsv}
+            className={clsx(
+              "flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 font-bold text-black transition-colors",
+              exportingCsv ? "cursor-wait opacity-60" : "hover:border-black",
+            )}
+          >
+            <Download className="w-5 h-5" />
+            <span>{exportingCsv ? "מייצא..." : "ייצוא CSV"}</span>
+          </button>
         </div>
-
-        <div className="flex flex-col items-stretch gap-2 sm:items-end">
-          <div className="flex flex-wrap gap-3 sm:gap-4">
-            <button
-              onClick={handlePdfExport}
-              disabled={!canExportPdf}
-              className={clsx(
-                "flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 font-bold text-black transition-colors",
-                canExportPdf ? "hover:border-black" : "opacity-50 cursor-not-allowed",
-              )}
-            >
-              <FileDown className="w-5 h-5" />
-              <span>ייצוא PDF</span>
-            </button>
-            <button
-              onClick={() => setCsvConfirmOpen(true)}
-              disabled={exportingCsv}
-              className={clsx(
-                "flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 font-bold text-black transition-colors",
-                exportingCsv ? "cursor-wait opacity-60" : "hover:border-black",
-              )}
-            >
-              <Download className="w-5 h-5" />
-              <span>{exportingCsv ? "מייצא..." : "ייצוא CSV"}</span>
-            </button>
-          </div>
-          {csvExportMessage && (
-            <p
-              role={csvExportMessage.kind === "error" ? "alert" : "status"}
-              className={clsx(
-                "max-w-xs text-right text-sm font-bold",
-                csvExportMessage.kind === "error" ? "text-red-700" : "text-green-700",
-              )}
-            >
-              {csvExportMessage.text}
-            </p>
-          )}
-          {!csvExportMessage && (
-            <p className="max-w-xs text-right text-xs font-bold text-gray-500">
-              CSV זמין גם לפני סיום סקירה ויכול לכלול נתונים זמניים.
-            </p>
-          )}
-        </div>
-      </div>
+        {csvExportMessage && (
+          <p
+            role={csvExportMessage.kind === "error" ? "alert" : "status"}
+            className={clsx(
+              "max-w-xs text-right text-sm font-bold",
+              csvExportMessage.kind === "error" ? "text-red-700" : "text-green-700",
+            )}
+          >
+            {csvExportMessage.text}
+          </p>
+        )}
+        {!csvExportMessage && (
+          <p className="max-w-xs text-right text-xs font-bold text-gray-500">
+            CSV זמין גם לפני סיום סקירה ויכול לכלול נתונים זמניים.
+          </p>
+        )}
+      </ReviewWorkbenchHeader>
 
       <div className="order-3 mb-5 grid grid-cols-2 gap-3 lg:grid-cols-6">
         {summary.map((item, i) => (

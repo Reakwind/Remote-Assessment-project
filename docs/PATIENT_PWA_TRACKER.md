@@ -91,6 +91,7 @@ scoring, or export behavior, use
 
 ## Verification Policy
 
+- Frontend implementation slices should follow `docs/FRONTEND_READINESS.md` and record skipped device or viewport checks.
 - Shell/UI PRs: `cd client && npm test`, `npm run lint`, `npm run build`, plus phone/iPad viewport smoke checks.
 - Contract PRs: full local Supabase/browser E2E is required when start, save, complete, storage, review, scoring, or export behavior changes.
 - Real-device checks stay blocked until the user tests the installed PWA on the available iPad/tablet and phone fallback.

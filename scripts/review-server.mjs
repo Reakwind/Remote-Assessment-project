@@ -1,9 +1,33 @@
 #!/usr/bin/env node
 
-import { spawn, spawnSync } from 'node:child_process';
-import os from 'node:os';
+import { spawnSync } from 'node:child_process';
+import {
+  buildReviewServerHttpsEnv,
+  buildReviewServerUrls,
+  edgeFunctionNames,
+  filePath,
+  findLanIp,
+  isEdgeFunctionReachable,
+  parseReviewServerArgs,
+  resolveReviewServerScheme,
+  reviewServerScriptName,
+  spawnCommand,
+  supabaseStatus,
+  waitForOutput,
+} from './review-server-runtime.mjs';
 
-const options = parseArgs(process.argv.slice(2));
+const options = parseReviewServerArgs(process.argv.slice(2));
+if (options.help) {
+  console.log([
+    'Usage: node scripts/review-server.mjs [--surface patient|clinician|combined] [--port 5173]',
+    '',
+    'Options:',
+    '  --https-cert <path>       Local HTTPS certificate file for Vite.',
+    '  --https-key <path>        Local HTTPS key file for Vite.',
+    '  --public-scheme <scheme>  Public URL scheme to print and allow, usually http or https.',
+  ].join('\n'));
+  process.exit(0);
+}
 const surface = options.surface ?? 'patient';
 const port = options.port ?? '5173';
 const host = options.host ?? '0.0.0.0';
@@ -11,8 +35,14 @@ const clientDir = new URL('../client/', import.meta.url);
 const repoRoot = new URL('../', import.meta.url);
 const lanIp = options.lanIp ?? findLanIp();
 const publicHost = lanIp ?? '127.0.0.1';
-const publicUrl = `http://${publicHost}:${port}`;
-const localUrl = `http://127.0.0.1:${port}`;
+let scheme;
+try {
+  scheme = resolveReviewServerScheme(options);
+} catch (error) {
+  fail(error.message);
+}
+const { localUrl, publicUrl, supabaseProxyUrl } = buildReviewServerUrls({ scheme, publicHost, port });
+const httpsEnv = buildReviewServerHttpsEnv(options);
 
 if (!['patient', 'clinician', 'combined'].includes(surface)) {
   fail(`Unsupported --surface ${surface}. Use patient, clinician, or combined.`);
@@ -36,11 +66,15 @@ process.on('exit', () => {
 });
 
 if (!options.skipFunctions) {
-  if (await isEdgeFunctionReachable(apiUrl)) {
+  const functionsReachable = await Promise.all([
+    isEdgeFunctionReachable(apiUrl, localUrl),
+    isEdgeFunctionReachable(apiUrl, publicUrl),
+  ]);
+  if (functionsReachable.every(Boolean)) {
     console.log('Local Supabase Edge Functions are already reachable. Reusing them.');
   } else {
-    const functionNames = edgeFunctionNames();
-    const functions = spawn('supabase', ['functions', 'serve', ...functionNames, '--env-file', '/dev/null'], {
+    const functionNames = edgeFunctionNames({ cwd: filePath(repoRoot) });
+    const functions = spawnCommand('supabase', ['functions', 'serve', ...functionNames, '--env-file', '/dev/null'], {
       cwd: filePath(repoRoot),
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
@@ -57,8 +91,7 @@ if (!options.skipFunctions) {
   }
 }
 
-const supabaseProxyUrl = `${publicUrl}/supabase`;
-const scriptName = surface === 'combined' ? 'dev' : `dev:${surface}`;
+const scriptName = reviewServerScriptName(surface);
 
 console.log('');
 console.log('Review server');
@@ -70,7 +103,7 @@ console.log('');
 console.log('Keep this terminal open while testing. Press Ctrl+C to stop.');
 console.log('');
 
-const vite = spawn('npm', ['run', scriptName, '--', '--host', host, '--port', port, '--strictPort'], {
+const vite = spawnCommand('npm', ['run', scriptName, '--', '--host', host, '--port', port, '--strictPort'], {
   cwd: filePath(clientDir),
   stdio: 'inherit',
   env: {
@@ -81,6 +114,7 @@ const vite = spawn('npm', ['run', scriptName, '--', '--host', host, '--port', po
     VITE_LOCAL_SUPABASE_PROXY_TARGET: apiUrl,
     VITE_SUPABASE_URL: supabaseProxyUrl,
     VITE_SUPABASE_ANON_KEY: anonKey,
+    ...httpsEnv,
   },
 });
 children.push(vite);
@@ -90,7 +124,7 @@ vite.on('exit', (code) => {
 });
 
 function ensureLocalSupabase() {
-  const status = supabaseStatus();
+  const status = supabaseStatus({ cwd: filePath(repoRoot) });
   if (status.ok) return status.env;
 
   console.log('Local Supabase is not reachable. Starting it now...');
@@ -101,118 +135,15 @@ function ensureLocalSupabase() {
   });
   if (started.status !== 0) fail('Failed to start local Supabase.');
 
-  const afterStart = supabaseStatus();
+  const afterStart = supabaseStatus({ cwd: filePath(repoRoot) });
   if (!afterStart.ok) fail(afterStart.error || 'Local Supabase did not report status after start.');
   return afterStart.env;
-}
-
-function supabaseStatus() {
-  const result = spawnSync('supabase', ['status', '-o', 'env'], {
-    cwd: filePath(repoRoot),
-    encoding: 'utf8',
-    env: process.env,
-  });
-  if (result.status !== 0) {
-    return { ok: false, error: result.stderr || result.stdout };
-  }
-  return { ok: true, env: parseEnvOutput(result.stdout) };
-}
-
-function edgeFunctionNames() {
-  const result = spawnSync('node', ['scripts/edge-functions.mjs', 'serve-args'], {
-    cwd: filePath(repoRoot),
-    encoding: 'utf8',
-    env: process.env,
-  });
-  if (result.status !== 0) fail(result.stderr || 'Failed to read Edge Function list.');
-  return result.stdout.trim().split(/\s+/).filter(Boolean);
-}
-
-async function isEdgeFunctionReachable(baseUrl) {
-  try {
-    const response = await fetch(new URL('/functions/v1/start-session', baseUrl), {
-      method: 'OPTIONS',
-      headers: { Origin: localUrl },
-    });
-    return response.status < 500;
-  } catch {
-    return false;
-  }
-}
-
-function parseEnvOutput(output) {
-  const env = {};
-  for (const line of output.split(/\r?\n/)) {
-    const match = line.match(/^([A-Z0-9_]+)="?(.*?)"?$/);
-    if (match) env[match[1]] = match[2];
-  }
-  return env;
-}
-
-async function waitForOutput(child, pattern, label) {
-  let buffer = '';
-  child.stdout.on('data', (chunk) => {
-    const text = chunk.toString();
-    buffer += text;
-    process.stdout.write(text);
-  });
-  child.stderr.on('data', (chunk) => process.stderr.write(chunk));
-
-  await new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error(`${label} did not become ready.\n${buffer}`));
-    }, 120_000);
-    child.on('exit', (code) => {
-      clearTimeout(timeout);
-      reject(new Error(`${label} exited before becoming ready with code ${code}.`));
-    });
-    child.stdout.on('data', () => {
-      if (pattern.test(buffer)) {
-        clearTimeout(timeout);
-        resolve();
-      }
-    });
-  });
 }
 
 function shutdown() {
   shuttingDown = true;
   for (const child of children) child.kill('SIGTERM');
   process.exit(0);
-}
-
-function findLanIp() {
-  for (const addresses of Object.values(os.networkInterfaces())) {
-    for (const address of addresses ?? []) {
-      if (address.family === 'IPv4' && !address.internal) return address.address;
-    }
-  }
-  return null;
-}
-
-function parseArgs(args) {
-  const parsed = {};
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--skip-functions') parsed.skipFunctions = true;
-    else if (arg === '--surface') parsed.surface = args[++index];
-    else if (arg === '--port') parsed.port = args[++index];
-    else if (arg === '--host') parsed.host = args[++index];
-    else if (arg === '--lan-ip') parsed.lanIp = args[++index];
-    else if (arg === '--supabase-url') parsed.supabaseUrl = args[++index];
-    else if (arg === '--anon-key') parsed.anonKey = args[++index];
-    else if (arg === '--help') {
-      console.log('Usage: node scripts/review-server.mjs [--surface patient|clinician|combined] [--port 5173]');
-      process.exit(0);
-    } else {
-      fail(`Unknown option: ${arg}`);
-    }
-  }
-  return parsed;
-}
-
-function filePath(url) {
-  return decodeURIComponent(url.pathname);
 }
 
 function fail(message) {

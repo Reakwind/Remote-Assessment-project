@@ -99,7 +99,7 @@ describe('AssessmentLayout', () => {
       taskSaveStatus: {
         cube: {
           status: 'error',
-          message: 'offline save failed',
+          message: 'בדוק שהחיבור פעיל ואז נסה שוב.',
         },
       },
     });
@@ -108,7 +108,37 @@ describe('AssessmentLayout', () => {
     await userEvent.click(screen.getByRole('button', { name: /נסה שוב לשמור/ }));
 
     expect(store.retryFailedSaves).toHaveBeenCalled();
-    expect(await screen.findByRole('alert')).toHaveTextContent('offline save failed');
+    expect(await screen.findByRole('alert')).toHaveTextContent('בדוק שהחיבור פעיל ואז נסה שוב.');
+    expect(router.state.location.pathname).toBe('/patient/cube');
+  });
+
+  it('normalizes technical drawing save errors and blocks navigation until the drawing is saved', async () => {
+    assessmentMocks.useAssessmentStore.mockReturnValue({
+      ...store,
+      state: {
+        ...store.state,
+        tasks: {
+          cube: {
+            strokes: [[{ x: 1, y: 2 }]],
+          },
+        },
+      },
+      taskSaveStatus: {
+        cube: {
+          status: 'error',
+          message: 'Failed to save drawing',
+        },
+      },
+    });
+    const router = renderLayout();
+
+    expect(screen.getByText('שמירת הציור נכשלה. בדוק חיבור ונסה שוב לפני המעבר.')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to save drawing')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /נסה שוב לשמור/ }));
+
+    expect(store.retryFailedSaves).toHaveBeenCalled();
+    expect(await screen.findByRole('alert')).toHaveTextContent('שמירת הציור נכשלה. בדוק חיבור ונסה שוב לפני המעבר.');
     expect(router.state.location.pathname).toBe('/patient/cube');
   });
 });

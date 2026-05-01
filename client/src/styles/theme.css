@@ -17,6 +17,7 @@
   --ink-900: #111827;
   --shadow-focus: 0 0 0 3px var(--accent-focus);
   --r-lg: 0.5rem;
+  --patient-shell-max-width: 1100px;
 
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);

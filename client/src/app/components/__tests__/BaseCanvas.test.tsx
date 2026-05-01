@@ -80,6 +80,21 @@ describe("BaseCanvas", () => {
     expect(canvas).toHaveStyle({ touchAction: "none" });
   });
 
+  it("keeps undo and clear controls available with stable labels after drawing", async () => {
+    const onSave = vi.fn();
+    mockCanvasContext();
+    render(<BaseCanvas onSave={onSave} />);
+    const canvas = screen.getByTestId("drawing-canvas") as HTMLCanvasElement;
+    mockCanvasElement(canvas);
+
+    fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10, pointerId: 1, pointerType: "touch" });
+    fireEvent.pointerMove(canvas, { clientX: 20, clientY: 20, pointerId: 1, pointerType: "touch" });
+    fireEvent.pointerUp(canvas, { clientX: 20, clientY: 20, pointerId: 1, pointerType: "touch" });
+
+    expect(screen.getByRole("button", { name: /בטל פעולה/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /מחיקת ציור/ })).toBeEnabled();
+  });
+
   it("saves the partial stroke when the pointer is cancelled", () => {
     const onSave = vi.fn();
     const onDrawChange = vi.fn();
@@ -124,7 +139,7 @@ describe("BaseCanvas", () => {
 
     fireEvent.pointerDown(canvas, { pointerId: 1, pointerType: "mouse", clientX: 10, clientY: 20, pressure: 0.5 });
     fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: "mouse", clientX: 30, clientY: 40, pressure: 0.5 });
-    fireEvent.click(screen.getByRole("button", { name: /נקה הכל/ }));
+    fireEvent.click(screen.getByRole("button", { name: /מחיקת ציור/ }));
 
     expect(window.confirm).toHaveBeenCalledWith("האם למחוק את כל הציור?");
     expect(onDrawChange).not.toHaveBeenCalledWith([]);
@@ -143,7 +158,7 @@ describe("BaseCanvas", () => {
 
     fireEvent.pointerDown(canvas, { pointerId: 1, pointerType: "mouse", clientX: 10, clientY: 20, pressure: 0.5 });
     fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: "mouse", clientX: 30, clientY: 40, pressure: 0.5 });
-    fireEvent.click(screen.getByRole("button", { name: /נקה הכל/ }));
+    fireEvent.click(screen.getByRole("button", { name: /מחיקת ציור/ }));
 
     expect(onDrawChange).toHaveBeenCalledWith([]);
     expect(onSave).toHaveBeenCalledWith("", []);

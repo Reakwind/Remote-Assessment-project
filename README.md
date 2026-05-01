@@ -106,6 +106,8 @@ Use [docs/CI_CD_AGENT_RUNBOOK.md](docs/CI_CD_AGENT_RUNBOOK.md) for the agent del
 
 Full browser/Supabase E2E remains a required local pre-merge check for backend, session-flow, patient-flow, dashboard, scoring, review, export, storage, and notification changes. CI may skip licensed PDF file validation, so run `docs/LOCAL_E2E_VERIFICATION.md` locally for clinical-readiness branches and record any skipped checks in the PR.
 
+Use [docs/LOCAL_REHEARSAL_GATE.md](docs/LOCAL_REHEARSAL_GATE.md) for Mac plus iPad HTTPS rehearsal before deployment readiness.
+
 ## Repo Map
 
 - `client/` - active frontend.
@@ -120,6 +122,7 @@ Full browser/Supabase E2E remains a required local pre-merge check for backend, 
 - `docs/DEVELOPMENT_PROCESS.md` - branch, PR, verification, and provider-neutral backend process.
 - `docs/CI_CD_AGENT_RUNBOOK.md` - GitHub, Netlify, and Supabase delivery checklist for agents.
 - `docs/LOCAL_E2E_VERIFICATION.md` - local end-to-end test instructions.
+- `docs/LOCAL_REHEARSAL_GATE.md` - Mac plus iPad HTTPS rehearsal gate and evidence workflow.
 - `docs/STIMULI_ASSET_RUNBOOK.md` - private licensed stimulus upload and validation instructions.
 - `docs/SUPABASE_RECONCILIATION.md` - hosted Supabase drift/reconciliation runbook.
 - `docs/security/THREAT_MODEL.md` - current application threat model.

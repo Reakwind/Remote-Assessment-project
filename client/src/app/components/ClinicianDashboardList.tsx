@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/incompatible-library */
-import { Search, ChevronLeft, Plus, Hash, ClipboardCheck } from "lucide-react";
+import { Search, ChevronLeft, Plus, Hash } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,6 +8,12 @@ import { supabase } from "../../lib/supabase";
 import { PatientForm } from "./PatientForm";
 import { CsvExportConfirmDialog } from "./CsvExportConfirmDialog";
 import { StatusPill } from "./StatusPill";
+import {
+  deriveClinicianQueueSummary,
+  deriveClinicianStatus,
+  type ClinicianQueueStatus,
+} from "./clinician/clinicianQueue";
+import { ClinicianWorkQueue } from "./clinician/ClinicianWorkQueue";
 
 interface PatientRow {
   id: string;
@@ -19,7 +25,7 @@ interface PatientRow {
   latestScore: number | null;
   latestScoreProvisional: boolean;
   needsReview: boolean;
-  status: "new" | "in_progress" | "review" | "completed";
+  status: ClinicianQueueStatus;
 }
 
 interface ScoringSummary {
@@ -67,21 +73,6 @@ function reportNeedsReview(report: ScoringSummary | null | undefined): boolean {
 function scoreLabel(score: number | null, provisional: boolean): string {
   if (score == null) return "—";
   return provisional ? `${score}/30 (זמני)` : `${score}/30`;
-}
-
-function deriveStatus(sessionValue: PatientWithSessions["sessions"]): PatientRow["status"] {
-  const sessions = relationArray(sessionValue);
-  if (!sessions || sessions.length === 0) return "new";
-  if (
-    sessions.some(
-      (s) =>
-        s.status === "awaiting_review" || relationArray(s.scoring_reports).some(reportNeedsReview),
-    )
-  )
-    return "review";
-  if (sessions.some((s) => s.status === "in_progress")) return "in_progress";
-  if (sessions.every((s) => s.status === "completed")) return "completed";
-  return "new";
 }
 
 function caseDisplay(row: Pick<PatientRow, "case_id" | "id">): string {
@@ -280,7 +271,7 @@ export function ClinicianDashboardList() {
           latestScore,
           latestScoreProvisional: finalScore == null && provisionalScore != null,
           needsReview,
-          status: deriveStatus(sessions),
+          status: deriveClinicianStatus(sessions),
         };
       });
       const trendPoints = (data as PatientWithSessions[])
@@ -399,30 +390,10 @@ export function ClinicianDashboardList() {
     }
   };
 
-  const totalCases = rows.length;
-  const reviewCount = rows.filter((r) => r.status === "review").length;
-  const inProgressCount = rows.filter((r) => r.status === "in_progress").length;
-  const pendingCount = rows.filter((r) => r.status === "new").length;
-  const completedCount = rows.filter((r) => r.status === "completed").length;
-  const statusFilters: Array<{
-    key: "all" | PatientRow["status"];
-    label: string;
-    count: number;
-    icon?: boolean;
-  }> = [
-    { key: "all", label: "כל התיקים", count: totalCases },
-    { key: "review", label: "ממתינים לסקירה", count: reviewCount, icon: true },
-    { key: "in_progress", label: "בתהליך", count: inProgressCount },
-    { key: "new", label: "טרם החל", count: pendingCount },
-    { key: "completed", label: "הושלמו", count: completedCount },
-  ];
-  const filterButtonClass = (active: boolean) =>
-    [
-      "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-extrabold transition-colors",
-      active
-        ? "bg-black text-white shadow-sm"
-        : "border border-gray-200 bg-white text-gray-800 hover:bg-gray-50",
-    ].join(" ");
+  const queueSummary = deriveClinicianQueueSummary(rows);
+  const totalCases = queueSummary.all;
+  const reviewCount = queueSummary.review;
+  const completedCount = queueSummary.completed;
   const emptyMessage =
     rows.length === 0
       ? 'עדיין לא נוספו תיקים. התחילו על ידי לחיצה על "תיק חדש".'
@@ -477,32 +448,11 @@ export function ClinicianDashboardList() {
             {csvExportMessage.text}
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="סינון תיקים">
-          {statusFilters.map((filter) => (
-            <button
-              key={filter.key}
-              type="button"
-              aria-pressed={statusFilter === filter.key}
-              aria-label={`${filter.label} ${filter.count}`}
-              onClick={() => setStatusFilter(filter.key)}
-              className={filterButtonClass(statusFilter === filter.key)}
-            >
-              {filter.icon && <ClipboardCheck className="h-4 w-4" />}
-              {filter.label}
-              <span
-                className={clsx(
-                  statusFilter === filter.key
-                    ? "text-white"
-                    : filter.key === "review"
-                      ? "text-red-600"
-                      : "text-gray-500",
-                )}
-              >
-                {filter.count}
-              </span>
-            </button>
-          ))}
-        </div>
+        <ClinicianWorkQueue
+          value={statusFilter}
+          summary={queueSummary}
+          onChange={setStatusFilter}
+        />
         <div className="grid grid-cols-3 gap-2 text-sm sm:max-w-md">
           {[
             { label: "תיקים", value: totalCases },

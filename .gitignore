@@ -4,10 +4,13 @@ node_modules/
 dist/
 .env
 .env.local
+.certs/
 .playwright-mcp/
+.superpowers/
 client/test-results/
 client/playwright-report/
 client/coverage/
 /patient-*.png
+local-rehearsal-evidence/
 deploy/netlify/*/.netlify/
 .claude/worktrees/

@@ -262,7 +262,7 @@ export function BaseCanvas({
           )}
         >
           <Trash2 className="h-5 w-5" />
-          <span>נקה הכל</span>
+          <span>מחיקת ציור</span>
         </button>
       </div>
     </div>

@@ -220,12 +220,15 @@ async function waitForEdgeFunctions(child, apiUrl) {
 }
 
 async function isEdgeFunctionReachable(apiUrl) {
+  const origin = 'http://127.0.0.1:5173';
   try {
     const response = await fetch(new URL('/functions/v1/start-session', apiUrl), {
       method: 'OPTIONS',
-      headers: { Origin: 'http://127.0.0.1:5173' },
+      headers: { Origin: origin },
     });
-    return response.status < 500;
+    return response.status >= 200 &&
+      response.status < 300 &&
+      response.headers.get('Access-Control-Allow-Origin') === origin;
   } catch {
     return false;
   }

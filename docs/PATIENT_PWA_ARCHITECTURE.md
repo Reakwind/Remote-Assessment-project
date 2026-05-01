@@ -117,6 +117,8 @@ Patient evidence persistence remains online-first with the existing local retry 
 
 ## Verification Requirements
 
+Use `docs/FRONTEND_READINESS.md` for frontend implementation rules, shared state language, and the patient/clinician verification matrix.
+
 For patient PWA work, run the relevant baseline checks plus explicit device-mode QA:
 
 - `cd client && npm test && npm run build && npm run lint`
