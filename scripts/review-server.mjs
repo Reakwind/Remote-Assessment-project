@@ -9,6 +9,7 @@ import {
   findLanIp,
   isEdgeFunctionReachable,
   parseReviewServerArgs,
+  resolveReviewServerScheme,
   reviewServerScriptName,
   spawnCommand,
   supabaseStatus,
@@ -34,7 +35,12 @@ const clientDir = new URL('../client/', import.meta.url);
 const repoRoot = new URL('../', import.meta.url);
 const lanIp = options.lanIp ?? findLanIp();
 const publicHost = lanIp ?? '127.0.0.1';
-const scheme = options.publicScheme ?? (options.httpsCert && options.httpsKey ? 'https' : 'http');
+let scheme;
+try {
+  scheme = resolveReviewServerScheme(options);
+} catch (error) {
+  fail(error.message);
+}
 const { localUrl, publicUrl, supabaseProxyUrl } = buildReviewServerUrls({ scheme, publicHost, port });
 const httpsEnv = buildReviewServerHttpsEnv(options);
 

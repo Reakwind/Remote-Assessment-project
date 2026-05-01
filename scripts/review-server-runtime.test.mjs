@@ -5,6 +5,7 @@ import {
   buildReviewServerUrls,
   parseEnvOutput,
   parseReviewServerArgs,
+  resolveReviewServerScheme,
   reviewServerScriptName,
 } from './review-server-runtime.mjs';
 
@@ -69,6 +70,39 @@ test('buildReviewServerHttpsEnv omits Vite HTTPS env when cert or key is missing
   assert.deepEqual(buildReviewServerHttpsEnv(), {});
   assert.deepEqual(buildReviewServerHttpsEnv({ httpsCert: '.certs/local.pem' }), {});
   assert.deepEqual(buildReviewServerHttpsEnv({ httpsKey: '.certs/local-key.pem' }), {});
+});
+
+test('resolveReviewServerScheme defaults to HTTP unless Vite HTTPS is configured', () => {
+  assert.equal(resolveReviewServerScheme(), 'http');
+  assert.equal(
+    resolveReviewServerScheme({
+      httpsCert: '.certs/local.pem',
+      httpsKey: '.certs/local-key.pem',
+    }),
+    'https',
+  );
+});
+
+test('resolveReviewServerScheme preserves explicit non-HTTPS public scheme', () => {
+  assert.equal(resolveReviewServerScheme({ publicScheme: 'http' }), 'http');
+});
+
+test('resolveReviewServerScheme rejects partial HTTPS file options', () => {
+  assert.throws(
+    () => resolveReviewServerScheme({ httpsCert: '.certs/local.pem' }),
+    /Use --https-cert and --https-key together/,
+  );
+  assert.throws(
+    () => resolveReviewServerScheme({ httpsKey: '.certs/local-key.pem' }),
+    /Use --https-cert and --https-key together/,
+  );
+});
+
+test('resolveReviewServerScheme rejects forced HTTPS without Vite HTTPS files', () => {
+  assert.throws(
+    () => resolveReviewServerScheme({ publicScheme: 'https' }),
+    /--public-scheme https requires both --https-cert and --https-key/,
+  );
 });
 
 test('reviewServerScriptName maps surface to npm script', () => {

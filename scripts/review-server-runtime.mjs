@@ -47,6 +47,21 @@ export function buildReviewServerHttpsEnv({ httpsCert, httpsKey } = {}) {
   };
 }
 
+export function resolveReviewServerScheme({ httpsCert, httpsKey, publicScheme } = {}) {
+  const hasHttpsCert = Boolean(httpsCert);
+  const hasHttpsKey = Boolean(httpsKey);
+  if (hasHttpsCert !== hasHttpsKey) {
+    throw new Error('Use --https-cert and --https-key together so the review server can serve HTTPS honestly.');
+  }
+
+  const viteHttpsEnabled = hasHttpsCert && hasHttpsKey;
+  if (publicScheme === 'https' && !viteHttpsEnabled) {
+    throw new Error('--public-scheme https requires both --https-cert and --https-key.');
+  }
+
+  return publicScheme ?? (viteHttpsEnabled ? 'https' : 'http');
+}
+
 export function reviewServerScriptName(surface) {
   return surface === 'combined' ? 'dev' : `dev:${surface}`;
 }
