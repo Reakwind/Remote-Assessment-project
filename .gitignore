@@ -10,5 +10,6 @@ client/test-results/
 client/playwright-report/
 client/coverage/
 /patient-*.png
+local-rehearsal-evidence/
 deploy/netlify/*/.netlify/
 .claude/worktrees/
