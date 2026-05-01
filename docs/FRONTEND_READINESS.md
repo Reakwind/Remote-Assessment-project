@@ -33,6 +33,8 @@ This guide is the implementation-facing frontend quality bar for the patient PWA
 
 ## Verification Matrix
 
+These checks are additive to the required baseline in `AGENTS.md`, `docs/DEVELOPMENT_PROCESS.md`, and `docs/CI_CD_AGENT_RUNBOOK.md`. Do not use this matrix to skip `npm run lint`, `npm run build`, or required local Supabase/browser E2E. Patient start, save, complete, storage, review, scoring, and export changes still require the full local contract checks described in `docs/LOCAL_E2E_VERIFICATION.md`.
+
 | Change area | Required checks |
 | --- | --- |
 | Patient task shell or save state | `cd client && npm test`, `npm run e2e:browser`, iPad installed-PWA manual check |
