@@ -5,6 +5,7 @@ dist/
 .env
 .env.local
 .playwright-mcp/
+.superpowers/
 client/test-results/
 client/playwright-report/
 client/coverage/
