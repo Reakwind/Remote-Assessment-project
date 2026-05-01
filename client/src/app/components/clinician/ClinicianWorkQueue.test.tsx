@@ -20,7 +20,7 @@ describe('ClinicianWorkQueue', () => {
     expect(screen.getByRole('button', { name: /כל התיקים\s+5/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ממתינים לסקירה\s+2/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /בתהליך\s+1/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /טרם התחילו\s+1/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /טרם החל\s+1/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /הושלמו\s+1/ })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /ממתינים לסקירה\s+2/ }));
