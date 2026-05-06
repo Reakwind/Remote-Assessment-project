@@ -186,8 +186,9 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
             className="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-5 py-4"
           >
             <div>
-              <label className="block text-sm font-bold text-gray-600 mb-1">מזהה תיק*</label>
+              <label htmlFor="case-id" className="block text-sm font-bold text-gray-600 mb-1">מזהה תיק*</label>
               <input
+                id="case-id"
                 value={caseId}
                 onChange={(e) => setCaseId(e.target.value.toUpperCase())}
                 placeholder="למשל CASE-20260425-001"
@@ -199,8 +200,9 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-600 mb-1">טלפון*</label>
+              <label htmlFor="phone" className="block text-sm font-bold text-gray-600 mb-1">טלפון*</label>
               <input
+                id="phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="למשל 0501234567"
@@ -238,8 +240,9 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-1">מין*</label>
+                <label htmlFor="gender" className="block text-sm font-bold text-gray-600 mb-1">מין*</label>
                 <select
+                  id="gender"
                   value={gender}
                   onChange={(e) => setGender(e.target.value as "" | "male" | "female")}
                   aria-label="מין*"
@@ -252,8 +255,9 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-1">שפת המבדק*</label>
+                <label htmlFor="language" className="block text-sm font-bold text-gray-600 mb-1">שפת המבדק*</label>
                 <select
+                  id="language"
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
                   aria-label="שפת המבדק*"
@@ -266,8 +270,9 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-1">יד דומיננטית*</label>
+                <label htmlFor="dominant-hand" className="block text-sm font-bold text-gray-600 mb-1">יד דומיננטית*</label>
                 <select
+                  id="dominant-hand"
                   value={dominantHand}
                   onChange={(e) =>
                     setDominantHand(e.target.value as "" | "right" | "left" | "ambidextrous")
@@ -283,8 +288,9 @@ export function PatientForm({ open, onClose, onCreated }: PatientFormProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-1">שנות לימוד*</label>
+                <label htmlFor="education-years" className="block text-sm font-bold text-gray-600 mb-1">שנות לימוד*</label>
                 <input
+                  id="education-years"
                   value={educationYears}
                   onChange={(e) => setEducationYears(e.target.value.replace(/\D/g, "").slice(0, 2))}
                   placeholder="למשל 12"
