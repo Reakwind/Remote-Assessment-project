@@ -1,0 +1,1 @@
+## 2025-05-06 - Form Accessibility\n**Learning:** The `PatientForm` component had missing `htmlFor` and `id` bindings, which is a common accessibility issue for screen readers. Added explicit `htmlFor` properties and mapped to corresponding `id`s.\n**Action:** Always ensure that form inputs have explicitly linked labels via `id` and `htmlFor`.
